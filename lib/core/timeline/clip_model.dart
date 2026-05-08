@@ -84,6 +84,10 @@ class ClipModel {
   Color get labelColor =>
       ColorTokens.clipLabels[labelColorIndex % ColorTokens.clipLabels.length];
 
+  // Sentinel used by copyWith to distinguish "omitted" from "explicitly null"
+  // for nullable String fields (transitionInId, transitionOutId).
+  static const Object _omit = Object();
+
   ClipModel copyWith({
     String? id,
     String? trackId,
@@ -103,8 +107,8 @@ class ClipModel {
     bool? isLocked,
     String? name,
     List<String>? effectIds,
-    String? transitionInId,
-    String? transitionOutId,
+    Object? transitionInId = _omit,
+    Object? transitionOutId = _omit,
     Duration? transitionInDuration,
     Duration? transitionOutDuration,
   }) {
@@ -127,8 +131,12 @@ class ClipModel {
       isLocked: isLocked ?? this.isLocked,
       name: name ?? this.name,
       effectIds: effectIds ?? this.effectIds,
-      transitionInId: transitionInId ?? this.transitionInId,
-      transitionOutId: transitionOutId ?? this.transitionOutId,
+      transitionInId: transitionInId == _omit
+          ? this.transitionInId
+          : transitionInId as String?,
+      transitionOutId: transitionOutId == _omit
+          ? this.transitionOutId
+          : transitionOutId as String?,
       transitionInDuration: transitionInDuration ?? this.transitionInDuration,
       transitionOutDuration:
           transitionOutDuration ?? this.transitionOutDuration,

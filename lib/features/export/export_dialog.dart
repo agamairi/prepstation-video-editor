@@ -330,8 +330,12 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
       setState(() => _progressText = 'Encoding...');
 
       final inputArgs = graphBuilder.buildInputArgs(clips, filePaths);
+      final effectsByClipId = {
+        for (final clip in clips)
+          clip.id: timeline.effectsForClip(clip.id),
+      };
       final filtergraph = clips.length > 1
-          ? '-filter_complex "${graphBuilder.buildConcatGraph(clips)}" '
+          ? '-filter_complex "${graphBuilder.buildTransitionGraph(clips, effectsByClipId: effectsByClipId)}" '
             '-map "[outv]" -map "[outa]" '
           : '';
 

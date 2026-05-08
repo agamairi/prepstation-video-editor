@@ -8,6 +8,7 @@ import 'package:fluxedit/core/timeline/keyframe_model.dart';
 import 'package:fluxedit/core/timeline/timeline_state.dart';
 import 'package:fluxedit/core/timeline/timeline_tool.dart';
 import 'package:fluxedit/core/timeline/track_model.dart';
+import 'package:fluxedit/core/transitions/transition_type.dart';
 
 typedef ClipCallback = void Function(String clipId);
 typedef ClipDragCallback = void Function(String clipId, double delta);
@@ -425,6 +426,12 @@ class _TimelinePainter extends CustomPainter {
         : baseColor.withValues(alpha: 0.4);
     canvas.drawRRect(rrect, borderPaint);
 
+    // Transition stripe at clip tail
+    if (clip.transitionOutId != null &&
+        clip.transitionOutDuration > Duration.zero) {
+      _paintTransitionStripe(canvas, clip, trackTop, track.height);
+    }
+
     // Keyframe diamonds
     final keyframes = timelineState.allKeyframesForClip(clip.id);
     if (keyframes.isNotEmpty) {
@@ -441,6 +448,59 @@ class _TimelinePainter extends CustomPainter {
       );
       tp.layout(maxWidth: width - 16);
       tp.paint(canvas, Offset(left + 8, trackTop + 6));
+    }
+  }
+
+  void _paintTransitionStripe(
+    Canvas canvas,
+    ClipModel clip,
+    double trackTop,
+    double trackHeight,
+  ) {
+    final clipRight = timelineState.timeToPixel(clip.endOnTimeline);
+    final transStart = timelineState.timeToPixel(
+      clip.endOnTimeline - clip.transitionOutDuration,
+    );
+    final top = trackTop + 2;
+    final bottom = trackTop + trackHeight - 2;
+
+    // Semi-transparent fill triangle indicating the transition zone.
+    final fillPath = Path()
+      ..moveTo(transStart, bottom)
+      ..lineTo(transStart, top)
+      ..lineTo(clipRight, top)
+      ..close();
+    canvas.drawPath(
+      fillPath,
+      Paint()
+        ..color =
+            ColorTokens.transitionStripe.withValues(alpha: 0.3),
+    );
+
+    // Left boundary line of transition zone.
+    canvas.drawLine(
+      Offset(transStart, top),
+      Offset(transStart, bottom),
+      Paint()
+        ..color = ColorTokens.transitionStripe
+        ..strokeWidth = 1.5,
+    );
+
+    // Small label showing the transition type abbreviation.
+    final transType = clip.transitionOutId != null
+        ? TransitionType.fromId(clip.transitionOutId!)
+        : null;
+    if (transType != null) {
+      final tp = TextPainter(textDirection: TextDirection.ltr)
+        ..text = TextSpan(
+          text: transType.displayName[0],
+          style: AppTypography.labelSmall.copyWith(
+            color: ColorTokens.transitionStripe,
+            fontSize: 9,
+          ),
+        )
+        ..layout();
+      tp.paint(canvas, Offset(transStart + 3, top + 2));
     }
   }
 

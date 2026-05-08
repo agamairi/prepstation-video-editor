@@ -20,6 +20,7 @@ import 'package:fluxedit/core/timeline/clip_model.dart';
 import 'package:fluxedit/core/timeline/keyframe_model.dart';
 import 'package:fluxedit/core/timeline/timeline_state.dart';
 import 'package:fluxedit/core/timeline/track_model.dart';
+import 'package:fluxedit/core/transitions/transition_type.dart';
 import 'package:uuid/uuid.dart';
 
 final timelineStateProvider = ChangeNotifierProvider.autoDispose<TimelineState>(
@@ -314,6 +315,45 @@ class TimelineController {
       before: clip,
       after: updated,
       description: 'Rename Clip',
+    ));
+  }
+
+  // ── Transition operations (all undoable) ──────────────────────────────────
+
+  Future<void> setTransition(
+    String clipId,
+    TransitionType type,
+    Duration duration,
+  ) async {
+    final clip = _findClip(clipId);
+    if (clip == null) return;
+    const minDur = Duration(milliseconds: 100);
+    const maxDur = Duration(seconds: 2);
+    final clamped = duration < minDur
+        ? minDur
+        : (duration > maxDur ? maxDur : duration);
+    final updated = clip.copyWith(
+      transitionOutId: type.name,
+      transitionOutDuration: clamped,
+    );
+    await execute(UpdateClipCommand(
+      before: clip,
+      after: updated,
+      description: 'Set Transition',
+    ));
+  }
+
+  Future<void> clearTransition(String clipId) async {
+    final clip = _findClip(clipId);
+    if (clip == null) return;
+    final updated = clip.copyWith(
+      transitionOutId: null,
+      transitionOutDuration: Duration.zero,
+    );
+    await execute(UpdateClipCommand(
+      before: clip,
+      after: updated,
+      description: 'Remove Transition',
     ));
   }
 

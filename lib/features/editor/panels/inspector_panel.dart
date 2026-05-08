@@ -11,6 +11,7 @@ import 'package:fluxedit/core/project/project_model.dart';
 import 'package:fluxedit/core/project/project_repository.dart';
 import 'package:fluxedit/core/timeline/clip_model.dart';
 import 'package:fluxedit/core/timeline/timeline_controller.dart';
+import 'package:fluxedit/core/transitions/transition_type.dart';
 
 class InspectorPanel extends ConsumerWidget {
   const InspectorPanel({super.key, required this.projectId});
@@ -264,6 +265,10 @@ class _ClipInspectorState extends ConsumerState<_ClipInspector> {
             ],
             const SizedBox(height: 12),
             _EffectsSection(clipId: clip.id),
+            if (clip.type == ClipType.video) ...[
+              const SizedBox(height: 12),
+              _TransitionSection(clip: clip),
+            ],
           ],
         );
       },
@@ -668,5 +673,140 @@ class _EffectRowState extends ConsumerState<_EffectRow> {
       (m) => ' ${m.group(0)}',
     );
     return result[0].toUpperCase() + result.substring(1);
+  }
+}
+
+// ── Transition Section ────────────────────────────────────────────────────────
+
+class _TransitionSection extends ConsumerStatefulWidget {
+  const _TransitionSection({required this.clip});
+
+  final ClipModel clip;
+
+  @override
+  ConsumerState<_TransitionSection> createState() => _TransitionSectionState();
+}
+
+class _TransitionSectionState extends ConsumerState<_TransitionSection> {
+  double? _dragStartDurationSecs;
+
+  ClipModel get _clip {
+    final clips = ref.read(timelineStateProvider).clips;
+    try {
+      return clips.firstWhere((c) => c.id == widget.clip.id);
+    } catch (_) {
+      return widget.clip;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final clip = ref.watch(timelineStateProvider).clips.cast<ClipModel?>()
+            .firstWhere(
+          (c) => c?.id == widget.clip.id,
+          orElse: () => null,
+        ) ??
+        widget.clip;
+
+    final controller = ref.read(timelineControllerProvider);
+    final currentType =
+        clip.transitionOutId != null
+            ? TransitionType.fromId(clip.transitionOutId!)
+            : null;
+    final durationSecs =
+        clip.transitionOutDuration.inMilliseconds / 1000.0;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Expanded(child: _SectionHeader(title: 'Transition Out')),
+            PopupMenuButton<TransitionType?>(
+              icon: const Icon(
+                Icons.add,
+                size: 16,
+                color: ColorTokens.accentPrimary,
+              ),
+              tooltip: 'Set Transition',
+              padding: EdgeInsets.zero,
+              itemBuilder: (_) => [
+                const PopupMenuItem<TransitionType?>(
+                  value: null,
+                  child: Text('None', style: AppTypography.bodySmall),
+                ),
+                ...TransitionType.values.map(
+                  (t) => PopupMenuItem(
+                    value: t,
+                    child: Text(t.displayName, style: AppTypography.bodySmall),
+                  ),
+                ),
+              ],
+              onSelected: (type) {
+                if (type == null) {
+                  controller.clearTransition(clip.id);
+                } else {
+                  final dur = currentType == null
+                      ? Duration(
+                          milliseconds: (AppConstants.defaultTransitionDuration *
+                                  1000)
+                              .round(),
+                        )
+                      : clip.transitionOutDuration;
+                  controller.setTransition(clip.id, type, dur);
+                }
+              },
+            ),
+          ],
+        ),
+        if (currentType == null)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Text(
+              'No transition',
+              style: AppTypography.bodySmall.copyWith(
+                color: ColorTokens.textSecondary,
+              ),
+            ),
+          )
+        else ...[
+          _PropertyRow(label: 'Type', value: currentType.displayName),
+          _SliderRow(
+            label: 'Duration',
+            value: durationSecs.clamp(
+              AppConstants.minTransitionDuration,
+              AppConstants.maxTransitionDuration,
+            ),
+            min: AppConstants.minTransitionDuration,
+            max: AppConstants.maxTransitionDuration,
+            displayText: '${durationSecs.toStringAsFixed(2)}s',
+            onChangeStart: (_) {
+              _dragStartDurationSecs = durationSecs;
+            },
+            onChanged: (v) {
+              // Live preview: update state without history
+              final c = _clip;
+              ref.read(timelineStateProvider).updateClip(
+                    c.copyWith(
+                      transitionOutDuration: Duration(
+                        milliseconds: (v * 1000).round(),
+                      ),
+                    ),
+                  );
+            },
+            onChangeEnd: (v) {
+              if (_dragStartDurationSecs != null) {
+                controller.setTransition(
+                  clip.id,
+                  currentType,
+                  Duration(milliseconds: (v * 1000).round()),
+                );
+                _dragStartDurationSecs = null;
+              }
+            },
+          ),
+        ],
+      ],
+    );
   }
 }

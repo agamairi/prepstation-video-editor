@@ -72,6 +72,7 @@ abstract final class ColorTokens {
   static const Color sliderThumb = Color(0xFF4D9CFF);
   static const Color keyframeDot = Color(0xFFFFB340);
   static const Color keyframeDiamond = Color(0xFFFFB340);
+  static const Color transitionStripe = Color(0xFF9B6DFF);
 
   // ── Scopes ────────────────────────────────────────────────────────────────
   static const Color scopeBackground = Color(0xFF0A0A0C);
