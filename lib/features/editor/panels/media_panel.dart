@@ -177,12 +177,13 @@ class _MediaTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return GestureDetector(
-      onDoubleTap: () => _addToTimeline(ref),
-      child: Tooltip(
-        message: '${asset.name}\n${asset.resolution} · '
-            '${asset.frameRateDisplay} fps · '
-            '${_formatDuration(asset.duration)}',
+    return Tooltip(
+      message: '${asset.name}\n${asset.resolution} · '
+          '${asset.frameRateDisplay} fps · '
+          '${_formatDuration(asset.duration)}',
+      child: GestureDetector(
+        onTap: () => _addToTimeline(ref, context),
+        onDoubleTap: () => _addToTimeline(ref, context),
         child: Container(
           decoration: BoxDecoration(
             color: ColorTokens.backgroundSurface,
@@ -216,10 +217,7 @@ class _MediaTile extends ConsumerWidget {
                     gradient: LinearGradient(
                       begin: Alignment.bottomCenter,
                       end: Alignment.topCenter,
-                      colors: [
-                        Colors.black87,
-                        Colors.transparent,
-                      ],
+                      colors: [Colors.black87, Colors.transparent],
                     ),
                     borderRadius: BorderRadius.vertical(
                       bottom: Radius.circular(3),
@@ -237,12 +235,25 @@ class _MediaTile extends ConsumerWidget {
                 const Positioned(
                   top: 4,
                   right: 4,
-                  child: Icon(
-                    Icons.videocam,
-                    size: 12,
-                    color: Colors.white70,
+                  child: Icon(Icons.videocam, size: 12, color: Colors.white70),
+                ),
+              // Visible "+" button so add-to-timeline is discoverable on mobile
+              Positioned(
+                bottom: 4,
+                right: 4,
+                child: GestureDetector(
+                  onTap: () => _addToTimeline(ref, context),
+                  child: Container(
+                    width: 22,
+                    height: 22,
+                    decoration: BoxDecoration(
+                      color: ColorTokens.accentPrimary,
+                      borderRadius: BorderRadius.circular(11),
+                    ),
+                    child: const Icon(Icons.add, size: 14, color: Colors.white),
                   ),
                 ),
+              ),
             ],
           ),
         ),
@@ -250,7 +261,7 @@ class _MediaTile extends ConsumerWidget {
     );
   }
 
-  Future<void> _addToTimeline(WidgetRef ref) async {
+  Future<void> _addToTimeline(WidgetRef ref, BuildContext context) async {
     final controller = ref.read(timelineControllerProvider);
     final state = ref.read(timelineStateProvider);
     final videoTracks = state.videoTracks;
@@ -260,6 +271,19 @@ class _MediaTile extends ConsumerWidget {
       trackId: videoTracks.first.id,
       asset: asset,
     );
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${asset.name} added to timeline',
+            style: AppTypography.bodySmall,
+          ),
+          duration: const Duration(seconds: 2),
+          backgroundColor: ColorTokens.backgroundElevated,
+        ),
+      );
+    }
   }
 
   String _formatDuration(Duration d) {

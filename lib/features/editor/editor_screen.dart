@@ -359,23 +359,120 @@ class _DesktopLayout extends StatelessWidget {
   }
 }
 
-class _MobileLayout extends StatelessWidget {
+class _MobileLayout extends ConsumerStatefulWidget {
   const _MobileLayout({required this.project});
 
   final ProjectModel project;
 
   @override
+  ConsumerState<_MobileLayout> createState() => _MobileLayoutState();
+}
+
+class _MobileLayoutState extends ConsumerState<_MobileLayout>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabs;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabs = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabs.dispose();
+    super.dispose();
+  }
+
+  void _showInspector() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.3,
+        maxChildSize: 0.9,
+        builder: (_, scrollController) => Container(
+          decoration: const BoxDecoration(
+            color: Color(0xFF1E1E21),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+          ),
+          child: Column(
+            children: [
+              Container(
+                margin: const EdgeInsets.symmetric(vertical: 8),
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF505057),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Expanded(
+                child: InspectorPanel(projectId: widget.project.id),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final selectedIds = ref.watch(timelineStateProvider).selectedClipIds;
+
     return Column(
       children: [
+        // Tab bar: Media | Preview
+        Container(
+          color: const Color(0xFF222224),
+          child: TabBar(
+            controller: _tabs,
+            labelStyle: const TextStyle(fontSize: 12),
+            indicatorColor: const Color(0xFF4D9CFF),
+            labelColor: const Color(0xFF4D9CFF),
+            unselectedLabelColor: const Color(0xFFA0A0AA),
+            tabs: const [
+              Tab(icon: Icon(Icons.perm_media_outlined, size: 16), text: 'Media'),
+              Tab(icon: Icon(Icons.play_circle_outline, size: 16), text: 'Preview'),
+            ],
+          ),
+        ),
+        // Top pane: tabbed between Media and Preview
         Expanded(
           flex: 5,
-          child: PreviewPanel(project: project),
+          child: Stack(
+            children: [
+              TabBarView(
+                controller: _tabs,
+                children: [
+                  MediaPanel(projectId: widget.project.id),
+                  PreviewPanel(project: widget.project),
+                ],
+              ),
+              // Inspector FAB — only visible when a clip is selected
+              if (selectedIds.isNotEmpty)
+                Positioned(
+                  right: 12,
+                  bottom: 12,
+                  child: FloatingActionButton.small(
+                    heroTag: 'inspector_fab',
+                    backgroundColor: const Color(0xFF4D9CFF),
+                    tooltip: 'Edit Clip',
+                    onPressed: _showInspector,
+                    child: const Icon(Icons.tune, size: 18),
+                  ),
+                ),
+            ],
+          ),
         ),
         const Divider(height: 1),
+        // Timeline always visible at bottom
         Expanded(
           flex: 5,
-          child: TimelinePanel(project: project),
+          child: TimelinePanel(project: widget.project),
         ),
       ],
     );
