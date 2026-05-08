@@ -67,6 +67,11 @@ abstract final class AppConstants {
   // Effects
   static const int maxEffectsPerClip = 8;
 
+  // Transitions
+  static const double minTransitionDuration = 0.1;
+  static const double maxTransitionDuration = 2.0;
+  static const double defaultTransitionDuration = 0.5;
+
   // Proxy resolution divisor
   static const int proxyResolutionDivisor = 4;
   static const int proxyCrf = 28;
