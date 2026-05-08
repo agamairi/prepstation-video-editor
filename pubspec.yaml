@@ -11,8 +11,8 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # FFmpeg — full GPL build for maximum codec/filter support
-  ffmpeg_kit_flutter_full_gpl: ^6.0.3
+  # FFmpeg — full GPL build for maximum codec/filter support (maintained fork)
+  ffmpeg_kit_flutter_new: ^4.1.0
 
   # State management
   flutter_riverpod: ^2.6.1
