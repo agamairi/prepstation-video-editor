@@ -457,6 +457,17 @@ class TimelineController {
         staticValue,
       );
 
+  Future<void> duplicateClip(String clipId) async {
+    final clip = _findClip(clipId);
+    if (clip == null) return;
+    final duplicate = clip.copyWith(
+      id: 'clip_${_uuid.v4()}',
+      startOnTimeline: clip.endOnTimeline,
+      endOnTimeline: clip.endOnTimeline + clip.duration,
+    );
+    await execute(AddClipCommand(duplicate));
+  }
+
   // ── Media import ───────────────────────────────────────────────────────────
 
   Future<MediaAsset> importMediaFile({

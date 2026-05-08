@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:fluxedit/app/theme/color_tokens.dart';
@@ -14,6 +16,7 @@ typedef ClipCallback = void Function(String clipId);
 typedef ClipDragCallback = void Function(String clipId, double delta);
 typedef ClipTrimCallback = void Function(String clipId, double dx);
 typedef ClipBladeCallback = void Function(String clipId, Duration time);
+typedef ClipContextCallback = void Function(String clipId, Offset globalPosition);
 
 class TimelineCanvas extends StatefulWidget {
   const TimelineCanvas({
@@ -26,7 +29,9 @@ class TimelineCanvas extends StatefulWidget {
     required this.onClipDrag,
     required this.onClipTrimStart,
     required this.onClipTrimEnd,
+    this.onClipContextMenu,
     this.waveforms = const {},
+    this.thumbnails = const {},
   });
 
   final TimelineState timelineState;
@@ -38,8 +43,13 @@ class TimelineCanvas extends StatefulWidget {
   final ClipTrimCallback onClipTrimStart;
   final ClipTrimCallback onClipTrimEnd;
 
+  final ClipContextCallback? onClipContextMenu;
+
   /// Optional waveform data keyed by asset ID.
   final Map<String, WaveformData> waveforms;
+
+  /// Optional timeline thumbnails keyed by clip ID.
+  final Map<String, List<ui.Image>> thumbnails;
 
   @override
   State<TimelineCanvas> createState() => _TimelineCanvasState();
@@ -81,6 +91,7 @@ class _TimelineCanvasState extends State<TimelineCanvas> {
             trimHandleWidth: _trimHandleWidth,
             rulerHeight: _rulerHeight,
             waveforms: widget.waveforms,
+            thumbnails: widget.thumbnails,
             bladeX: widget.tool == TimelineTool.blade ? _bladeX : null,
           ),
           child: _buildGestureLayer(),
@@ -97,6 +108,22 @@ class _TimelineCanvasState extends State<TimelineCanvas> {
 
         return Stack(
           children: [
+            // Background pan-to-scroll (touch; below all clip gesture areas)
+            Positioned.fill(
+              child: GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onHorizontalDragUpdate: (d) {
+                  if (widget.tool != TimelineTool.blade) {
+                    final deltaSecs = -d.delta.dx / state.zoom;
+                    final newOffset = state.scrollOffset +
+                        Duration(
+                          microseconds: (deltaSecs * 1000000).round(),
+                        );
+                    state.setScrollOffset(newOffset);
+                  }
+                },
+              ),
+            ),
             // Playhead drag target (ruler area — select tool only)
             Positioned(
               top: 0,
@@ -183,6 +210,9 @@ class _TimelineCanvasState extends State<TimelineCanvas> {
           onDragEnd: () => _draggingClipId = null,
           onTrimStartDrag: (dx) => widget.onClipTrimStart(clip.id, left + dx),
           onTrimEndDrag: (dx) => widget.onClipTrimEnd(clip.id, left + dx),
+          onContextMenu: widget.onClipContextMenu != null
+              ? (pos) => widget.onClipContextMenu!(clip.id, pos)
+              : null,
         ),
       );
     });
@@ -200,6 +230,7 @@ class _ClipGestureArea extends StatelessWidget {
     required this.onDragEnd,
     required this.onTrimStartDrag,
     required this.onTrimEndDrag,
+    this.onContextMenu,
   });
 
   final ClipModel clip;
@@ -211,6 +242,7 @@ class _ClipGestureArea extends StatelessWidget {
   final VoidCallback onDragEnd;
   final ValueChanged<double> onTrimStartDrag;
   final ValueChanged<double> onTrimEndDrag;
+  final ValueChanged<Offset>? onContextMenu;
 
   @override
   Widget build(BuildContext context) {
@@ -222,6 +254,12 @@ class _ClipGestureArea extends StatelessWidget {
           right: trimHandleWidth,
           child: GestureDetector(
             onTap: onTap,
+            onLongPressStart: onContextMenu != null
+                ? (d) => onContextMenu!(d.globalPosition)
+                : null,
+            onSecondaryTapDown: onContextMenu != null
+                ? (d) => onContextMenu!(d.globalPosition)
+                : null,
             onHorizontalDragStart: (d) => onDragStart(d.globalPosition.dx),
             onHorizontalDragUpdate: (d) => onDrag(d.globalPosition.dx),
             onHorizontalDragEnd: (_) => onDragEnd(),
@@ -289,6 +327,7 @@ class _TimelinePainter extends CustomPainter {
     required this.trimHandleWidth,
     required this.rulerHeight,
     required this.waveforms,
+    required this.thumbnails,
     this.bladeX,
   }) : super(repaint: timelineState);
 
@@ -296,6 +335,7 @@ class _TimelinePainter extends CustomPainter {
   final double trimHandleWidth;
   final double rulerHeight;
   final Map<String, WaveformData> waveforms;
+  final Map<String, List<ui.Image>> thumbnails;
   final double? bladeX;
 
   @override
@@ -413,6 +453,14 @@ class _TimelinePainter extends CustomPainter {
     paint.color = baseColor;
     canvas.drawRRect(rrect, paint);
 
+    // Frame thumbnails tiled across video clip body
+    if (track.isVideo) {
+      final clipImages = thumbnails[clip.id];
+      if (clipImages != null && clipImages.isNotEmpty) {
+        _paintThumbnails(canvas, rect, clipImages);
+      }
+    }
+
     // Waveform for audio clips
     if (track.isAudio) {
       final waveform = waveforms[clip.mediaId];
@@ -449,6 +497,44 @@ class _TimelinePainter extends CustomPainter {
       tp.layout(maxWidth: width - 16);
       tp.paint(canvas, Offset(left + 8, trackTop + 6));
     }
+  }
+
+  void _paintThumbnails(
+    Canvas canvas,
+    Rect clipRect,
+    List<ui.Image> images,
+  ) {
+    if (images.isEmpty) return;
+
+    final thumbW = clipRect.height * 16 / 9;
+    final clipPath = Path()..addRect(clipRect);
+    canvas.save();
+    canvas.clipPath(clipPath);
+
+    final paint = Paint()..filterQuality = FilterQuality.low;
+    var x = clipRect.left;
+    var imgIndex = 0;
+    while (x < clipRect.right) {
+      final img = images[imgIndex % images.length];
+      final src = Rect.fromLTWH(
+        0,
+        0,
+        img.width.toDouble(),
+        img.height.toDouble(),
+      );
+      final dst = Rect.fromLTWH(x, clipRect.top, thumbW, clipRect.height);
+      canvas.drawImageRect(img, src, dst, paint);
+      x += thumbW;
+      imgIndex++;
+    }
+
+    // Darken overlay so clip label and UI remain legible
+    canvas.drawRect(
+      clipRect,
+      Paint()..color = Colors.black.withValues(alpha: 0.35),
+    );
+
+    canvas.restore();
   }
 
   void _paintTransitionStripe(
