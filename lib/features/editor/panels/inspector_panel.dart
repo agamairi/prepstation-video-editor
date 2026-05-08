@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fluxedit/app/theme/color_tokens.dart';
 import 'package:fluxedit/app/theme/typography.dart';
 import 'package:fluxedit/core/constants/app_constants.dart';
+import 'package:fluxedit/core/effects/effect_model.dart';
+import 'package:fluxedit/core/effects/effect_registry.dart';
+import 'package:fluxedit/core/effects/effect_type.dart';
 import 'package:fluxedit/core/project/project_model.dart';
 import 'package:fluxedit/core/project/project_repository.dart';
 import 'package:fluxedit/core/timeline/clip_model.dart';
@@ -214,6 +217,8 @@ class _ClipInspectorState extends ConsumerState<_ClipInspector> {
               _PropertyRow(label: 'Audio Codec', value: asset.audioCodec),
               _PropertyRow(label: 'Color Space', value: asset.colorSpace),
             ],
+            const SizedBox(height: 12),
+            _EffectsSection(clipId: clip.id),
           ],
         );
       },
@@ -402,5 +407,160 @@ class _SliderRow extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+// ── Effects Section ───────────────────────────────────────────────────────────
+
+class _EffectsSection extends ConsumerWidget {
+  const _EffectsSection({required this.clipId});
+
+  final String clipId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(timelineStateProvider);
+    final effects = state.effectsForClip(clipId);
+    final controller = ref.read(timelineControllerProvider);
+    final canAdd = effects.length < AppConstants.maxEffectsPerClip;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Expanded(child: _SectionHeader(title: 'Effects')),
+            if (canAdd)
+              _AddEffectButton(
+                onSelected: (type) => controller.addEffect(clipId, type),
+              ),
+          ],
+        ),
+        if (effects.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Text(
+              'No effects applied',
+              style: AppTypography.bodySmall.copyWith(
+                color: ColorTokens.textSecondary,
+              ),
+            ),
+          ),
+        ...effects.map((e) => _EffectRow(effect: e)),
+      ],
+    );
+  }
+}
+
+class _AddEffectButton extends StatelessWidget {
+  const _AddEffectButton({required this.onSelected});
+
+  final void Function(EffectType) onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<EffectType>(
+      icon: const Icon(Icons.add, size: 16, color: ColorTokens.accentPrimary),
+      tooltip: 'Add Effect',
+      padding: EdgeInsets.zero,
+      itemBuilder: (_) => EffectType.values
+          .where((t) => t != EffectType.lut)
+          .map(
+            (t) => PopupMenuItem(
+              value: t,
+              child: Text(t.displayName, style: AppTypography.bodySmall),
+            ),
+          )
+          .toList(),
+      onSelected: onSelected,
+    );
+  }
+}
+
+class _EffectRow extends ConsumerStatefulWidget {
+  const _EffectRow({required this.effect});
+
+  final EffectInstance effect;
+
+  @override
+  ConsumerState<_EffectRow> createState() => _EffectRowState();
+}
+
+class _EffectRowState extends ConsumerState<_EffectRow> {
+  EffectInstance? _atDragStart;
+
+  @override
+  Widget build(BuildContext context) {
+    final effect = widget.effect;
+    final controller = ref.read(timelineControllerProvider);
+    final ranges = EffectRegistry.parameterRanges(effect.type);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Checkbox(
+              value: effect.isEnabled,
+              onChanged: (_) => controller.toggleEffect(effect),
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              visualDensity: VisualDensity.compact,
+            ),
+            Expanded(
+              child: Text(effect.displayName, style: AppTypography.labelMedium),
+            ),
+            SizedBox(
+              width: 24,
+              height: 24,
+              child: IconButton(
+                padding: EdgeInsets.zero,
+                icon: const Icon(Icons.close, size: 14),
+                color: ColorTokens.textSecondary,
+                tooltip: 'Remove',
+                onPressed: () => controller.removeEffect(effect),
+              ),
+            ),
+          ],
+        ),
+        if (effect.isEnabled)
+          ...ranges.entries.map((entry) {
+            final key = entry.key;
+            final (min, max) = entry.value;
+            final value = (effect.parameters[key] ?? min).clamp(min, max);
+            return _SliderRow(
+              label: _formatParamName(key),
+              value: value,
+              min: min,
+              max: max,
+              displayText: value.toStringAsFixed(2),
+              onChangeStart: (_) => _atDragStart = effect,
+              onChanged: (v) {
+                final updated = effect.copyWith(
+                  parameters: {...effect.parameters, key: v},
+                );
+                ref.read(timelineStateProvider).updateEffect(updated);
+              },
+              onChangeEnd: (v) {
+                if (_atDragStart != null) {
+                  controller.updateEffectParameters(
+                    _atDragStart!,
+                    {..._atDragStart!.parameters, key: v},
+                  );
+                  _atDragStart = null;
+                }
+              },
+            );
+          }),
+        const Divider(height: 8),
+      ],
+    );
+  }
+
+  String _formatParamName(String key) {
+    final result = key.replaceAllMapped(
+      RegExp(r'([A-Z])'),
+      (m) => ' ${m.group(0)}',
+    );
+    return result[0].toUpperCase() + result.substring(1);
   }
 }
