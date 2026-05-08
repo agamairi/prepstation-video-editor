@@ -130,6 +130,7 @@ class Keyframes extends Table {
   Set<Column<Object>> get primaryKey => {id};
 }
 
+@DataClassName('EffectInstanceRow')
 class EffectInstances extends Table {
   TextColumn get id => text()();
   TextColumn get clipId =>

@@ -1,14 +1,60 @@
+import 'package:fluxedit/core/effects/effect_model.dart';
+import 'package:fluxedit/core/effects/effect_registry.dart';
 import 'package:fluxedit/core/timeline/clip_model.dart';
 
 /// Builds FFmpeg filtergraph strings for export-time rendering.
 class FiltergraphBuilder {
   const FiltergraphBuilder();
 
-  /// Constructs a complete FFmpeg filtergraph for a list of clips on a
-  /// single video track. This is a simplified concat-based graph for
-  /// Phase 1; advanced compositing is added in later phases.
-  String buildConcatGraph(List<ClipModel> clips) {
+  /// Constructs a complete FFmpeg filtergraph for a list of clips on a single
+  /// video track. When [effectsByClipId] is provided, per-clip effect chains
+  /// are injected before the concat filter.
+  String buildConcatGraph(
+    List<ClipModel> clips, {
+    Map<String, List<EffectInstance>>? effectsByClipId,
+  }) {
     if (clips.isEmpty) return '';
+
+    final effects = effectsByClipId ?? {};
+    final hasAnyEffects =
+        effects.values.any((list) => list.any((e) => e.isEnabled));
+
+    if (!hasAnyEffects) {
+      return _simpleConcatGraph(clips);
+    }
+
+    final sb = StringBuffer();
+
+    // Per-clip effect chains
+    for (var i = 0; i < clips.length; i++) {
+      final clip = clips[i];
+      final clipEffects = effects[clip.id] ?? [];
+      final chain = EffectRegistry.buildClipEffectChain(
+        '$i:v',
+        'v$i',
+        clipEffects,
+      );
+      if (chain.isNotEmpty) {
+        sb.write('$chain;');
+      }
+    }
+
+    // Concat inputs: use effect output label if chain exists, else raw input
+    for (var i = 0; i < clips.length; i++) {
+      final clip = clips[i];
+      final clipEffects = effects[clip.id] ?? [];
+      final hasChain = EffectRegistry.buildClipEffectChain(
+        '$i:v',
+        'v$i',
+        clipEffects,
+      ).isNotEmpty;
+      sb.write(hasChain ? '[v$i][$i:a]' : '[$i:v][$i:a]');
+    }
+    sb.write('concat=n=${clips.length}:v=1:a=1[outv][outa]');
+    return sb.toString();
+  }
+
+  String _simpleConcatGraph(List<ClipModel> clips) {
     final sb = StringBuffer();
     for (var i = 0; i < clips.length; i++) {
       sb.write('[$i:v][$i:a]');

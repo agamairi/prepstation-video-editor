@@ -2,6 +2,8 @@ import 'package:drift/drift.dart' hide Column;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fluxedit/core/database/database.dart';
 import 'package:fluxedit/core/database/database_provider.dart';
+import 'package:fluxedit/core/effects/effect_model.dart';
+import 'package:fluxedit/core/effects/effect_type.dart';
 import 'package:fluxedit/core/project/project_model.dart';
 import 'package:fluxedit/core/timeline/clip_model.dart';
 import 'package:fluxedit/core/timeline/composition_model.dart';
@@ -203,6 +205,34 @@ class ProjectRepository {
     await (_db.delete(_db.clips)..where((t) => t.id.equals(id))).go();
   }
 
+  // ── Effects ───────────────────────────────────────────────────────────────
+
+  Future<List<EffectInstance>> getEffectsForClip(String clipId) async {
+    final rows = await (_db.select(_db.effectInstances)
+          ..where((t) => t.clipId.equals(clipId))
+          ..orderBy([(t) => OrderingTerm.asc(t.stackIndex)]))
+        .get();
+    return rows.map(_effectFromRow).toList();
+  }
+
+  Future<void> saveEffect(EffectInstance effect) async {
+    await _db.into(_db.effectInstances).insertOnConflictUpdate(
+      EffectInstancesCompanion(
+        id: Value(effect.id),
+        clipId: Value(effect.clipId),
+        effectType: Value(effect.type.name),
+        stackIndex: Value(effect.stackIndex),
+        isEnabled: Value(effect.isEnabled),
+        parametersJson: Value(effect.parametersToJson()),
+      ),
+    );
+  }
+
+  Future<void> deleteEffect(String id) async {
+    await (_db.delete(_db.effectInstances)..where((t) => t.id.equals(id)))
+        .go();
+  }
+
   // ── Private converters ────────────────────────────────────────────────────
 
   ProjectModel _projectFromRow(Project row) {
@@ -268,6 +298,20 @@ class ProjectRepository {
       isVisible: row.isVisible,
       volume: row.volume,
       pan: row.pan,
+    );
+  }
+
+  EffectInstance _effectFromRow(EffectInstanceRow row) {
+    return EffectInstance(
+      id: row.id,
+      clipId: row.clipId,
+      type: EffectType.values.firstWhere(
+        (e) => e.name == row.effectType,
+        orElse: () => EffectType.colorCorrection,
+      ),
+      stackIndex: row.stackIndex,
+      isEnabled: row.isEnabled,
+      parameters: EffectInstance.parametersFromJson(row.parametersJson),
     );
   }
 

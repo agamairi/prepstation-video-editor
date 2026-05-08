@@ -20,7 +20,7 @@ class _StubRepo implements ProjectRepository {
   Future<void> deleteClip(String clipId) async => _clips.remove(clipId);
 
   @override
-  dynamic noSuchMethod(Invocation invocation) => Future.value();
+  dynamic noSuchMethod(Invocation invocation) => Future<void>.value();
 }
 
 // ── Fixtures ───────────────────────────────────────────────────────────────

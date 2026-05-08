@@ -2,10 +2,15 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fluxedit/core/audio/waveform_generator.dart';
+import 'package:fluxedit/core/constants/app_constants.dart';
+import 'package:fluxedit/core/effects/effect_model.dart';
+import 'package:fluxedit/core/effects/effect_registry.dart';
+import 'package:fluxedit/core/effects/effect_type.dart';
 import 'package:fluxedit/core/ffmpeg/ffmpeg_engine.dart';
 import 'package:fluxedit/core/ffmpeg/thumbnail_generator.dart';
 import 'package:fluxedit/core/history/clip_commands.dart';
 import 'package:fluxedit/core/history/edit_command.dart';
+import 'package:fluxedit/core/history/effect_commands.dart';
 import 'package:fluxedit/core/history/history_manager.dart';
 import 'package:fluxedit/core/project/project_model.dart';
 import 'package:fluxedit/core/project/project_repository.dart';
@@ -54,6 +59,12 @@ class TimelineController {
     final clips = await repository.getClipsForProject(projectId);
     state.setTracks(tracks);
     state.setClips(clips);
+    for (final clip in clips) {
+      final effects = await repository.getEffectsForClip(clip.id);
+      if (effects.isNotEmpty) {
+        state.setEffectsForClip(clip.id, effects);
+      }
+    }
   }
 
   Future<TrackModel> addTrack({
@@ -290,6 +301,40 @@ class TimelineController {
       after: updated,
       description: 'Rename Clip',
     ));
+  }
+
+  // ── Effect operations (all undoable) ──────────────────────────────────────
+
+  Future<EffectInstance?> addEffect(String clipId, EffectType type) async {
+    final current = state.effectsForClip(clipId);
+    if (current.length >= AppConstants.maxEffectsPerClip) return null;
+
+    final effect = EffectInstance(
+      id: 'effect_${_uuid.v4()}',
+      clipId: clipId,
+      type: type,
+      stackIndex: current.length,
+      parameters: EffectRegistry.defaultParameters(type),
+    );
+    await execute(AddEffectCommand(effect));
+    return effect;
+  }
+
+  Future<void> removeEffect(EffectInstance effect) async {
+    await execute(RemoveEffectCommand(effect));
+  }
+
+  Future<void> updateEffectParameters(
+    EffectInstance effect,
+    Map<String, double> parameters,
+  ) async {
+    final updated = effect.copyWith(parameters: parameters);
+    await execute(UpdateEffectCommand(before: effect, after: updated));
+  }
+
+  Future<void> toggleEffect(EffectInstance effect) async {
+    final updated = effect.copyWith(isEnabled: !effect.isEnabled);
+    await execute(UpdateEffectCommand(before: effect, after: updated));
   }
 
   // ── Media import ───────────────────────────────────────────────────────────

@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:fluxedit/core/constants/app_constants.dart';
+import 'package:fluxedit/core/effects/effect_model.dart';
 import 'package:fluxedit/core/timeline/clip_model.dart';
 import 'package:fluxedit/core/timeline/track_model.dart';
 
@@ -37,6 +38,8 @@ class TimelineState extends ChangeNotifier {
   bool _isScrubbing = false;
   bool _snapEnabled = true;
 
+  final Map<String, List<EffectInstance>> _effectsByClipId = {};
+
   // ── Getters ───────────────────────────────────────────────────────────────
 
   List<TrackModel> get tracks => List.unmodifiable(_tracks);
@@ -52,6 +55,9 @@ class TimelineState extends ChangeNotifier {
   bool get isPlaying => _isPlaying;
   bool get isScrubbing => _isScrubbing;
   bool get snapEnabled => _snapEnabled;
+
+  List<EffectInstance> effectsForClip(String clipId) =>
+      List.unmodifiable(_effectsByClipId[clipId] ?? []);
 
   List<TrackModel> get videoTracks =>
       _tracks.where((t) => t.isVideo).toList();
@@ -237,6 +243,36 @@ class TimelineState extends ChangeNotifier {
 
     // Snap to markers (future)
     return nearest;
+  }
+
+  void setEffectsForClip(String clipId, List<EffectInstance> effects) {
+    _effectsByClipId[clipId] = List.from(effects);
+    notifyListeners();
+  }
+
+  void addEffect(EffectInstance effect) {
+    final list = <EffectInstance>[
+      ...(_effectsByClipId[effect.clipId] ?? []),
+      effect,
+    ];
+    _effectsByClipId[effect.clipId] = list;
+    notifyListeners();
+  }
+
+  void removeEffect(EffectInstance effect) {
+    final list = (_effectsByClipId[effect.clipId] ?? [])
+        .where((e) => e.id != effect.id)
+        .toList();
+    _effectsByClipId[effect.clipId] = list;
+    notifyListeners();
+  }
+
+  void updateEffect(EffectInstance effect) {
+    final list = (_effectsByClipId[effect.clipId] ?? [])
+        .map((e) => e.id == effect.id ? effect : e)
+        .toList();
+    _effectsByClipId[effect.clipId] = list;
+    notifyListeners();
   }
 
   void _recalculateDuration() {
