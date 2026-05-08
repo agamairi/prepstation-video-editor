@@ -1,7 +1,7 @@
 import 'dart:io';
 
-import 'package:ffmpeg_kit_flutter_full_gpl/ffmpeg_kit.dart';
-import 'package:ffmpeg_kit_flutter_full_gpl/return_code.dart';
+import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
+import 'package:ffmpeg_kit_flutter_new/return_code.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fluxedit/core/audio/waveform_data.dart';
