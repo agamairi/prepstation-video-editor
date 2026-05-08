@@ -13,6 +13,7 @@ import 'package:fluxedit/features/editor/panels/media_panel.dart';
 import 'package:fluxedit/features/editor/panels/preview_panel.dart';
 import 'package:fluxedit/features/editor/panels/timeline_panel.dart';
 import 'package:fluxedit/features/export/export_dialog.dart';
+import 'package:fluxedit/widgets/help_overlay.dart';
 
 final _projectProvider = FutureProvider.family<ProjectModel?, String>(
   (ref, projectId) =>
@@ -226,6 +227,14 @@ class _EditorAppBar extends ConsumerWidget implements PreferredSizeWidget {
       actions: [
         _TransportControls(timelineState: timelineState),
         const SizedBox(width: 8),
+        IconButton(
+          icon: const Icon(Icons.help_outline, size: 18),
+          tooltip: 'Help & Shortcuts',
+          onPressed: () => showHelpDialog(context),
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+        ),
+        const SizedBox(width: 4),
         TextButton.icon(
           onPressed: () => _showExportDialog(context),
           icon: const Icon(Icons.upload, size: 16),
