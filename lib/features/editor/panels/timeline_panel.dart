@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fluxedit/app/theme/color_tokens.dart';
 import 'package:fluxedit/app/theme/typography.dart';
 import 'package:fluxedit/core/constants/app_constants.dart';
+import 'package:fluxedit/core/history/history_manager.dart';
 import 'package:fluxedit/core/project/project_model.dart';
 import 'package:fluxedit/core/timeline/clip_model.dart';
 import 'package:fluxedit/core/timeline/timeline_controller.dart';
+import 'package:fluxedit/core/timeline/timeline_tool.dart';
 import 'package:fluxedit/core/timeline/track_model.dart';
 import 'package:fluxedit/widgets/timeline/timeline_canvas.dart';
 
@@ -44,6 +46,8 @@ class _TimelineToolbar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(timelineStateProvider);
+    final tool = ref.watch(timelineToolProvider);
+    final history = ref.watch(historyManagerProvider);
 
     return Container(
       height: 36,
@@ -53,6 +57,50 @@ class _TimelineToolbar extends ConsumerWidget {
       ),
       child: Row(
         children: [
+          // Undo / Redo
+          IconButton(
+            icon: const Icon(Icons.undo, size: 16),
+            tooltip: history.nextUndoDescription != null
+                ? 'Undo: ${history.nextUndoDescription}'
+                : 'Nothing to Undo',
+            onPressed: history.canUndo
+                ? () => ref.read(timelineControllerProvider).undo()
+                : null,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+          ),
+          IconButton(
+            icon: const Icon(Icons.redo, size: 16),
+            tooltip: history.nextRedoDescription != null
+                ? 'Redo: ${history.nextRedoDescription}'
+                : 'Nothing to Redo',
+            onPressed: history.canRedo
+                ? () => ref.read(timelineControllerProvider).redo()
+                : null,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+          ),
+          const VerticalDivider(width: 16),
+          // Select tool
+          _ToolButton(
+            icon: Icons.near_me,
+            tooltip: 'Select (V)',
+            isActive: tool == TimelineTool.select,
+            onPressed: () => ref
+                .read(timelineToolProvider.notifier)
+                .state = TimelineTool.select,
+          ),
+          // Blade tool
+          _ToolButton(
+            icon: Icons.content_cut,
+            tooltip: 'Blade / Cut (B)',
+            isActive: tool == TimelineTool.blade,
+            onPressed: () => ref
+                .read(timelineToolProvider.notifier)
+                .state = TimelineTool.blade,
+          ),
+          const VerticalDivider(width: 16),
+          // Add tracks
           IconButton(
             icon: const Icon(Icons.add, size: 16),
             tooltip: 'Add Video Track',
@@ -74,8 +122,9 @@ class _TimelineToolbar extends ConsumerWidget {
             constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
           ),
           const SizedBox(width: 8),
-          const VerticalDivider(width: 20),
+          const VerticalDivider(width: 8),
           const SizedBox(width: 8),
+          // Zoom
           const Icon(
             Icons.zoom_out,
             size: 14,
@@ -97,13 +146,12 @@ class _TimelineToolbar extends ConsumerWidget {
             color: ColorTokens.textSecondary,
           ),
           const SizedBox(width: 8),
-          const VerticalDivider(width: 20),
+          const VerticalDivider(width: 8),
           const SizedBox(width: 8),
+          // Snap
           IconButton(
             icon: Icon(
-              state.snapEnabled
-                  ? Icons.grid_on
-                  : Icons.grid_off,
+              state.snapEnabled ? Icons.grid_on : Icons.grid_off,
               size: 16,
             ),
             tooltip: state.snapEnabled ? 'Snap On' : 'Snap Off',
@@ -125,6 +173,51 @@ class _TimelineToolbar extends ConsumerWidget {
   }
 }
 
+class _ToolButton extends StatelessWidget {
+  const _ToolButton({
+    required this.icon,
+    required this.tooltip,
+    required this.isActive,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final bool isActive;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(4),
+        child: Container(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(
+            color: isActive
+                ? ColorTokens.accentPrimary.withValues(alpha: 0.2)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(4),
+            border: isActive
+                ? Border.all(color: ColorTokens.accentPrimary, width: 1)
+                : null,
+          ),
+          child: Icon(
+            icon,
+            size: 16,
+            color: isActive
+                ? ColorTokens.accentPrimary
+                : ColorTokens.textSecondary,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _TrackHeaders extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -141,7 +234,6 @@ class _TrackHeaders extends ConsumerWidget {
       ),
       child: Column(
         children: [
-          // Time ruler spacer
           const SizedBox(height: 28),
           ...tracks.map((track) => _TrackHeader(track: track)),
         ],
@@ -157,49 +249,37 @@ class _TrackHeader extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isSelected = ref.watch(timelineStateProvider).selectedTrackId ==
-        track.id;
+    final isSelected =
+        ref.watch(timelineStateProvider).selectedTrackId == track.id;
 
-    return Container(
-      height: track.height,
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      decoration: BoxDecoration(
-        color: isSelected
-            ? ColorTokens.backgroundHover
-            : Colors.transparent,
-        border: const Border(
-          bottom: BorderSide(color: ColorTokens.trackDivider),
+    return GestureDetector(
+      onTap: () =>
+          ref.read(timelineStateProvider).selectTrack(track.id),
+      child: Container(
+        height: track.height,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? ColorTokens.backgroundHover
+              : Colors.transparent,
+          border: const Border(
+            bottom: BorderSide(color: ColorTokens.trackDivider),
+          ),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                track.displayName,
+                style: AppTypography.labelMedium,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            _MuteButton(track: track),
+            _LockButton(track: track),
+          ],
         ),
       ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              track.displayName,
-              style: AppTypography.labelMedium,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          _TrackControlButtons(track: track),
-        ],
-      ),
-    );
-  }
-}
-
-class _TrackControlButtons extends ConsumerWidget {
-  const _TrackControlButtons({required this.track});
-
-  final TrackModel track;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _MuteButton(track: track),
-        _LockButton(track: track),
-      ],
     );
   }
 }
@@ -264,18 +344,27 @@ class _TimelineScrollArea extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(timelineStateProvider);
+    final tool = ref.watch(timelineToolProvider);
 
     return GestureDetector(
       onTapDown: (details) {
-        final time = state.pixelToTime(details.localPosition.dx);
-        ref.read(timelineStateProvider).setPlayhead(time);
-        ref.read(timelineStateProvider).clearSelection();
+        if (tool == TimelineTool.select) {
+          final time = state.pixelToTime(details.localPosition.dx);
+          ref.read(timelineStateProvider).setPlayhead(time);
+          ref.read(timelineStateProvider).clearSelection();
+        }
       },
       child: ClipRect(
         child: TimelineCanvas(
           timelineState: state,
+          tool: tool,
           onClipTap: (clipId) {
-            ref.read(timelineStateProvider).selectClip(clipId);
+            if (tool == TimelineTool.select) {
+              ref.read(timelineStateProvider).selectClip(clipId);
+            }
+          },
+          onClipBladeAt: (clipId, time) {
+            ref.read(timelineControllerProvider).splitClip(clipId, time);
           },
           onClipDragStart: (clipId) {},
           onClipDrag: (clipId, delta) {
@@ -298,17 +387,15 @@ class _TimelineScrollArea extends ConsumerWidget {
           },
           onClipTrimStart: (clipId, dx) {
             final newTime = state.pixelToTime(dx);
-            ref.read(timelineControllerProvider).trimClipStart(
-              clipId,
-              newTime,
-            );
+            ref
+                .read(timelineControllerProvider)
+                .trimClipStart(clipId, newTime);
           },
           onClipTrimEnd: (clipId, dx) {
             final newTime = state.pixelToTime(dx);
-            ref.read(timelineControllerProvider).trimClipEnd(
-              clipId,
-              newTime,
-            );
+            ref
+                .read(timelineControllerProvider)
+                .trimClipEnd(clipId, newTime);
           },
         ),
       ),
