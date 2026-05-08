@@ -12,9 +12,12 @@ import 'package:fluxedit/core/history/clip_commands.dart';
 import 'package:fluxedit/core/history/edit_command.dart';
 import 'package:fluxedit/core/history/effect_commands.dart';
 import 'package:fluxedit/core/history/history_manager.dart';
+import 'package:fluxedit/core/history/keyframe_commands.dart';
+import 'package:fluxedit/core/keyframes/keyframe_repository.dart';
 import 'package:fluxedit/core/project/project_model.dart';
 import 'package:fluxedit/core/project/project_repository.dart';
 import 'package:fluxedit/core/timeline/clip_model.dart';
+import 'package:fluxedit/core/timeline/keyframe_model.dart';
 import 'package:fluxedit/core/timeline/timeline_state.dart';
 import 'package:fluxedit/core/timeline/track_model.dart';
 import 'package:uuid/uuid.dart';
@@ -32,6 +35,7 @@ final timelineControllerProvider =
     thumbnailGenerator: ref.watch(thumbnailGeneratorProvider),
     waveformGenerator: ref.watch(waveformGeneratorProvider),
     history: ref.watch(historyManagerProvider.notifier),
+    keyframeRepo: ref.watch(keyframeRepositoryProvider),
   );
 });
 
@@ -43,6 +47,7 @@ class TimelineController {
     required this.thumbnailGenerator,
     required this.waveformGenerator,
     required this.history,
+    required this.keyframeRepo,
   });
 
   final TimelineState state;
@@ -51,6 +56,7 @@ class TimelineController {
   final ThumbnailGenerator thumbnailGenerator;
   final WaveformGenerator waveformGenerator;
   final HistoryManager history;
+  final KeyframeRepository keyframeRepo;
 
   static const _uuid = Uuid();
 
@@ -63,6 +69,14 @@ class TimelineController {
       final effects = await repository.getEffectsForClip(clip.id);
       if (effects.isNotEmpty) {
         state.setEffectsForClip(clip.id, effects);
+      }
+      final keyframes = await keyframeRepo.getKeyframesForClip(clip.id);
+      if (keyframes.isNotEmpty) {
+        final byParam = <String, List<KeyframeModel>>{};
+        for (final kf in keyframes) {
+          (byParam[kf.parameterId] ??= []).add(kf);
+        }
+        state.setKeyframesForClip(clip.id, byParam);
       }
     }
   }
@@ -336,6 +350,72 @@ class TimelineController {
     final updated = effect.copyWith(isEnabled: !effect.isEnabled);
     await execute(UpdateEffectCommand(before: effect, after: updated));
   }
+
+  // ── Keyframe operations (all undoable) ────────────────────────────────────
+
+  /// Sets a keyframe at the current playhead for [parameterId] on [clipId].
+  /// If a keyframe already exists at that time it is updated; otherwise a new
+  /// one is added.
+  Future<void> setKeyframe(
+    String clipId,
+    String parameterId,
+    double value, {
+    KeyframeInterpolation interpolation = KeyframeInterpolation.linear,
+  }) async {
+    final time = state.playhead;
+    final existing = state.keyframeAt(clipId, parameterId, time);
+    if (existing != null) {
+      final updated = existing.copyWith(value: value, interpolation: interpolation);
+      await execute(UpdateKeyframeCommand(
+        clipId: clipId,
+        before: existing,
+        after: updated,
+        keyframeRepo: keyframeRepo,
+      ));
+    } else {
+      final kf = KeyframeModel(
+        id: 'kf_${_uuid.v4()}',
+        parameterId: parameterId,
+        time: time,
+        value: value,
+        interpolation: interpolation,
+      );
+      await execute(AddKeyframeCommand(
+        clipId: clipId,
+        keyframe: kf,
+        keyframeRepo: keyframeRepo,
+      ));
+    }
+  }
+
+  /// Removes the keyframe at the current playhead for [parameterId] on
+  /// [clipId], if one exists.
+  Future<void> removeKeyframeAtPlayhead(
+    String clipId,
+    String parameterId,
+  ) async {
+    final existing = state.keyframeAt(clipId, parameterId, state.playhead);
+    if (existing == null) return;
+    await execute(RemoveKeyframeCommand(
+      clipId: clipId,
+      keyframe: existing,
+      keyframeRepo: keyframeRepo,
+    ));
+  }
+
+  /// Returns the evaluated (animated) value for a clip parameter at the
+  /// current playhead. Falls back to [staticValue] when no keyframes exist.
+  double evaluatedParameter(
+    String clipId,
+    String parameterId,
+    double staticValue,
+  ) =>
+      state.evaluateParameter(
+        clipId,
+        parameterId,
+        state.playhead,
+        staticValue,
+      );
 
   // ── Media import ───────────────────────────────────────────────────────────
 
