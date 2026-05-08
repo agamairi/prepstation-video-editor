@@ -4324,7 +4324,7 @@ class KeyframesCompanion extends UpdateCompanion<Keyframe> {
 }
 
 class $EffectInstancesTable extends EffectInstances
-    with TableInfo<$EffectInstancesTable, EffectInstance> {
+    with TableInfo<$EffectInstancesTable, EffectInstanceRow> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
@@ -4415,7 +4415,7 @@ class $EffectInstancesTable extends EffectInstances
   static const String $name = 'effect_instances';
   @override
   VerificationContext validateIntegrity(
-    Insertable<EffectInstance> instance, {
+    Insertable<EffectInstanceRow> instance, {
     bool isInserting = false,
   }) {
     final context = VerificationContext();
@@ -4470,9 +4470,9 @@ class $EffectInstancesTable extends EffectInstances
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
-  EffectInstance map(Map<String, dynamic> data, {String? tablePrefix}) {
+  EffectInstanceRow map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return EffectInstance(
+    return EffectInstanceRow(
       id: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}id'],
@@ -4506,14 +4506,15 @@ class $EffectInstancesTable extends EffectInstances
   }
 }
 
-class EffectInstance extends DataClass implements Insertable<EffectInstance> {
+class EffectInstanceRow extends DataClass
+    implements Insertable<EffectInstanceRow> {
   final String id;
   final String clipId;
   final String effectType;
   final int stackIndex;
   final bool isEnabled;
   final String parametersJson;
-  const EffectInstance({
+  const EffectInstanceRow({
     required this.id,
     required this.clipId,
     required this.effectType,
@@ -4544,12 +4545,12 @@ class EffectInstance extends DataClass implements Insertable<EffectInstance> {
     );
   }
 
-  factory EffectInstance.fromJson(
+  factory EffectInstanceRow.fromJson(
     Map<String, dynamic> json, {
     ValueSerializer? serializer,
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return EffectInstance(
+    return EffectInstanceRow(
       id: serializer.fromJson<String>(json['id']),
       clipId: serializer.fromJson<String>(json['clipId']),
       effectType: serializer.fromJson<String>(json['effectType']),
@@ -4571,14 +4572,14 @@ class EffectInstance extends DataClass implements Insertable<EffectInstance> {
     };
   }
 
-  EffectInstance copyWith({
+  EffectInstanceRow copyWith({
     String? id,
     String? clipId,
     String? effectType,
     int? stackIndex,
     bool? isEnabled,
     String? parametersJson,
-  }) => EffectInstance(
+  }) => EffectInstanceRow(
     id: id ?? this.id,
     clipId: clipId ?? this.clipId,
     effectType: effectType ?? this.effectType,
@@ -4586,8 +4587,8 @@ class EffectInstance extends DataClass implements Insertable<EffectInstance> {
     isEnabled: isEnabled ?? this.isEnabled,
     parametersJson: parametersJson ?? this.parametersJson,
   );
-  EffectInstance copyWithCompanion(EffectInstancesCompanion data) {
-    return EffectInstance(
+  EffectInstanceRow copyWithCompanion(EffectInstancesCompanion data) {
+    return EffectInstanceRow(
       id: data.id.present ? data.id.value : this.id,
       clipId: data.clipId.present ? data.clipId.value : this.clipId,
       effectType: data.effectType.present
@@ -4605,7 +4606,7 @@ class EffectInstance extends DataClass implements Insertable<EffectInstance> {
 
   @override
   String toString() {
-    return (StringBuffer('EffectInstance(')
+    return (StringBuffer('EffectInstanceRow(')
           ..write('id: $id, ')
           ..write('clipId: $clipId, ')
           ..write('effectType: $effectType, ')
@@ -4628,7 +4629,7 @@ class EffectInstance extends DataClass implements Insertable<EffectInstance> {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is EffectInstance &&
+      (other is EffectInstanceRow &&
           other.id == this.id &&
           other.clipId == this.clipId &&
           other.effectType == this.effectType &&
@@ -4637,7 +4638,7 @@ class EffectInstance extends DataClass implements Insertable<EffectInstance> {
           other.parametersJson == this.parametersJson);
 }
 
-class EffectInstancesCompanion extends UpdateCompanion<EffectInstance> {
+class EffectInstancesCompanion extends UpdateCompanion<EffectInstanceRow> {
   final Value<String> id;
   final Value<String> clipId;
   final Value<String> effectType;
@@ -4666,7 +4667,7 @@ class EffectInstancesCompanion extends UpdateCompanion<EffectInstance> {
        clipId = Value(clipId),
        effectType = Value(effectType),
        stackIndex = Value(stackIndex);
-  static Insertable<EffectInstance> custom({
+  static Insertable<EffectInstanceRow> custom({
     Expression<String>? id,
     Expression<String>? clipId,
     Expression<String>? effectType,
@@ -7079,7 +7080,7 @@ final class $$ClipsTableReferences
     );
   }
 
-  static MultiTypedResultKey<$EffectInstancesTable, List<EffectInstance>>
+  static MultiTypedResultKey<$EffectInstancesTable, List<EffectInstanceRow>>
   _effectInstancesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
     db.effectInstances,
     aliasName: $_aliasNameGenerator(db.clips.id, db.effectInstances.clipId),
@@ -7850,7 +7851,7 @@ class $$ClipsTableTableManager
                         await $_getPrefetchedData<
                           Clip,
                           $ClipsTable,
-                          EffectInstance
+                          EffectInstanceRow
                         >(
                           currentTable: table,
                           referencedTable: $$ClipsTableReferences
@@ -8342,7 +8343,11 @@ typedef $$EffectInstancesTableUpdateCompanionBuilder =
 
 final class $$EffectInstancesTableReferences
     extends
-        BaseReferences<_$AppDatabase, $EffectInstancesTable, EffectInstance> {
+        BaseReferences<
+          _$AppDatabase,
+          $EffectInstancesTable,
+          EffectInstanceRow
+        > {
   $$EffectInstancesTableReferences(
     super.$_db,
     super.$_table,
@@ -8543,14 +8548,14 @@ class $$EffectInstancesTableTableManager
         RootTableManager<
           _$AppDatabase,
           $EffectInstancesTable,
-          EffectInstance,
+          EffectInstanceRow,
           $$EffectInstancesTableFilterComposer,
           $$EffectInstancesTableOrderingComposer,
           $$EffectInstancesTableAnnotationComposer,
           $$EffectInstancesTableCreateCompanionBuilder,
           $$EffectInstancesTableUpdateCompanionBuilder,
-          (EffectInstance, $$EffectInstancesTableReferences),
-          EffectInstance,
+          (EffectInstanceRow, $$EffectInstancesTableReferences),
+          EffectInstanceRow,
           PrefetchHooks Function({bool clipId})
         > {
   $$EffectInstancesTableTableManager(
@@ -8661,14 +8666,14 @@ typedef $$EffectInstancesTableProcessedTableManager =
     ProcessedTableManager<
       _$AppDatabase,
       $EffectInstancesTable,
-      EffectInstance,
+      EffectInstanceRow,
       $$EffectInstancesTableFilterComposer,
       $$EffectInstancesTableOrderingComposer,
       $$EffectInstancesTableAnnotationComposer,
       $$EffectInstancesTableCreateCompanionBuilder,
       $$EffectInstancesTableUpdateCompanionBuilder,
-      (EffectInstance, $$EffectInstancesTableReferences),
-      EffectInstance,
+      (EffectInstanceRow, $$EffectInstancesTableReferences),
+      EffectInstanceRow,
       PrefetchHooks Function({bool clipId})
     >;
 typedef $$ProjectSettingsTableCreateCompanionBuilder =

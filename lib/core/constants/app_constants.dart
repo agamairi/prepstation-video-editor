@@ -64,6 +64,9 @@ abstract final class AppConstants {
   static const int waveformSampleRate = 200; // peaks per second
   static const int maxWaveformPeaks = 4000; // max stored peaks per asset
 
+  // Effects
+  static const int maxEffectsPerClip = 8;
+
   // Proxy resolution divisor
   static const int proxyResolutionDivisor = 4;
   static const int proxyCrf = 28;
