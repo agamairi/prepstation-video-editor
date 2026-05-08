@@ -49,6 +49,14 @@
 	</dict>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>FluxEdit needs access to your photo library to import videos and images for editing.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>FluxEdit needs permission to save exported videos to your photo library.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>FluxEdit needs microphone access for audio recording.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>FluxEdit needs camera access for video capture.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
