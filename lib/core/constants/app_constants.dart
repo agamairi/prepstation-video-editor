@@ -60,6 +60,10 @@ abstract final class AppConstants {
   static const double minOpacity = 0.0;
   static const double maxOpacity = 1.0;
 
+  // Waveform extraction
+  static const int waveformSampleRate = 200; // peaks per second
+  static const int maxWaveformPeaks = 4000; // max stored peaks per asset
+
   // Proxy resolution divisor
   static const int proxyResolutionDivisor = 4;
   static const int proxyCrf = 28;

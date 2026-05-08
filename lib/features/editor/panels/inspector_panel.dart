@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fluxedit/app/theme/color_tokens.dart';
 import 'package:fluxedit/app/theme/typography.dart';
+import 'package:fluxedit/core/constants/app_constants.dart';
 import 'package:fluxedit/core/project/project_model.dart';
 import 'package:fluxedit/core/project/project_repository.dart';
 import 'package:fluxedit/core/timeline/clip_model.dart';
@@ -24,7 +25,7 @@ class InspectorPanel extends ConsumerWidget {
           const _PanelHeader(),
           Expanded(
             child: selectedIds.isEmpty
-                ? _NoSelectionPlaceholder()
+                ? const _NoSelectionPlaceholder()
                 : _ClipInspector(
                     clipId: selectedIds.first,
                     projectId: projectId,
@@ -59,6 +60,8 @@ class _PanelHeader extends StatelessWidget {
 }
 
 class _NoSelectionPlaceholder extends StatelessWidget {
+  const _NoSelectionPlaceholder();
+
   @override
   Widget build(BuildContext context) {
     return const Center(
@@ -70,7 +73,7 @@ class _NoSelectionPlaceholder extends StatelessWidget {
   }
 }
 
-class _ClipInspector extends ConsumerWidget {
+class _ClipInspector extends ConsumerStatefulWidget {
   const _ClipInspector({
     required this.clipId,
     required this.projectId,
@@ -80,29 +83,61 @@ class _ClipInspector extends ConsumerWidget {
   final String projectId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_ClipInspector> createState() => _ClipInspectorState();
+}
+
+class _ClipInspectorState extends ConsumerState<_ClipInspector> {
+  late TextEditingController _nameController;
+  ClipModel? _clipAtDragStart;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  ClipModel? _findClip() {
+    final clips = ref.read(timelineStateProvider).clips;
+    try {
+      return clips.firstWhere((c) => c.id == widget.clipId);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final timelineState = ref.watch(timelineStateProvider);
     final ClipModel? clip = timelineState.clips
         .cast<ClipModel?>()
         .firstWhere(
-          (ClipModel? c) => c?.id == clipId,
+          (ClipModel? c) => c?.id == widget.clipId,
           orElse: () => null,
         );
 
     if (clip == null) return const SizedBox();
 
+    // Sync name field when clip changes externally
+    if (_nameController.text != clip.name) {
+      _nameController.text = clip.name;
+    }
+
     return FutureBuilder<MediaAsset?>(
-      future: ref.read(projectRepositoryProvider).getMediaAsset(clip.mediaId),
+      future:
+          ref.read(projectRepositoryProvider).getMediaAsset(clip.mediaId),
       builder: (context, snap) {
         final asset = snap.data;
         return ListView(
           padding: const EdgeInsets.all(12),
           children: [
             const _SectionHeader(title: 'Clip'),
-            _PropertyRow(
-              label: 'Name',
-              value: asset?.name ?? clip.mediaId,
-            ),
+            _NameField(controller: _nameController, onSubmit: _onNameSubmit),
             _PropertyRow(
               label: 'Duration',
               value: _formatDuration(clip.duration),
@@ -115,42 +150,78 @@ class _ClipInspector extends ConsumerWidget {
               label: 'End',
               value: _formatDuration(clip.endOnTimeline),
             ),
-            _PropertyRow(
+            const SizedBox(height: 8),
+            _SliderRow(
               label: 'Speed',
-              value: '${clip.speed}x',
+              value: clip.speed,
+              min: AppConstants.minClipSpeed,
+              max: AppConstants.maxClipSpeed,
+              displayText: '${clip.speed.toStringAsFixed(2)}x',
+              onChangeStart: (_) => _clipAtDragStart = _findClip(),
+              onChangeEnd: (v) {
+                if (_clipAtDragStart != null) {
+                  ref.read(timelineControllerProvider).updateClipSpeed(
+                    widget.clipId,
+                    v,
+                  );
+                  _clipAtDragStart = null;
+                }
+              },
+              onChanged: (v) {
+                // Live preview without committing to history
+                final c = _findClip();
+                if (c != null) {
+                  ref.read(timelineStateProvider).updateClip(
+                    c.copyWith(speed: v),
+                  );
+                }
+              },
             ),
-            _PropertyRow(
+            _SliderRow(
               label: 'Opacity',
-              value: '${(clip.opacity * 100).toStringAsFixed(0)}%',
+              value: clip.opacity,
+              min: 0,
+              max: 1,
+              displayText: '${(clip.opacity * 100).toStringAsFixed(0)}%',
+              onChangeStart: (_) => _clipAtDragStart = _findClip(),
+              onChangeEnd: (v) {
+                if (_clipAtDragStart != null) {
+                  ref.read(timelineControllerProvider).updateClipOpacity(
+                    widget.clipId,
+                    v,
+                  );
+                  _clipAtDragStart = null;
+                }
+              },
+              onChanged: (v) {
+                final c = _findClip();
+                if (c != null) {
+                  ref.read(timelineStateProvider).updateClip(
+                    c.copyWith(opacity: v),
+                  );
+                }
+              },
             ),
             if (asset != null) ...[
               const SizedBox(height: 12),
               const _SectionHeader(title: 'Source'),
-              _PropertyRow(
-                label: 'Resolution',
-                value: asset.resolution,
-              ),
+              _PropertyRow(label: 'Resolution', value: asset.resolution),
               _PropertyRow(
                 label: 'Frame Rate',
                 value: '${asset.frameRateDisplay} fps',
               ),
-              _PropertyRow(
-                label: 'Video Codec',
-                value: asset.videoCodec,
-              ),
-              _PropertyRow(
-                label: 'Audio Codec',
-                value: asset.audioCodec,
-              ),
-              _PropertyRow(
-                label: 'Color Space',
-                value: asset.colorSpace,
-              ),
+              _PropertyRow(label: 'Video Codec', value: asset.videoCodec),
+              _PropertyRow(label: 'Audio Codec', value: asset.audioCodec),
+              _PropertyRow(label: 'Color Space', value: asset.colorSpace),
             ],
           ],
         );
       },
     );
+  }
+
+  void _onNameSubmit(String name) {
+    ref.read(timelineControllerProvider).updateClipName(widget.clipId, name);
   }
 
   String _formatDuration(Duration d) {
@@ -185,6 +256,60 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
+class _NameField extends StatelessWidget {
+  const _NameField({
+    required this.controller,
+    required this.onSubmit,
+  });
+
+  final TextEditingController controller;
+  final ValueChanged<String> onSubmit;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          const SizedBox(
+            width: 80,
+            child: Text('Name', style: AppTypography.labelMedium),
+          ),
+          Expanded(
+            child: TextField(
+              controller: controller,
+              style: AppTypography.bodySmall
+                  .copyWith(color: ColorTokens.textPrimary),
+              decoration: InputDecoration(
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 6,
+                  vertical: 4,
+                ),
+                filled: true,
+                fillColor: ColorTokens.backgroundSurface,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(4),
+                  borderSide: const BorderSide(
+                    color: ColorTokens.borderSubtle,
+                  ),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(4),
+                  borderSide: const BorderSide(
+                    color: ColorTokens.borderSubtle,
+                  ),
+                ),
+              ),
+              onSubmitted: onSubmit,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _PropertyRow extends StatelessWidget {
   const _PropertyRow({required this.label, required this.value});
 
@@ -194,7 +319,7 @@ class _PropertyRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
         children: [
           SizedBox(
@@ -207,6 +332,71 @@ class _PropertyRow extends StatelessWidget {
               style: AppTypography.bodySmall.copyWith(
                 color: ColorTokens.textPrimary,
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SliderRow extends StatelessWidget {
+  const _SliderRow({
+    required this.label,
+    required this.value,
+    required this.min,
+    required this.max,
+    required this.displayText,
+    required this.onChangeStart,
+    required this.onChanged,
+    required this.onChangeEnd,
+  });
+
+  final String label;
+  final double value;
+  final double min;
+  final double max;
+  final String displayText;
+  final ValueChanged<double> onChangeStart;
+  final ValueChanged<double> onChanged;
+  final ValueChanged<double> onChangeEnd;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              SizedBox(
+                width: 80,
+                child: Text(label, style: AppTypography.labelMedium),
+              ),
+              Text(
+                displayText,
+                style: AppTypography.bodySmall
+                    .copyWith(color: ColorTokens.textPrimary),
+              ),
+            ],
+          ),
+          SliderTheme(
+            data: SliderTheme.of(context).copyWith(
+              trackHeight: 2,
+              thumbShape:
+                  const RoundSliderThumbShape(enabledThumbRadius: 6),
+              overlayShape:
+                  const RoundSliderOverlayShape(overlayRadius: 12),
+            ),
+            child: Slider(
+              value: value.clamp(min, max),
+              min: min,
+              max: max,
+              onChangeStart: onChangeStart,
+              onChanged: onChanged,
+              onChangeEnd: onChangeEnd,
+              activeColor: ColorTokens.accentPrimary,
             ),
           ),
         ],

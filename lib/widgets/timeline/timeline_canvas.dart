@@ -2,31 +2,42 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:fluxedit/app/theme/color_tokens.dart';
 import 'package:fluxedit/app/theme/typography.dart';
+import 'package:fluxedit/core/audio/waveform_data.dart';
 import 'package:fluxedit/core/timeline/clip_model.dart';
 import 'package:fluxedit/core/timeline/timeline_state.dart';
+import 'package:fluxedit/core/timeline/timeline_tool.dart';
 import 'package:fluxedit/core/timeline/track_model.dart';
 
 typedef ClipCallback = void Function(String clipId);
 typedef ClipDragCallback = void Function(String clipId, double delta);
 typedef ClipTrimCallback = void Function(String clipId, double dx);
+typedef ClipBladeCallback = void Function(String clipId, Duration time);
 
 class TimelineCanvas extends StatefulWidget {
   const TimelineCanvas({
     super.key,
     required this.timelineState,
+    required this.tool,
     required this.onClipTap,
+    required this.onClipBladeAt,
     required this.onClipDragStart,
     required this.onClipDrag,
     required this.onClipTrimStart,
     required this.onClipTrimEnd,
+    this.waveforms = const {},
   });
 
   final TimelineState timelineState;
+  final TimelineTool tool;
   final ClipCallback onClipTap;
+  final ClipBladeCallback onClipBladeAt;
   final ClipCallback onClipDragStart;
   final ClipDragCallback onClipDrag;
   final ClipTrimCallback onClipTrimStart;
   final ClipTrimCallback onClipTrimEnd;
+
+  /// Optional waveform data keyed by asset ID.
+  final Map<String, WaveformData> waveforms;
 
   @override
   State<TimelineCanvas> createState() => _TimelineCanvasState();
@@ -35,29 +46,43 @@ class TimelineCanvas extends StatefulWidget {
 class _TimelineCanvasState extends State<TimelineCanvas> {
   String? _draggingClipId;
   double _dragStartX = 0;
+  double? _bladeX; // current blade cursor x for preview line
 
   static const double _trimHandleWidth = 8.0;
   static const double _rulerHeight = 28.0;
 
   @override
   Widget build(BuildContext context) {
-    return Listener(
-      onPointerSignal: (event) {
-        if (event is PointerScrollEvent) {
-          final state = widget.timelineState;
-          final deltaSecs = event.scrollDelta.dx / state.zoom;
-          final newOffset = state.scrollOffset +
-              Duration(microseconds: (deltaSecs * 1000000).round());
-          state.setScrollOffset(newOffset);
-        }
-      },
-      child: CustomPaint(
-        painter: _TimelinePainter(
-          timelineState: widget.timelineState,
-          trimHandleWidth: _trimHandleWidth,
-          rulerHeight: _rulerHeight,
+    return MouseRegion(
+      cursor: widget.tool == TimelineTool.blade
+          ? SystemMouseCursors.precise
+          : MouseCursor.defer,
+      onHover: widget.tool == TimelineTool.blade
+          ? (e) => setState(() => _bladeX = e.localPosition.dx)
+          : null,
+      onExit: widget.tool == TimelineTool.blade
+          ? (_) => setState(() => _bladeX = null)
+          : null,
+      child: Listener(
+        onPointerSignal: (event) {
+          if (event is PointerScrollEvent) {
+            final state = widget.timelineState;
+            final deltaSecs = event.scrollDelta.dx / state.zoom;
+            final newOffset = state.scrollOffset +
+                Duration(microseconds: (deltaSecs * 1000000).round());
+            state.setScrollOffset(newOffset);
+          }
+        },
+        child: CustomPaint(
+          painter: _TimelinePainter(
+            timelineState: widget.timelineState,
+            trimHandleWidth: _trimHandleWidth,
+            rulerHeight: _rulerHeight,
+            waveforms: widget.waveforms,
+            bladeX: widget.tool == TimelineTool.blade ? _bladeX : null,
+          ),
+          child: _buildGestureLayer(),
         ),
-        child: _buildGestureLayer(),
       ),
     );
   }
@@ -70,7 +95,7 @@ class _TimelineCanvasState extends State<TimelineCanvas> {
 
         return Stack(
           children: [
-            // Playhead drag target (full width, ruler area)
+            // Playhead drag target (ruler area — select tool only)
             Positioned(
               top: 0,
               left: 0,
@@ -78,8 +103,10 @@ class _TimelineCanvasState extends State<TimelineCanvas> {
               height: _rulerHeight,
               child: GestureDetector(
                 onHorizontalDragUpdate: (d) {
-                  final time = state.pixelToTime(d.localPosition.dx);
-                  state.setPlayhead(time);
+                  if (widget.tool == TimelineTool.select) {
+                    final time = state.pixelToTime(d.localPosition.dx);
+                    state.setPlayhead(time);
+                  }
                 },
               ),
             ),
@@ -114,6 +141,22 @@ class _TimelineCanvasState extends State<TimelineCanvas> {
 
       final isSelected = state.selectedClipIds.contains(clip.id);
 
+      if (widget.tool == TimelineTool.blade) {
+        // In blade mode, entire clip area is a tap target for splitting
+        return Positioned(
+          left: left,
+          top: trackTop + 2,
+          width: width,
+          height: track.height - 4,
+          child: GestureDetector(
+            onTapDown: (d) {
+              final tapTime = state.pixelToTime(left + d.localPosition.dx);
+              widget.onClipBladeAt(clip.id, tapTime);
+            },
+          ),
+        );
+      }
+
       return Positioned(
         left: left,
         top: trackTop + 2,
@@ -136,13 +179,8 @@ class _TimelineCanvasState extends State<TimelineCanvas> {
             }
           },
           onDragEnd: () => _draggingClipId = null,
-          onTrimStartDrag: (dx) {
-            widget.onClipTrimStart(clip.id, left + dx);
-          },
-          onTrimEndDrag: (dx) {
-            widget.onClipTrimEnd(clip.id, left + dx);
-          },
-          onTrimEnd: () {},
+          onTrimStartDrag: (dx) => widget.onClipTrimStart(clip.id, left + dx),
+          onTrimEndDrag: (dx) => widget.onClipTrimEnd(clip.id, left + dx),
         ),
       );
     });
@@ -160,7 +198,6 @@ class _ClipGestureArea extends StatelessWidget {
     required this.onDragEnd,
     required this.onTrimStartDrag,
     required this.onTrimEndDrag,
-    required this.onTrimEnd,
   });
 
   final ClipModel clip;
@@ -172,13 +209,12 @@ class _ClipGestureArea extends StatelessWidget {
   final VoidCallback onDragEnd;
   final ValueChanged<double> onTrimStartDrag;
   final ValueChanged<double> onTrimEndDrag;
-  final VoidCallback onTrimEnd;
 
   @override
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        // Main clip body (drag to move)
+        // Main clip body
         Positioned.fill(
           left: trimHandleWidth,
           right: trimHandleWidth,
@@ -199,7 +235,6 @@ class _ClipGestureArea extends StatelessWidget {
           child: GestureDetector(
             onHorizontalDragUpdate: (d) =>
                 onTrimStartDrag(d.localPosition.dx),
-            onHorizontalDragEnd: (_) => onTrimEnd(),
             child: MouseRegion(
               cursor: SystemMouseCursors.resizeLeft,
               child: Container(
@@ -225,7 +260,6 @@ class _ClipGestureArea extends StatelessWidget {
           child: GestureDetector(
             onHorizontalDragUpdate: (d) =>
                 onTrimEndDrag(d.localPosition.dx),
-            onHorizontalDragEnd: (_) => onTrimEnd(),
             child: MouseRegion(
               cursor: SystemMouseCursors.resizeRight,
               child: Container(
@@ -252,11 +286,15 @@ class _TimelinePainter extends CustomPainter {
     required this.timelineState,
     required this.trimHandleWidth,
     required this.rulerHeight,
+    required this.waveforms,
+    this.bladeX,
   }) : super(repaint: timelineState);
 
   final TimelineState timelineState;
   final double trimHandleWidth;
   final double rulerHeight;
+  final Map<String, WaveformData> waveforms;
+  final double? bladeX;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -264,6 +302,7 @@ class _TimelinePainter extends CustomPainter {
     _paintRuler(canvas, size);
     _paintTracks(canvas, size);
     _paintPlayhead(canvas, size);
+    if (bladeX != null) _paintBladeCursor(canvas, size, bladeX!);
   }
 
   void _paintBackground(Canvas canvas, Size size) {
@@ -297,7 +336,6 @@ class _TimelinePainter extends CustomPainter {
         Offset(x, rulerHeight),
         tickPaint..strokeWidth = 1,
       );
-
       tp.text = TextSpan(
         text: _formatRulerLabel(sec),
         style: AppTypography.labelSmall,
@@ -306,7 +344,6 @@ class _TimelinePainter extends CustomPainter {
       tp.paint(canvas, Offset(x + 3, rulerHeight - 16));
     }
 
-    // Minor ticks
     final minorStep = step / 5;
     for (var sec = startSec; sec <= endSec; sec += minorStep) {
       final x = (sec - offsetSecs) * timelineState.zoom;
@@ -329,14 +366,10 @@ class _TimelinePainter extends CustomPainter {
     final tp = TextPainter(textDirection: TextDirection.ltr);
 
     for (final track in tracks) {
-      // Track row background
       canvas.drawRect(
         Rect.fromLTWH(0, yOffset, size.width, track.height),
-        Paint()
-          ..color = ColorTokens.backgroundSurface,
+        Paint()..color = ColorTokens.backgroundSurface,
       );
-
-      // Track divider
       canvas.drawLine(
         Offset(0, yOffset + track.height),
         Offset(size.width, yOffset + track.height),
@@ -345,18 +378,8 @@ class _TimelinePainter extends CustomPainter {
           ..strokeWidth = 1,
       );
 
-      // Clips on this track
-      final clips = timelineState.clipsForTrack(track.id);
-      for (final clip in clips) {
-        _paintClip(
-          canvas,
-          clip,
-          track,
-          yOffset,
-          clipPaint,
-          clipBorderPaint,
-          tp,
-        );
+      for (final clip in timelineState.clipsForTrack(track.id)) {
+        _paintClip(canvas, clip, track, yOffset, clipPaint, clipBorderPaint, tp);
       }
 
       yOffset += track.height;
@@ -378,26 +401,24 @@ class _TimelinePainter extends CustomPainter {
     if (width <= 0) return;
 
     final isSelected = timelineState.selectedClipIds.contains(clip.id);
-    final rect = Rect.fromLTWH(
-      left + 1,
-      trackTop + 2,
-      width - 2,
-      track.height - 4,
-    );
-
+    final rect = Rect.fromLTWH(left + 1, trackTop + 2, width - 2, track.height - 4);
     final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(3));
 
-    // Clip fill
     final baseColor = track.isVideo
         ? (isSelected ? ColorTokens.clipVideoSelected : ColorTokens.clipVideo)
-        : (isSelected
-            ? ColorTokens.clipAudioSelected
-            : ColorTokens.clipAudio);
+        : (isSelected ? ColorTokens.clipAudioSelected : ColorTokens.clipAudio);
 
     paint.color = baseColor;
     canvas.drawRRect(rrect, paint);
 
-    // Border
+    // Waveform for audio clips
+    if (track.isAudio) {
+      final waveform = waveforms[clip.mediaId];
+      if (waveform != null) {
+        _paintWaveform(canvas, clip, rect, waveform);
+      }
+    }
+
     borderPaint.color = isSelected
         ? ColorTokens.accentPrimary
         : baseColor.withValues(alpha: 0.4);
@@ -412,7 +433,38 @@ class _TimelinePainter extends CustomPainter {
         ),
       );
       tp.layout(maxWidth: width - 16);
-      tp.paint(canvas, Offset(left + 8, trackTop + track.height / 2 - 6));
+      tp.paint(canvas, Offset(left + 8, trackTop + 6));
+    }
+  }
+
+  void _paintWaveform(
+    Canvas canvas,
+    ClipModel clip,
+    Rect clipRect,
+    WaveformData waveform,
+  ) {
+    final pixelWidth = clipRect.width.toInt().clamp(1, 4000);
+    final peaks = waveform.peaksForRange(
+      clip.mediaInPoint,
+      clip.mediaOutPoint,
+      pixelWidth,
+    );
+
+    final waveformPaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.35)
+      ..strokeWidth = 1;
+
+    final midY = clipRect.center.dy;
+    final halfH = (clipRect.height / 2 - 4).clamp(2.0, 100.0);
+
+    for (var i = 0; i < peaks.length; i++) {
+      final x = clipRect.left + i.toDouble();
+      final amp = peaks[i] * halfH;
+      canvas.drawLine(
+        Offset(x, midY - amp),
+        Offset(x, midY + amp),
+        waveformPaint,
+      );
     }
   }
 
@@ -424,10 +476,8 @@ class _TimelinePainter extends CustomPainter {
       ..color = ColorTokens.playhead
       ..strokeWidth = 1.5;
 
-    // Line
     canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
 
-    // Triangle head
     final path = Path()
       ..moveTo(x - 6, 0)
       ..lineTo(x + 6, 0)
@@ -436,9 +486,19 @@ class _TimelinePainter extends CustomPainter {
     canvas.drawPath(path, paint..style = PaintingStyle.fill);
   }
 
+  void _paintBladeCursor(Canvas canvas, Size size, double x) {
+    final paint = Paint()
+      ..color = ColorTokens.accentPrimary.withValues(alpha: 0.7)
+      ..strokeWidth = 1;
+    canvas.drawLine(
+      Offset(x, rulerHeight),
+      Offset(x, size.height),
+      paint,
+    );
+  }
+
   double _rulerStep(double zoom) {
-    // Pick a step that gives ~80–160px between major ticks
-    final targetInterval = 100.0 / zoom; // seconds
+    final targetInterval = 100.0 / zoom;
     const steps = [
       0.1, 0.25, 0.5, 1.0, 2.0, 5.0, 10.0, 15.0, 30.0, 60.0, 120.0, 300.0,
       600.0,
