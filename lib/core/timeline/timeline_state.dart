@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:fluxedit/core/constants/app_constants.dart';
 import 'package:fluxedit/core/effects/effect_model.dart';
 import 'package:fluxedit/core/timeline/clip_model.dart';
+import 'package:fluxedit/core/timeline/keyframe_model.dart';
 import 'package:fluxedit/core/timeline/track_model.dart';
 
 /// The canonical timeline state. Uses [ChangeNotifier] so timeline widgets
@@ -39,6 +40,9 @@ class TimelineState extends ChangeNotifier {
   bool _snapEnabled = true;
 
   final Map<String, List<EffectInstance>> _effectsByClipId = {};
+
+  // clipId → parameterId → ParameterCurve
+  final Map<String, Map<String, ParameterCurve>> _curvesByClipId = {};
 
   // ── Getters ───────────────────────────────────────────────────────────────
 
@@ -272,6 +276,130 @@ class TimelineState extends ChangeNotifier {
         .map((e) => e.id == effect.id ? effect : e)
         .toList();
     _effectsByClipId[effect.clipId] = list;
+    notifyListeners();
+  }
+
+  // ── Keyframe state ────────────────────────────────────────────────────────
+
+  /// All parameter curves for a clip.
+  Map<String, ParameterCurve> curvesForClip(String clipId) =>
+      Map.unmodifiable(_curvesByClipId[clipId] ?? {});
+
+  /// All keyframes across all parameters for a clip, sorted by time.
+  List<KeyframeModel> allKeyframesForClip(String clipId) {
+    final curves = _curvesByClipId[clipId];
+    if (curves == null || curves.isEmpty) return const [];
+    final all = <KeyframeModel>[];
+    for (final curve in curves.values) {
+      all.addAll(curve.keyframes);
+    }
+    all.sort((a, b) => a.time.compareTo(b.time));
+    return all;
+  }
+
+  /// Evaluates a parameter at [time]. Returns the animated value if keyframes
+  /// exist for that parameter, otherwise [staticValue].
+  double evaluateParameter(
+    String clipId,
+    String parameterId,
+    Duration time,
+    double staticValue,
+  ) {
+    final curve = _curvesByClipId[clipId]?[parameterId];
+    if (curve == null || curve.keyframes.isEmpty) return staticValue;
+    return curve.evaluate(time);
+  }
+
+  /// Returns true if a keyframe exists at exactly [time] (±1 frame) for
+  /// the given parameter.
+  bool hasKeyframeAt(
+    String clipId,
+    String parameterId,
+    Duration time, {
+    Duration tolerance = const Duration(milliseconds: 17),
+  }) {
+    final curve = _curvesByClipId[clipId]?[parameterId];
+    if (curve == null) return false;
+    return curve.keyframes.any(
+      (kf) => (kf.time - time).abs() <= tolerance,
+    );
+  }
+
+  /// Returns the keyframe at exactly [time] for a parameter, or null.
+  KeyframeModel? keyframeAt(
+    String clipId,
+    String parameterId,
+    Duration time, {
+    Duration tolerance = const Duration(milliseconds: 17),
+  }) {
+    final curve = _curvesByClipId[clipId]?[parameterId];
+    if (curve == null) return null;
+    try {
+      return curve.keyframes.firstWhere(
+        (kf) => (kf.time - time).abs() <= tolerance,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  void addKeyframe(String clipId, KeyframeModel keyframe) {
+    final existing = _curvesByClipId[clipId] ?? {};
+    final curve = existing[keyframe.parameterId] ??
+        ParameterCurve(
+          parameterId: keyframe.parameterId,
+          keyframes: const [],
+          defaultValue: keyframe.value,
+        );
+    final updated = curve.copyWith(
+      keyframes: [...curve.keyframes, keyframe],
+    );
+    _curvesByClipId[clipId] = {...existing, keyframe.parameterId: updated};
+    notifyListeners();
+  }
+
+  void removeKeyframe(String clipId, String keyframeId) {
+    final existing = _curvesByClipId[clipId];
+    if (existing == null) return;
+    final updated = <String, ParameterCurve>{};
+    for (final entry in existing.entries) {
+      final newKfs =
+          entry.value.keyframes.where((k) => k.id != keyframeId).toList();
+      updated[entry.key] = entry.value.copyWith(keyframes: newKfs);
+    }
+    _curvesByClipId[clipId] = updated;
+    notifyListeners();
+  }
+
+  void updateKeyframe(String clipId, KeyframeModel keyframe) {
+    final existing = _curvesByClipId[clipId];
+    if (existing == null) return;
+    final curve = existing[keyframe.parameterId];
+    if (curve == null) return;
+    final newKfs = curve.keyframes
+        .map((k) => k.id == keyframe.id ? keyframe : k)
+        .toList();
+    _curvesByClipId[clipId] = {
+      ...existing,
+      keyframe.parameterId: curve.copyWith(keyframes: newKfs),
+    };
+    notifyListeners();
+  }
+
+  void setKeyframesForClip(
+    String clipId,
+    Map<String, List<KeyframeModel>> keyframesByParam,
+  ) {
+    final curves = <String, ParameterCurve>{};
+    for (final entry in keyframesByParam.entries) {
+      final kfs = entry.value;
+      curves[entry.key] = ParameterCurve(
+        parameterId: entry.key,
+        keyframes: kfs,
+        defaultValue: kfs.isEmpty ? 0.0 : kfs.first.value,
+      );
+    }
+    _curvesByClipId[clipId] = curves;
     notifyListeners();
   }
 

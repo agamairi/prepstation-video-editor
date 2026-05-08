@@ -4,6 +4,7 @@ import 'package:fluxedit/app/theme/color_tokens.dart';
 import 'package:fluxedit/app/theme/typography.dart';
 import 'package:fluxedit/core/audio/waveform_data.dart';
 import 'package:fluxedit/core/timeline/clip_model.dart';
+import 'package:fluxedit/core/timeline/keyframe_model.dart';
 import 'package:fluxedit/core/timeline/timeline_state.dart';
 import 'package:fluxedit/core/timeline/timeline_tool.dart';
 import 'package:fluxedit/core/timeline/track_model.dart';
@@ -424,6 +425,12 @@ class _TimelinePainter extends CustomPainter {
         : baseColor.withValues(alpha: 0.4);
     canvas.drawRRect(rrect, borderPaint);
 
+    // Keyframe diamonds
+    final keyframes = timelineState.allKeyframesForClip(clip.id);
+    if (keyframes.isNotEmpty) {
+      _paintKeyframeDiamonds(canvas, clip, keyframes, trackTop, track.height);
+    }
+
     // Label
     if (width > 40) {
       tp.text = TextSpan(
@@ -434,6 +441,29 @@ class _TimelinePainter extends CustomPainter {
       );
       tp.layout(maxWidth: width - 16);
       tp.paint(canvas, Offset(left + 8, trackTop + 6));
+    }
+  }
+
+  void _paintKeyframeDiamonds(
+    Canvas canvas,
+    ClipModel clip,
+    List<KeyframeModel> keyframes,
+    double trackTop,
+    double trackHeight,
+  ) {
+    final diamondPaint = Paint()..color = ColorTokens.keyframeDiamond;
+    const r = 4.0;
+    final cy = trackTop + trackHeight - 6.0;
+
+    for (final kf in keyframes) {
+      final x = timelineState.timeToPixel(clip.startOnTimeline + kf.time);
+      final path = Path()
+        ..moveTo(x, cy - r)
+        ..lineTo(x + r, cy)
+        ..lineTo(x, cy + r)
+        ..lineTo(x - r, cy)
+        ..close();
+      canvas.drawPath(path, diamondPaint);
     }
   }
 
