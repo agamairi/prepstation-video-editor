@@ -6,6 +6,7 @@ import 'package:fluxedit/core/constants/app_constants.dart';
 import 'package:fluxedit/core/effects/effect_model.dart';
 import 'package:fluxedit/core/effects/effect_registry.dart';
 import 'package:fluxedit/core/effects/effect_type.dart';
+import 'package:fluxedit/core/keyframes/animated_property.dart';
 import 'package:fluxedit/core/project/project_model.dart';
 import 'package:fluxedit/core/project/project_repository.dart';
 import 'package:fluxedit/core/timeline/clip_model.dart';
@@ -182,26 +183,70 @@ class _ClipInspectorState extends ConsumerState<_ClipInspector> {
             ),
             _SliderRow(
               label: 'Opacity',
-              value: clip.opacity,
+              value: timelineState.evaluateParameter(
+                widget.clipId,
+                AnimatedProperty.opacity,
+                timelineState.playhead,
+                clip.opacity,
+              ),
               min: 0,
               max: 1,
-              displayText: '${(clip.opacity * 100).toStringAsFixed(0)}%',
+              displayText:
+                  '${(timelineState.evaluateParameter(widget.clipId, AnimatedProperty.opacity, timelineState.playhead, clip.opacity) * 100).toStringAsFixed(0)}%',
+              keyframeDiamond: _KeyframeDiamond(
+                isFilled: timelineState.hasKeyframeAt(
+                  widget.clipId,
+                  AnimatedProperty.opacity,
+                  timelineState.playhead,
+                ),
+                onTap: () {
+                  final controller =
+                      ref.read(timelineControllerProvider);
+                  if (timelineState.hasKeyframeAt(
+                    widget.clipId,
+                    AnimatedProperty.opacity,
+                    timelineState.playhead,
+                  )) {
+                    controller.removeKeyframeAtPlayhead(
+                      widget.clipId,
+                      AnimatedProperty.opacity,
+                    );
+                  } else {
+                    controller.setKeyframe(
+                      widget.clipId,
+                      AnimatedProperty.opacity,
+                      clip.opacity,
+                    );
+                  }
+                },
+              ),
               onChangeStart: (_) => _clipAtDragStart = _findClip(),
               onChangeEnd: (v) {
                 if (_clipAtDragStart != null) {
-                  ref.read(timelineControllerProvider).updateClipOpacity(
+                  final controller =
+                      ref.read(timelineControllerProvider);
+                  if (timelineState.hasKeyframeAt(
                     widget.clipId,
-                    v,
-                  );
+                    AnimatedProperty.opacity,
+                    timelineState.playhead,
+                  )) {
+                    controller.setKeyframe(
+                      widget.clipId,
+                      AnimatedProperty.opacity,
+                      v,
+                    );
+                  } else {
+                    controller.updateClipOpacity(widget.clipId, v);
+                  }
                   _clipAtDragStart = null;
                 }
               },
               onChanged: (v) {
                 final c = _findClip();
                 if (c != null) {
-                  ref.read(timelineStateProvider).updateClip(
-                    c.copyWith(opacity: v),
-                  );
+                  ref
+                      .read(timelineStateProvider)
+                      .updateClip(c.copyWith(opacity: v));
                 }
               },
             ),
@@ -355,6 +400,7 @@ class _SliderRow extends StatelessWidget {
     required this.onChangeStart,
     required this.onChanged,
     required this.onChangeEnd,
+    this.keyframeDiamond,
   });
 
   final String label;
@@ -365,6 +411,7 @@ class _SliderRow extends StatelessWidget {
   final ValueChanged<double> onChangeStart;
   final ValueChanged<double> onChanged;
   final ValueChanged<double> onChangeEnd;
+  final Widget? keyframeDiamond;
 
   @override
   Widget build(BuildContext context) {
@@ -384,6 +431,10 @@ class _SliderRow extends StatelessWidget {
                 style: AppTypography.bodySmall
                     .copyWith(color: ColorTokens.textPrimary),
               ),
+              if (keyframeDiamond != null) ...[
+                const Spacer(),
+                keyframeDiamond!,
+              ],
             ],
           ),
           SliderTheme(
@@ -408,6 +459,61 @@ class _SliderRow extends StatelessWidget {
       ),
     );
   }
+}
+
+// ── Keyframe Diamond Button ───────────────────────────────────────────────────
+
+class _KeyframeDiamond extends StatelessWidget {
+  const _KeyframeDiamond({required this.isFilled, required this.onTap});
+
+  final bool isFilled;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 20,
+      height: 20,
+      child: GestureDetector(
+        onTap: onTap,
+        child: CustomPaint(painter: _DiamondPainter(filled: isFilled)),
+      ),
+    );
+  }
+}
+
+class _DiamondPainter extends CustomPainter {
+  const _DiamondPainter({required this.filled});
+
+  final bool filled;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final cx = size.width / 2;
+    final cy = size.height / 2;
+    final r = size.width * 0.35;
+    final path = Path()
+      ..moveTo(cx, cy - r)
+      ..lineTo(cx + r, cy)
+      ..lineTo(cx, cy + r)
+      ..lineTo(cx - r, cy)
+      ..close();
+    const color = ColorTokens.accentPrimary;
+    if (filled) {
+      canvas.drawPath(path, Paint()..color = color);
+    } else {
+      canvas.drawPath(
+        path,
+        Paint()
+          ..color = color
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.5,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DiamondPainter old) => old.filled != filled;
 }
 
 // ── Effects Section ───────────────────────────────────────────────────────────
