@@ -5,11 +5,18 @@ import 'package:fluxedit/app/theme/typography.dart';
 import 'package:fluxedit/core/constants/app_constants.dart';
 import 'package:fluxedit/core/history/history_manager.dart';
 import 'package:fluxedit/core/project/project_model.dart';
+import 'package:fluxedit/core/project/project_repository.dart';
 import 'package:fluxedit/core/timeline/clip_model.dart';
+import 'package:fluxedit/core/timeline/clip_thumbnail_cache.dart';
 import 'package:fluxedit/core/timeline/timeline_controller.dart';
 import 'package:fluxedit/core/timeline/timeline_tool.dart';
 import 'package:fluxedit/core/timeline/track_model.dart';
 import 'package:fluxedit/widgets/timeline/timeline_canvas.dart';
+
+final _timelineAssetsProvider = FutureProvider.family<List<MediaAsset>, String>(
+  (ref, projectId) =>
+      ref.watch(projectRepositoryProvider).getMediaAssets(projectId),
+);
 
 class TimelinePanel extends ConsumerWidget {
   const TimelinePanel({super.key, required this.project});
@@ -28,7 +35,7 @@ class TimelinePanel extends ConsumerWidget {
             child: Row(
               children: [
                 _TrackHeaders(),
-                Expanded(child: _TimelineScrollArea()),
+                Expanded(child: _TimelineScrollArea(projectId: project.id)),
               ],
             ),
           ),
@@ -341,10 +348,31 @@ class _LockButton extends ConsumerWidget {
 }
 
 class _TimelineScrollArea extends ConsumerWidget {
+  const _TimelineScrollArea({required this.projectId});
+
+  final String projectId;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(timelineStateProvider);
     final tool = ref.watch(timelineToolProvider);
+    final thumbCache = ref.watch(clipThumbnailCacheProvider);
+    final assetsAsync = ref.watch(_timelineAssetsProvider(projectId));
+
+    // Trigger thumbnail loading for video clips that have a resolved asset.
+    assetsAsync.whenData((assets) {
+      final assetMap = {for (final a in assets) a.id: a};
+      for (final clip in state.clips) {
+        if (clip.type != ClipType.video) continue;
+        final asset = assetMap[clip.mediaId];
+        if (asset == null) continue;
+        thumbCache.ensureLoaded(
+          clip: clip,
+          filePath: asset.filePath,
+          mediaDuration: asset.duration,
+        );
+      }
+    });
 
     return GestureDetector(
       onTapDown: (details) {
@@ -397,8 +425,104 @@ class _TimelineScrollArea extends ConsumerWidget {
                 .read(timelineControllerProvider)
                 .trimClipEnd(clipId, newTime);
           },
+          onClipContextMenu: (clipId, position) =>
+              _showClipContextMenu(context, ref, clipId, position),
+          thumbnails: {
+            for (final entry in state.clips)
+              if (thumbCache.thumbnailsForClip(entry.id) != null)
+                entry.id: thumbCache.thumbnailsForClip(entry.id)!,
+          },
         ),
       ),
+    );
+  }
+
+  Future<void> _showClipContextMenu(
+    BuildContext context,
+    WidgetRef ref,
+    String clipId,
+    Offset position,
+  ) async {
+    final controller = ref.read(timelineControllerProvider);
+    final timelineState = ref.read(timelineStateProvider);
+
+    final result = await showMenu<_ClipAction>(
+      context: context,
+      position: RelativeRect.fromLTRB(
+        position.dx,
+        position.dy,
+        position.dx + 1,
+        position.dy + 1,
+      ),
+      items: const [
+        PopupMenuItem(
+          value: _ClipAction.edit,
+          child: _ContextMenuItem(icon: Icons.tune, label: 'Edit Clip'),
+        ),
+        PopupMenuItem(
+          value: _ClipAction.splitAtPlayhead,
+          child: _ContextMenuItem(icon: Icons.content_cut, label: 'Split at Playhead'),
+        ),
+        PopupMenuItem(
+          value: _ClipAction.duplicate,
+          child: _ContextMenuItem(icon: Icons.copy, label: 'Duplicate'),
+        ),
+        PopupMenuDivider(),
+        PopupMenuItem(
+          value: _ClipAction.delete,
+          child: _ContextMenuItem(
+            icon: Icons.delete_outline,
+            label: 'Delete',
+            isDestructive: true,
+          ),
+        ),
+      ],
+    );
+
+    if (result == null) return;
+    timelineState.selectClip(clipId);
+
+    switch (result) {
+      case _ClipAction.edit:
+        // Inspector is always visible on desktop; on mobile the FAB opens it.
+        // Selecting the clip is sufficient to populate the inspector.
+        break;
+      case _ClipAction.splitAtPlayhead:
+        await controller.splitAtPlayhead();
+        break;
+      case _ClipAction.duplicate:
+        await controller.duplicateClip(clipId);
+        break;
+      case _ClipAction.delete:
+        await controller.rippleDelete(clipId);
+        timelineState.clearSelection();
+        break;
+    }
+  }
+}
+
+enum _ClipAction { edit, splitAtPlayhead, duplicate, delete }
+
+class _ContextMenuItem extends StatelessWidget {
+  const _ContextMenuItem({
+    required this.icon,
+    required this.label,
+    this.isDestructive = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool isDestructive;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = isDestructive ? Colors.redAccent : null;
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: color),
+        const SizedBox(width: 8),
+        Text(label, style: TextStyle(color: color)),
+      ],
     );
   }
 }

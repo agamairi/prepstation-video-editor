@@ -16,6 +16,7 @@ class FluxEditApp extends ConsumerWidget {
       themeMode: ThemeMode.dark,
       routerConfig: router,
       debugShowCheckedModeBanner: false,
+      builder: (context, child) => SafeArea(child: child ?? const SizedBox()),
     );
   }
 }
