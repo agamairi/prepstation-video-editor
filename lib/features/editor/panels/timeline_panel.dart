@@ -432,6 +432,10 @@ class _TimelineScrollArea extends ConsumerWidget {
               if (thumbCache.thumbnailsForClip(entry.id) != null)
                 entry.id: thumbCache.thumbnailsForClip(entry.id)!,
           },
+          loadingClipIds: {
+            for (final entry in state.clips)
+              if (thumbCache.isLoading(entry.id)) entry.id,
+          },
         ),
       ),
     );

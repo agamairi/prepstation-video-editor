@@ -421,14 +421,14 @@ class _SliderRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               SizedBox(
-                width: 80,
+                width: 84,
                 child: Text(label, style: AppTypography.labelMedium),
               ),
               Text(
@@ -444,11 +444,15 @@ class _SliderRow extends StatelessWidget {
           ),
           SliderTheme(
             data: SliderTheme.of(context).copyWith(
-              trackHeight: 2,
+              trackHeight: 4,
               thumbShape:
-                  const RoundSliderThumbShape(enabledThumbRadius: 6),
+                  const RoundSliderThumbShape(enabledThumbRadius: 10),
               overlayShape:
-                  const RoundSliderOverlayShape(overlayRadius: 12),
+                  const RoundSliderOverlayShape(overlayRadius: 22),
+              activeTrackColor: ColorTokens.accentPrimary,
+              thumbColor: ColorTokens.accentPrimary,
+              overlayColor:
+                  ColorTokens.accentPrimary.withValues(alpha: 0.12),
             ),
             child: Slider(
               value: value.clamp(min, max),
@@ -457,7 +461,6 @@ class _SliderRow extends StatelessWidget {
               onChangeStart: onChangeStart,
               onChanged: onChanged,
               onChangeEnd: onChangeEnd,
-              activeColor: ColorTokens.accentPrimary,
             ),
           ),
         ],
@@ -606,64 +609,121 @@ class _EffectRowState extends ConsumerState<_EffectRow> {
     final controller = ref.read(timelineControllerProvider);
     final ranges = EffectRegistry.parameterRanges(effect.type);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Checkbox(
-              value: effect.isEnabled,
-              onChanged: (_) => controller.toggleEffect(effect),
-              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              visualDensity: VisualDensity.compact,
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: ColorTokens.backgroundSurface,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: ColorTokens.borderSubtle),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Effect header row
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 4, 4, 4),
+            child: Row(
+              children: [
+                GestureDetector(
+                  onTap: () => controller.toggleEffect(effect),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    width: 36,
+                    height: 20,
+                    decoration: BoxDecoration(
+                      color: effect.isEnabled
+                          ? ColorTokens.accentPrimary
+                          : ColorTokens.backgroundElevated,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: effect.isEnabled
+                            ? ColorTokens.accentPrimary
+                            : ColorTokens.borderStrong,
+                      ),
+                    ),
+                    child: AnimatedAlign(
+                      duration: const Duration(milliseconds: 150),
+                      alignment: effect.isEnabled
+                          ? Alignment.centerRight
+                          : Alignment.centerLeft,
+                      child: Padding(
+                        padding: const EdgeInsets.all(2),
+                        child: Container(
+                          width: 14,
+                          height: 14,
+                          decoration: const BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    effect.displayName,
+                    style: AppTypography.labelMedium.copyWith(
+                      color: effect.isEnabled
+                          ? ColorTokens.textPrimary
+                          : ColorTokens.textSecondary,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  padding: const EdgeInsets.all(10),
+                  icon: const Icon(Icons.delete_outline, size: 16),
+                  color: ColorTokens.textSecondary,
+                  tooltip: 'Remove Effect',
+                  onPressed: () => controller.removeEffect(effect),
+                  constraints: const BoxConstraints(
+                    minWidth: 44,
+                    minHeight: 44,
+                  ),
+                ),
+              ],
             ),
-            Expanded(
-              child: Text(effect.displayName, style: AppTypography.labelMedium),
-            ),
-            SizedBox(
-              width: 24,
-              height: 24,
-              child: IconButton(
-                padding: EdgeInsets.zero,
-                icon: const Icon(Icons.close, size: 14),
-                color: ColorTokens.textSecondary,
-                tooltip: 'Remove',
-                onPressed: () => controller.removeEffect(effect),
+          ),
+          if (effect.isEnabled) ...[
+            const Divider(height: 1),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
+              child: Column(
+                children: ranges.entries.map((entry) {
+                  final key = entry.key;
+                  final (min, max) = entry.value;
+                  final value =
+                      (effect.parameters[key] ?? min).clamp(min, max);
+                  return _SliderRow(
+                    label: _formatParamName(key),
+                    value: value,
+                    min: min,
+                    max: max,
+                    displayText: value.toStringAsFixed(2),
+                    onChangeStart: (_) => _atDragStart = effect,
+                    onChanged: (v) {
+                      final updated = effect.copyWith(
+                        parameters: {...effect.parameters, key: v},
+                      );
+                      ref.read(timelineStateProvider).updateEffect(updated);
+                    },
+                    onChangeEnd: (v) {
+                      if (_atDragStart != null) {
+                        controller.updateEffectParameters(
+                          _atDragStart!,
+                          {..._atDragStart!.parameters, key: v},
+                        );
+                        _atDragStart = null;
+                      }
+                    },
+                  );
+                }).toList(),
               ),
             ),
           ],
-        ),
-        if (effect.isEnabled)
-          ...ranges.entries.map((entry) {
-            final key = entry.key;
-            final (min, max) = entry.value;
-            final value = (effect.parameters[key] ?? min).clamp(min, max);
-            return _SliderRow(
-              label: _formatParamName(key),
-              value: value,
-              min: min,
-              max: max,
-              displayText: value.toStringAsFixed(2),
-              onChangeStart: (_) => _atDragStart = effect,
-              onChanged: (v) {
-                final updated = effect.copyWith(
-                  parameters: {...effect.parameters, key: v},
-                );
-                ref.read(timelineStateProvider).updateEffect(updated);
-              },
-              onChangeEnd: (v) {
-                if (_atDragStart != null) {
-                  controller.updateEffectParameters(
-                    _atDragStart!,
-                    {..._atDragStart!.parameters, key: v},
-                  );
-                  _atDragStart = null;
-                }
-              },
-            );
-          }),
-        const Divider(height: 8),
-      ],
+        ],
+      ),
     );
   }
 

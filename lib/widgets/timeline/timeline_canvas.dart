@@ -32,6 +32,7 @@ class TimelineCanvas extends StatefulWidget {
     this.onClipContextMenu,
     this.waveforms = const {},
     this.thumbnails = const {},
+    this.loadingClipIds = const {},
   });
 
   final TimelineState timelineState;
@@ -50,6 +51,9 @@ class TimelineCanvas extends StatefulWidget {
 
   /// Optional timeline thumbnails keyed by clip ID.
   final Map<String, List<ui.Image>> thumbnails;
+
+  /// Clip IDs whose thumbnails are currently being generated.
+  final Set<String> loadingClipIds;
 
   @override
   State<TimelineCanvas> createState() => _TimelineCanvasState();
@@ -92,6 +96,7 @@ class _TimelineCanvasState extends State<TimelineCanvas> {
             rulerHeight: _rulerHeight,
             waveforms: widget.waveforms,
             thumbnails: widget.thumbnails,
+            loadingClipIds: widget.loadingClipIds,
             bladeX: widget.tool == TimelineTool.blade ? _bladeX : null,
           ),
           child: _buildGestureLayer(),
@@ -248,11 +253,12 @@ class _ClipGestureArea extends StatelessWidget {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        // Main clip body
+        // Main clip body — opaque so it wins the arena over background scroll
         Positioned.fill(
           left: trimHandleWidth,
           right: trimHandleWidth,
           child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
             onTap: onTap,
             onLongPressStart: onContextMenu != null
                 ? (d) => onContextMenu!(d.globalPosition)
@@ -263,7 +269,6 @@ class _ClipGestureArea extends StatelessWidget {
             onHorizontalDragStart: (d) => onDragStart(d.globalPosition.dx),
             onHorizontalDragUpdate: (d) => onDrag(d.globalPosition.dx),
             onHorizontalDragEnd: (_) => onDragEnd(),
-            child: const ColoredBox(color: Colors.transparent),
           ),
         ),
         // Left trim handle
@@ -328,6 +333,7 @@ class _TimelinePainter extends CustomPainter {
     required this.rulerHeight,
     required this.waveforms,
     required this.thumbnails,
+    required this.loadingClipIds,
     this.bladeX,
   }) : super(repaint: timelineState);
 
@@ -336,6 +342,7 @@ class _TimelinePainter extends CustomPainter {
   final double rulerHeight;
   final Map<String, WaveformData> waveforms;
   final Map<String, List<ui.Image>> thumbnails;
+  final Set<String> loadingClipIds;
   final double? bladeX;
 
   @override
@@ -458,6 +465,9 @@ class _TimelinePainter extends CustomPainter {
       final clipImages = thumbnails[clip.id];
       if (clipImages != null && clipImages.isNotEmpty) {
         _paintThumbnails(canvas, rect, clipImages);
+      } else if (loadingClipIds.contains(clip.id)) {
+        // Draw a subtle diagonal-stripe shimmer while thumbnails generate.
+        _paintLoadingStripes(canvas, rect);
       }
     }
 
@@ -497,6 +507,29 @@ class _TimelinePainter extends CustomPainter {
       tp.layout(maxWidth: width - 16);
       tp.paint(canvas, Offset(left + 8, trackTop + 6));
     }
+  }
+
+  void _paintLoadingStripes(Canvas canvas, Rect clipRect) {
+    const stripeW = 8.0;
+    const gap = 8.0;
+    final paint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.06)
+      ..style = PaintingStyle.fill;
+
+    canvas.save();
+    canvas.clipRect(clipRect);
+    var x = clipRect.left - clipRect.height;
+    while (x < clipRect.right) {
+      final path = Path()
+        ..moveTo(x, clipRect.bottom)
+        ..lineTo(x + clipRect.height, clipRect.top)
+        ..lineTo(x + clipRect.height + stripeW, clipRect.top)
+        ..lineTo(x + stripeW, clipRect.bottom)
+        ..close();
+      canvas.drawPath(path, paint);
+      x += stripeW + gap;
+    }
+    canvas.restore();
   }
 
   void _paintThumbnails(
