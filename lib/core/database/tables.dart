@@ -108,6 +108,19 @@ class Clips extends Table {
   IntColumn get transitionOutDurationUs =>
       integer().withDefault(const Constant(0))();
 
+  // Title clip columns
+  TextColumn get titleText => text().nullable()();
+  RealColumn get titleFontSize =>
+      real().withDefault(const Constant(48.0))();
+  IntColumn get titleColorValue =>
+      integer().withDefault(const Constant(0xFFFFFFFF))();
+  TextColumn get titleAlignment =>
+      text().withDefault(const Constant('center'))();
+
+  // Color-card clip column
+  IntColumn get cardColorValue =>
+      integer().withDefault(const Constant(0xFF000000))();
+
   @override
   Set<Column<Object>> get primaryKey => {id};
 }

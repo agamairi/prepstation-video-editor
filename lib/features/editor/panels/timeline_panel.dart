@@ -25,6 +25,11 @@ class TimelinePanel extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(timelineStateProvider);
+    final tracksH =
+        state.tracks.fold(0.0, (sum, t) => sum + t.height);
+    final canvasH = AppConstants.timelineRulerHeight + tracksH;
+
     return Container(
       color: ColorTokens.backgroundBase,
       child: Column(
@@ -32,11 +37,20 @@ class TimelinePanel extends ConsumerWidget {
           _TimelineToolbar(project: project),
           const Divider(height: 1),
           Expanded(
-            child: Row(
-              children: [
-                _TrackHeaders(),
-                Expanded(child: _TimelineScrollArea(projectId: project.id)),
-              ],
+            child: SingleChildScrollView(
+              scrollDirection: Axis.vertical,
+              child: SizedBox(
+                height: canvasH,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _TrackHeaders(),
+                    Expanded(
+                      child: _TimelineScrollArea(projectId: project.id),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         ],
@@ -107,7 +121,7 @@ class _TimelineToolbar extends ConsumerWidget {
                 .state = TimelineTool.blade,
           ),
           const VerticalDivider(width: 16),
-          // Add tracks
+          // Add video / audio tracks
           IconButton(
             icon: const Icon(Icons.add, size: 16),
             tooltip: 'Add Video Track',
@@ -128,6 +142,9 @@ class _TimelineToolbar extends ConsumerWidget {
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
           ),
+          const VerticalDivider(width: 16),
+          // Add synthetic clips
+          _AddSyntheticButton(project: project),
           const SizedBox(width: 8),
           const VerticalDivider(width: 8),
           const SizedBox(width: 8),
@@ -155,7 +172,7 @@ class _TimelineToolbar extends ConsumerWidget {
           const SizedBox(width: 8),
           const VerticalDivider(width: 8),
           const SizedBox(width: 8),
-          // Snap
+          // Snap toggle
           IconButton(
             icon: Icon(
               state.snapEnabled ? Icons.grid_on : Icons.grid_off,
@@ -179,6 +196,67 @@ class _TimelineToolbar extends ConsumerWidget {
     );
   }
 }
+
+/// Popup menu for adding a Title or Color Card clip to the first video track.
+class _AddSyntheticButton extends ConsumerWidget {
+  const _AddSyntheticButton({required this.project});
+
+  final ProjectModel project;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return PopupMenuButton<_SyntheticClipType>(
+      tooltip: 'Add Title / Color Card',
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+      icon: const Icon(Icons.text_fields, size: 16),
+      onSelected: (type) {
+        final state = ref.read(timelineStateProvider);
+        final controller = ref.read(timelineControllerProvider);
+        final firstVideoTrack =
+            state.videoTracks.isNotEmpty ? state.videoTracks.first : null;
+        if (firstVideoTrack == null) return;
+
+        switch (type) {
+          case _SyntheticClipType.title:
+            controller.addTitleClip(
+              projectId: project.id,
+              trackId: firstVideoTrack.id,
+            );
+          case _SyntheticClipType.colorCard:
+            controller.addColorCardClip(
+              projectId: project.id,
+              trackId: firstVideoTrack.id,
+            );
+        }
+      },
+      itemBuilder: (_) => const [
+        PopupMenuItem(
+          value: _SyntheticClipType.title,
+          child: Row(
+            children: [
+              Icon(Icons.title, size: 16),
+              SizedBox(width: 8),
+              Text('Add Title'),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          value: _SyntheticClipType.colorCard,
+          child: Row(
+            children: [
+              Icon(Icons.rectangle, size: 16),
+              SizedBox(width: 8),
+              Text('Add Color Card'),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+enum _SyntheticClipType { title, colorCard }
 
 class _ToolButton extends StatelessWidget {
   const _ToolButton({
@@ -359,19 +437,22 @@ class _TimelineScrollArea extends ConsumerWidget {
     final thumbCache = ref.watch(clipThumbnailCacheProvider);
     final assetsAsync = ref.watch(_timelineAssetsProvider(projectId));
 
-    // Trigger thumbnail loading for video clips that have a resolved asset.
+    // Trigger thumbnail loading after the current frame to avoid calling
+    // notifyListeners() during the build phase.
     assetsAsync.whenData((assets) {
-      final assetMap = {for (final a in assets) a.id: a};
-      for (final clip in state.clips) {
-        if (clip.type != ClipType.video) continue;
-        final asset = assetMap[clip.mediaId];
-        if (asset == null) continue;
-        thumbCache.ensureLoaded(
-          clip: clip,
-          filePath: asset.filePath,
-          mediaDuration: asset.duration,
-        );
-      }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final assetMap = {for (final a in assets) a.id: a};
+        for (final clip in state.clips) {
+          if (clip.type != ClipType.video) continue;
+          final asset = assetMap[clip.mediaId];
+          if (asset == null) continue;
+          thumbCache.ensureLoaded(
+            clip: clip,
+            filePath: asset.filePath,
+            mediaDuration: asset.duration,
+          );
+        }
+      });
     });
 
     return GestureDetector(
@@ -465,7 +546,8 @@ class _TimelineScrollArea extends ConsumerWidget {
         ),
         PopupMenuItem(
           value: _ClipAction.splitAtPlayhead,
-          child: _ContextMenuItem(icon: Icons.content_cut, label: 'Split at Playhead'),
+          child: _ContextMenuItem(
+              icon: Icons.content_cut, label: 'Split at Playhead'),
         ),
         PopupMenuItem(
           value: _ClipAction.duplicate,
@@ -488,19 +570,14 @@ class _TimelineScrollArea extends ConsumerWidget {
 
     switch (result) {
       case _ClipAction.edit:
-        // Inspector is always visible on desktop; on mobile the FAB opens it.
-        // Selecting the clip is sufficient to populate the inspector.
         break;
       case _ClipAction.splitAtPlayhead:
         await controller.splitAtPlayhead();
-        break;
       case _ClipAction.duplicate:
         await controller.duplicateClip(clipId);
-        break;
       case _ClipAction.delete:
         await controller.rippleDelete(clipId);
         timelineState.clearSelection();
-        break;
     }
   }
 }

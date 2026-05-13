@@ -72,6 +72,14 @@ abstract final class AppConstants {
   static const double maxTransitionDuration = 2.0;
   static const double defaultTransitionDuration = 0.5;
 
+  // Timeline ruler
+  static const double timelineRulerHeight = 28.0;
+
+  // Title / color-card clip defaults
+  static const double defaultTitleFontSize = 48.0;
+  static const int defaultTitleColor = 0xFFFFFFFF; // white
+  static const int defaultCardColor = 0xFF000000; // black
+
   // Proxy resolution divisor
   static const int proxyResolutionDivisor = 4;
   static const int proxyCrf = 28;

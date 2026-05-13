@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
@@ -12,9 +13,10 @@ import 'package:fluxedit/core/project/project_model.dart';
 import 'package:fluxedit/core/project/project_repository.dart';
 import 'package:fluxedit/core/timeline/clip_model.dart';
 import 'package:fluxedit/core/timeline/timeline_controller.dart';
+import 'package:fluxedit/core/timeline/timeline_state.dart';
 import 'package:video_player/video_player.dart';
 
-/// The clip currently under the playhead (first video track, reversed priority).
+/// The clip currently under the playhead (top video track wins).
 final _activeClipProvider = Provider.autoDispose<ClipModel?>((ref) {
   final state = ref.watch(timelineStateProvider);
   for (final track in state.videoTracks.reversed) {
@@ -24,9 +26,20 @@ final _activeClipProvider = Provider.autoDispose<ClipModel?>((ref) {
   return null;
 });
 
+/// Derived bool provider so ref.listen sees value changes (not same-object
+/// ChangeNotifier ticks).
+final _isPlayingProvider = Provider.autoDispose<bool>((ref) {
+  return ref.watch(timelineStateProvider).isPlaying;
+});
+
 final _currentClipPathProvider = Provider.autoDispose<String?>((ref) {
   final clip = ref.watch(_activeClipProvider);
-  return clip?.mediaId;
+  if (clip == null) return null;
+  // Synthetic clips (title, colorCard) have no real video file.
+  if (clip.type == ClipType.title || clip.type == ClipType.colorCard) {
+    return null;
+  }
+  return clip.mediaId;
 });
 
 class PreviewPanel extends ConsumerStatefulWidget {
@@ -43,14 +56,85 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
   String? _currentMediaId;
   bool _initialized = false;
 
+  Timer? _playbackTimer;
+  DateTime? _wallClockAtPlayStart;
+  Duration _playheadAtPlayStart = Duration.zero;
+
   @override
   void dispose() {
+    _playbackTimer?.cancel();
     _controller?.dispose();
     super.dispose();
   }
 
+  // ── Playback control ────────────────────────────────────────────────────────
+
+  void _startPlayback(TimelineState state) {
+    _playbackTimer?.cancel();
+
+    // If a clip is selected and the playhead is outside it, jump to its start.
+    Duration seekTo = state.playhead;
+    if (state.selectedClipIds.isNotEmpty) {
+      final selectedId = state.selectedClipIds.first;
+      try {
+        final selected =
+            state.clips.firstWhere((c) => c.id == selectedId);
+        if (state.playhead < selected.startOnTimeline ||
+            state.playhead >= selected.endOnTimeline) {
+          seekTo = selected.startOnTimeline;
+          state.setPlayhead(seekTo);
+        }
+      } catch (_) {}
+    }
+
+    _playheadAtPlayStart = seekTo;
+    _wallClockAtPlayStart = DateTime.now();
+
+    // Seek video to the correct position within the active clip.
+    if (_controller != null && _initialized) {
+      ClipModel? videoClip;
+      for (final track in state.videoTracks.reversed) {
+        final c = state.clipAt(track.id, seekTo);
+        if (c != null && c.type == ClipType.video) {
+          videoClip = c;
+          break;
+        }
+      }
+      if (videoClip != null) {
+        final offsetInClip = seekTo - videoClip.startOnTimeline;
+        final videoPos = videoClip.mediaInPoint + offsetInClip;
+        _controller!.seekTo(videoPos);
+        _controller!.play();
+      }
+    }
+
+    _playbackTimer = Timer.periodic(const Duration(milliseconds: 33), (_) {
+      if (!mounted) return;
+      final s = ref.read(timelineStateProvider);
+      if (!s.isPlaying) return;
+
+      final elapsed = DateTime.now().difference(_wallClockAtPlayStart!);
+      final newPlayhead = _playheadAtPlayStart + elapsed;
+
+      if (s.duration > Duration.zero && newPlayhead >= s.duration) {
+        s.setPlayhead(Duration.zero);
+        s.setPlaying(false);
+        return;
+      }
+      s.setPlayhead(newPlayhead);
+    });
+  }
+
+  void _stopPlayback() {
+    _playbackTimer?.cancel();
+    _playbackTimer = null;
+    _wallClockAtPlayStart = null;
+    _controller?.pause();
+  }
+
+  // ── Effect filters ──────────────────────────────────────────────────────────
+
   /// Wraps [child] with Flutter filter widgets mirroring the active effects.
-  /// This gives a real-time visual preview without running FFmpeg.
   Widget _applyEffectFilters(Widget child, List<EffectInstance> effects) {
     Widget result = child;
     for (final effect in effects.where((e) => e.isEnabled)) {
@@ -66,13 +150,14 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
               (effect.parameters['radius'] ?? 4.0).clamp(0.0, 40.0);
           if (sigma > 0) {
             result = ImageFiltered(
-              imageFilter: ui.ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
+              imageFilter:
+                  ui.ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
               child: result,
             );
           }
         case EffectType.vignette:
-          final angle = (effect.parameters['angle'] ?? 1.5708)
-              .clamp(0.0, 3.14159);
+          final angle =
+              (effect.parameters['angle'] ?? 1.5708).clamp(0.0, 3.14159);
           final strength = (angle / math.pi).clamp(0.0, 1.0);
           result = Stack(
             children: [
@@ -99,17 +184,16 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
           );
         case EffectType.grain:
         case EffectType.lut:
-          // Not representable with Flutter filters; skip for preview.
           break;
       }
     }
     return result;
   }
 
-  /// Computes a 20-element RGBA color matrix combining brightness, contrast,
-  /// and saturation so a single [ColorFilter.matrix] covers all three.
+  /// 20-element RGBA color matrix combining brightness, contrast, saturation.
   ///
-  /// Input/output values are in [0,1]. The offset column uses [0,1] as well.
+  /// Flutter's [ColorFilter.matrix] expects offset values in the [0, 255]
+  /// range (same as Android ColorMatrix).
   List<double> _buildColorMatrix(Map<String, double> params) {
     final brightness = (params['brightness'] ?? 0.0).clamp(-1.0, 1.0);
     final contrast = (params['contrast'] ?? 1.0).clamp(0.0, 3.0);
@@ -125,11 +209,10 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
     final sg = gLum * (1.0 - saturation);
     final sb = bLum * (1.0 - saturation);
 
-    // Contrast: scale and offset to keep midpoint at 0.5
-    final offset = (1.0 - contrast) / 2.0 + brightness;
+    // Contrast: scale and shift to keep midpoint at 0.5; brightness shifts on
+    // top. Offset column must be in [0, 255] for ColorFilter.matrix.
+    final offset = ((1.0 - contrast) / 2.0 + brightness) * 255.0;
 
-    // Combined S then C then B in one matrix:
-    //   out_R = contrast * (sr+sat)*R + contrast*sg*G + contrast*sb*B + offset
     return [
       contrast * (sr + saturation), contrast * sg, contrast * sb, 0, offset,
       contrast * sr, contrast * (sg + saturation), contrast * sb, 0, offset,
@@ -138,6 +221,8 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
     ];
   }
 
+  // ── Video loading ───────────────────────────────────────────────────────────
+
   Future<void> _loadVideo(String mediaId) async {
     if (_currentMediaId == mediaId) return;
     _currentMediaId = mediaId;
@@ -145,6 +230,18 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
     final asset =
         await ref.read(projectRepositoryProvider).getMediaAsset(mediaId);
     if (asset == null || !mounted) return;
+
+    // Synthetic assets (title, colorCard) carry no video file.
+    if (!asset.hasVideo) {
+      await _controller?.dispose();
+      if (mounted) {
+        setState(() {
+          _controller = null;
+          _initialized = false;
+        });
+      }
+      return;
+    }
 
     await _controller?.dispose();
     final controller = VideoPlayerController.file(
@@ -163,60 +260,153 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
     });
   }
 
+  // ── Build ───────────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
+    // React to play/pause transitions via a derived bool provider so that
+    // the same-object ChangeNotifier issue doesn't prevent detection.
+    ref.listen<bool>(_isPlayingProvider, (prev, isPlaying) {
+      final state = ref.read(timelineStateProvider);
+      if (isPlaying) {
+        _startPlayback(state);
+      } else {
+        _stopPlayback();
+      }
+    });
+
     final mediaId = ref.watch(_currentClipPathProvider);
+    final activeClip = ref.watch(_activeClipProvider);
     final timelineState = ref.watch(timelineStateProvider);
 
     if (mediaId != null && mediaId != _currentMediaId) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _loadVideo(mediaId);
+        if (mounted) _loadVideo(mediaId);
       });
     }
 
-    if (mediaId == null && _controller != null) {
-      _controller?.pause();
+    // Reset video controller when no video clip is under the playhead.
+    if (mediaId == null && _initialized) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        setState(() {
+          _controller?.dispose();
+          _controller = null;
+          _initialized = false;
+          _currentMediaId = null;
+        });
+      });
     }
 
-    if (_controller != null) {
-      if (timelineState.isPlaying &&
-          !(_controller?.value.isPlaying ?? false)) {
-        _controller?.play();
-      } else if (!timelineState.isPlaying &&
-          (_controller?.value.isPlaying ?? false)) {
-        _controller?.pause();
-      }
-    }
-
-    final activeClip = ref.watch(_activeClipProvider);
     final effects = activeClip != null
-        ? ref.watch(timelineStateProvider).effectsForClip(activeClip.id)
+        ? timelineState.effectsForClip(activeClip.id)
         : <EffectInstance>[];
 
-    Widget videoWidget = _initialized && _controller != null
-        ? AspectRatio(
-            aspectRatio: _controller!.value.aspectRatio,
-            child: VideoPlayer(_controller!),
-          )
-        : _EmptyPreview(
-            width: widget.project.composition.width,
-            height: widget.project.composition.height,
-          );
+    // Choose the content widget based on the active clip type.
+    Widget contentWidget;
+    if (activeClip?.type == ClipType.title) {
+      contentWidget = _TitlePreview(
+        clip: activeClip!,
+        compositionWidth: widget.project.composition.width,
+        compositionHeight: widget.project.composition.height,
+      );
+    } else if (activeClip?.type == ClipType.colorCard) {
+      contentWidget = _ColorCardPreview(
+        clip: activeClip!,
+        compositionWidth: widget.project.composition.width,
+        compositionHeight: widget.project.composition.height,
+      );
+    } else if (_initialized && _controller != null) {
+      contentWidget = AspectRatio(
+        aspectRatio: _controller!.value.aspectRatio,
+        child: VideoPlayer(_controller!),
+      );
+    } else {
+      contentWidget = _EmptyPreview(
+        width: widget.project.composition.width,
+        height: widget.project.composition.height,
+      );
+    }
 
-    // Apply active effects as Flutter visual filters for real-time preview.
-    videoWidget = _applyEffectFilters(videoWidget, effects);
+    contentWidget = _applyEffectFilters(contentWidget, effects);
 
     return Container(
       color: Colors.black,
       child: Column(
         children: [
-          Expanded(child: Center(child: videoWidget)),
+          Expanded(child: Center(child: contentWidget)),
           _PreviewToolbar(project: widget.project),
         ],
       ),
     );
   }
 }
+
+// ── Synthetic clip preview widgets ───────────────────────────────────────────
+
+class _TitlePreview extends StatelessWidget {
+  const _TitlePreview({
+    required this.clip,
+    required this.compositionWidth,
+    required this.compositionHeight,
+  });
+
+  final ClipModel clip;
+  final int compositionWidth;
+  final int compositionHeight;
+
+  @override
+  Widget build(BuildContext context) {
+    final alignment = switch (clip.titleAlignment) {
+      'left' => TextAlign.left,
+      'right' => TextAlign.right,
+      _ => TextAlign.center,
+    };
+    return AspectRatio(
+      aspectRatio: compositionWidth / compositionHeight,
+      child: Container(
+        color: Colors.black,
+        padding: const EdgeInsets.all(32),
+        child: Center(
+          child: Text(
+            clip.titleText ?? '',
+            textAlign: alignment,
+            style: TextStyle(
+              color: Color(clip.titleColorValue),
+              fontSize: clip.titleFontSize,
+              fontWeight: FontWeight.bold,
+              shadows: const [
+                Shadow(blurRadius: 4, color: Colors.black54),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ColorCardPreview extends StatelessWidget {
+  const _ColorCardPreview({
+    required this.clip,
+    required this.compositionWidth,
+    required this.compositionHeight,
+  });
+
+  final ClipModel clip;
+  final int compositionWidth;
+  final int compositionHeight;
+
+  @override
+  Widget build(BuildContext context) {
+    return AspectRatio(
+      aspectRatio: compositionWidth / compositionHeight,
+      child: ColoredBox(color: Color(clip.cardColorValue)),
+    );
+  }
+}
+
+// ── Shared preview widgets ────────────────────────────────────────────────────
 
 class _EmptyPreview extends StatelessWidget {
   const _EmptyPreview({required this.width, required this.height});

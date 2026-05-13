@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:fluxedit/app/theme/color_tokens.dart';
+import 'package:fluxedit/core/constants/app_constants.dart';
 
-enum ClipType { video, audio, title, image, adjustment }
+enum ClipType { video, audio, title, image, adjustment, colorCard }
 
 enum BlendMode2 {
   normal,
@@ -48,6 +49,11 @@ class ClipModel {
     this.transitionOutId,
     this.transitionInDuration = Duration.zero,
     this.transitionOutDuration = Duration.zero,
+    this.titleText,
+    this.titleFontSize = AppConstants.defaultTitleFontSize,
+    this.titleColorValue = AppConstants.defaultTitleColor,
+    this.titleAlignment = 'center',
+    this.cardColorValue = AppConstants.defaultCardColor,
   });
 
   final String id;
@@ -77,6 +83,15 @@ class ClipModel {
   final String? transitionOutId;
   final Duration transitionInDuration;
   final Duration transitionOutDuration;
+
+  // Title clip fields
+  final String? titleText;
+  final double titleFontSize;
+  final int titleColorValue;
+  final String titleAlignment; // 'left' | 'center' | 'right'
+
+  // Color-card clip field
+  final int cardColorValue;
 
   Duration get duration => endOnTimeline - startOnTimeline;
   Duration get mediaDuration => mediaOutPoint - mediaInPoint;
@@ -111,6 +126,11 @@ class ClipModel {
     Object? transitionOutId = _omit,
     Duration? transitionInDuration,
     Duration? transitionOutDuration,
+    Object? titleText = _omit,
+    double? titleFontSize,
+    int? titleColorValue,
+    String? titleAlignment,
+    int? cardColorValue,
   }) {
     return ClipModel(
       id: id ?? this.id,
@@ -140,6 +160,11 @@ class ClipModel {
       transitionInDuration: transitionInDuration ?? this.transitionInDuration,
       transitionOutDuration:
           transitionOutDuration ?? this.transitionOutDuration,
+      titleText: titleText == _omit ? this.titleText : titleText as String?,
+      titleFontSize: titleFontSize ?? this.titleFontSize,
+      titleColorValue: titleColorValue ?? this.titleColorValue,
+      titleAlignment: titleAlignment ?? this.titleAlignment,
+      cardColorValue: cardColorValue ?? this.cardColorValue,
     );
   }
 

@@ -453,22 +453,53 @@ class _TimelinePainter extends CustomPainter {
     final rect = Rect.fromLTWH(left + 1, trackTop + 2, width - 2, track.height - 4);
     final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(3));
 
-    final baseColor = track.isVideo
-        ? (isSelected ? ColorTokens.clipVideoSelected : ColorTokens.clipVideo)
-        : (isSelected ? ColorTokens.clipAudioSelected : ColorTokens.clipAudio);
+    final Color baseColor;
+    switch (clip.type) {
+      case ClipType.title:
+        baseColor = isSelected
+            ? ColorTokens.accentSecondary
+            : ColorTokens.clipTitle;
+      case ClipType.colorCard:
+        final cardColor = Color(clip.cardColorValue);
+        // Darken slightly so unselected/selected states differ visually.
+        baseColor = isSelected
+            ? Color.lerp(cardColor, Colors.white, 0.25)!
+            : Color.lerp(cardColor, Colors.black, 0.15)!;
+      case ClipType.audio:
+        baseColor = isSelected
+            ? ColorTokens.clipAudioSelected
+            : ColorTokens.clipAudio;
+      case ClipType.video:
+      case ClipType.image:
+      case ClipType.adjustment:
+        baseColor = track.isVideo
+            ? (isSelected ? ColorTokens.clipVideoSelected : ColorTokens.clipVideo)
+            : (isSelected ? ColorTokens.clipAudioSelected : ColorTokens.clipAudio);
+    }
 
     paint.color = baseColor;
     canvas.drawRRect(rrect, paint);
 
     // Frame thumbnails tiled across video clip body
-    if (track.isVideo) {
+    if (clip.type == ClipType.video) {
       final clipImages = thumbnails[clip.id];
       if (clipImages != null && clipImages.isNotEmpty) {
         _paintThumbnails(canvas, rect, clipImages);
       } else if (loadingClipIds.contains(clip.id)) {
-        // Draw a subtle diagonal-stripe shimmer while thumbnails generate.
         _paintLoadingStripes(canvas, rect);
       }
+    }
+
+    // Color preview band at the top of color-card clips.
+    if (clip.type == ClipType.colorCard) {
+      canvas.drawRRect(
+        RRect.fromRectAndCorners(
+          Rect.fromLTWH(rect.left, rect.top, rect.width, 4),
+          topLeft: const Radius.circular(3),
+          topRight: const Radius.circular(3),
+        ),
+        Paint()..color = Color(clip.cardColorValue),
+      );
     }
 
     // Waveform for audio clips
@@ -498,8 +529,16 @@ class _TimelinePainter extends CustomPainter {
 
     // Label
     if (width > 40) {
+      final labelText = switch (clip.type) {
+        ClipType.title => clip.titleText?.isNotEmpty == true
+            ? 'T  ${clip.titleText}'
+            : 'T  Title',
+        ClipType.colorCard =>
+            clip.name.isNotEmpty ? clip.name : 'Color Card',
+        _ => clip.name.isNotEmpty ? clip.name : '  Clip',
+      };
       tp.text = TextSpan(
-        text: clip.name.isNotEmpty ? clip.name : '  Clip',
+        text: labelText,
         style: AppTypography.labelSmall.copyWith(
           color: Colors.white.withValues(alpha: 0.9),
         ),

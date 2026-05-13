@@ -263,6 +263,14 @@ class _ClipInspectorState extends ConsumerState<_ClipInspector> {
               _PropertyRow(label: 'Audio Codec', value: asset.audioCodec),
               _PropertyRow(label: 'Color Space', value: asset.colorSpace),
             ],
+            if (clip.type == ClipType.title) ...[
+              const SizedBox(height: 12),
+              _TitleSection(clip: clip),
+            ],
+            if (clip.type == ClipType.colorCard) ...[
+              const SizedBox(height: 12),
+              _ColorCardSection(clip: clip),
+            ],
             const SizedBox(height: 12),
             _EffectsSection(clipId: clip.id),
             if (clip.type == ClipType.video) ...[
@@ -733,6 +741,324 @@ class _EffectRowState extends ConsumerState<_EffectRow> {
       (m) => ' ${m.group(0)}',
     );
     return result[0].toUpperCase() + result.substring(1);
+  }
+}
+
+// ── Title Clip Section ────────────────────────────────────────────────────────
+
+class _TitleSection extends ConsumerStatefulWidget {
+  const _TitleSection({required this.clip});
+
+  final ClipModel clip;
+
+  @override
+  ConsumerState<_TitleSection> createState() => _TitleSectionState();
+}
+
+class _TitleSectionState extends ConsumerState<_TitleSection> {
+  late TextEditingController _textController;
+  ClipModel? _clipAtDragStart;
+
+  static const _presetColors = [
+    0xFFFFFFFF, // white
+    0xFF000000, // black
+    0xFFFF5252, // red
+    0xFFFFB340, // orange
+    0xFFFFEB3B, // yellow
+    0xFF34C47A, // green
+    0xFF4D9CFF, // blue
+    0xFF9B6DFF, // purple
+    0xFFFF6B9D, // pink
+    0xFF40D9F3, // cyan
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _textController =
+        TextEditingController(text: widget.clip.titleText ?? '');
+  }
+
+  @override
+  void dispose() {
+    _textController.dispose();
+    super.dispose();
+  }
+
+  ClipModel? _latestClip() {
+    try {
+      return ref
+          .read(timelineStateProvider)
+          .clips
+          .firstWhere((c) => c.id == widget.clip.id);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final clip = ref
+            .watch(timelineStateProvider)
+            .clips
+            .cast<ClipModel?>()
+            .firstWhere((c) => c?.id == widget.clip.id, orElse: () => null) ??
+        widget.clip;
+
+    if (_textController.text != (clip.titleText ?? '')) {
+      _textController.text = clip.titleText ?? '';
+    }
+
+    final controller = ref.read(timelineControllerProvider);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _SectionHeader(title: 'Title'),
+        // Text content
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
+            children: [
+              const SizedBox(
+                width: 80,
+                child: Text('Text', style: AppTypography.labelMedium),
+              ),
+              Expanded(
+                child: TextField(
+                  controller: _textController,
+                  style: AppTypography.bodySmall
+                      .copyWith(color: ColorTokens.textPrimary),
+                  decoration: InputDecoration(
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 6, vertical: 4),
+                    filled: true,
+                    fillColor: ColorTokens.backgroundSurface,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(4),
+                      borderSide:
+                          const BorderSide(color: ColorTokens.borderSubtle),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(4),
+                      borderSide:
+                          const BorderSide(color: ColorTokens.borderSubtle),
+                    ),
+                  ),
+                  onSubmitted: (v) => controller.updateTitleText(clip.id, v),
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Font size
+        _SliderRow(
+          label: 'Font Size',
+          value: clip.titleFontSize.clamp(8.0, 200.0),
+          min: 8,
+          max: 200,
+          displayText: clip.titleFontSize.toStringAsFixed(0),
+          onChangeStart: (_) => _clipAtDragStart = _latestClip(),
+          onChanged: (v) {
+            final c = _latestClip();
+            if (c != null) {
+              ref
+                  .read(timelineStateProvider)
+                  .updateClip(c.copyWith(titleFontSize: v));
+            }
+          },
+          onChangeEnd: (v) {
+            if (_clipAtDragStart != null) {
+              controller.updateTitleFontSize(clip.id, v);
+              _clipAtDragStart = null;
+            }
+          },
+        ),
+        // Alignment
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
+            children: [
+              const SizedBox(
+                width: 80,
+                child: Text('Align', style: AppTypography.labelMedium),
+              ),
+              _AlignButton(
+                icon: Icons.format_align_left,
+                isActive: clip.titleAlignment == 'left',
+                onTap: () =>
+                    controller.updateTitleAlignment(clip.id, 'left'),
+              ),
+              const SizedBox(width: 4),
+              _AlignButton(
+                icon: Icons.format_align_center,
+                isActive: clip.titleAlignment == 'center',
+                onTap: () =>
+                    controller.updateTitleAlignment(clip.id, 'center'),
+              ),
+              const SizedBox(width: 4),
+              _AlignButton(
+                icon: Icons.format_align_right,
+                isActive: clip.titleAlignment == 'right',
+                onTap: () =>
+                    controller.updateTitleAlignment(clip.id, 'right'),
+              ),
+            ],
+          ),
+        ),
+        // Text color
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Text Color', style: AppTypography.labelMedium),
+              const SizedBox(height: 6),
+              _ColorSwatchRow(
+                selectedColor: clip.titleColorValue,
+                colors: _presetColors,
+                onSelected: (c) =>
+                    controller.updateTitleColor(clip.id, c),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Color Card Section ────────────────────────────────────────────────────────
+
+class _ColorCardSection extends ConsumerWidget {
+  const _ColorCardSection({required this.clip});
+
+  final ClipModel clip;
+
+  static const _presetColors = [
+    0xFF000000, // black
+    0xFFFFFFFF, // white
+    0xFF1A1A1B, // dark grey
+    0xFF505057, // mid grey
+    0xFFFF5252, // red
+    0xFFFFB340, // orange
+    0xFFFFEB3B, // yellow
+    0xFF34C47A, // green
+    0xFF4D9CFF, // blue
+    0xFF9B6DFF, // purple
+    0xFFFF6B9D, // pink
+    0xFF40D9F3, // cyan
+  ];
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final liveClip = ref
+            .watch(timelineStateProvider)
+            .clips
+            .cast<ClipModel?>()
+            .firstWhere((c) => c?.id == clip.id, orElse: () => null) ??
+        clip;
+
+    final controller = ref.read(timelineControllerProvider);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _SectionHeader(title: 'Color Card'),
+        const Text('Background Color', style: AppTypography.labelMedium),
+        const SizedBox(height: 6),
+        _ColorSwatchRow(
+          selectedColor: liveClip.cardColorValue,
+          colors: _presetColors,
+          onSelected: (c) => controller.updateCardColor(liveClip.id, c),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Shared small widgets ──────────────────────────────────────────────────────
+
+class _AlignButton extends StatelessWidget {
+  const _AlignButton({
+    required this.icon,
+    required this.isActive,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final bool isActive;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 28,
+        height: 28,
+        decoration: BoxDecoration(
+          color: isActive
+              ? ColorTokens.accentPrimary.withValues(alpha: 0.2)
+              : ColorTokens.backgroundSurface,
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(
+            color: isActive
+                ? ColorTokens.accentPrimary
+                : ColorTokens.borderSubtle,
+          ),
+        ),
+        child: Icon(
+          icon,
+          size: 14,
+          color: isActive
+              ? ColorTokens.accentPrimary
+              : ColorTokens.textSecondary,
+        ),
+      ),
+    );
+  }
+}
+
+class _ColorSwatchRow extends StatelessWidget {
+  const _ColorSwatchRow({
+    required this.selectedColor,
+    required this.colors,
+    required this.onSelected,
+  });
+
+  final int selectedColor;
+  final List<int> colors;
+  final ValueChanged<int> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: colors
+          .map(
+            (c) => GestureDetector(
+              onTap: () => onSelected(c),
+              child: Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: Color(c),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: selectedColor == c
+                        ? ColorTokens.accentPrimary
+                        : ColorTokens.borderStrong,
+                    width: selectedColor == c ? 2 : 1,
+                  ),
+                ),
+              ),
+            ),
+          )
+          .toList(),
+    );
   }
 }
 
