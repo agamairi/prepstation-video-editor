@@ -202,6 +202,8 @@ class ProjectRepository {
         titleColorValue: Value(clip.titleColorValue),
         titleAlignment: Value(clip.titleAlignment),
         cardColorValue: Value(clip.cardColorValue),
+        fontFamily: Value(clip.fontFamily),
+        textAnimationType: Value(clip.textAnimationType.name),
       ),
     );
   }
@@ -358,6 +360,8 @@ class ProjectRepository {
       titleColorValue: row.titleColorValue,
       titleAlignment: row.titleAlignment,
       cardColorValue: row.cardColorValue,
+      fontFamily: row.fontFamily,
+      textAnimationType: TextAnimationType.fromId(row.textAnimationType),
     );
   }
 }

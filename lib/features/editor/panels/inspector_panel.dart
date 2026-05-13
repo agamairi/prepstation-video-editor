@@ -12,6 +12,7 @@ import 'package:fluxedit/core/project/project_repository.dart';
 import 'package:fluxedit/core/timeline/clip_model.dart';
 import 'package:fluxedit/core/timeline/timeline_controller.dart';
 import 'package:fluxedit/core/transitions/transition_type.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class InspectorPanel extends ConsumerWidget {
   const InspectorPanel({super.key, required this.projectId});
@@ -744,18 +745,35 @@ class _EffectRowState extends ConsumerState<_EffectRow> {
   }
 }
 
-// ── Title Clip Section ────────────────────────────────────────────────────────
+// ── Curated font list ─────────────────────────────────────────────────────────
 
-class _TitleSection extends ConsumerStatefulWidget {
-  const _TitleSection({required this.clip});
+const _kFontFamilies = [
+  'Roboto',
+  'Montserrat',
+  'Poppins',
+  'Inter',
+  'Oswald',
+  'Raleway',
+  'Nunito',
+  'Bebas Neue',
+  'Playfair Display',
+  'Dancing Script',
+  'Permanent Marker',
+  'Anton',
+];
+
+// ── Shared text-style controls (used by Title and ColorCard sections) ─────────
+
+class _TextStyleControls extends ConsumerStatefulWidget {
+  const _TextStyleControls({required this.clip});
 
   final ClipModel clip;
 
   @override
-  ConsumerState<_TitleSection> createState() => _TitleSectionState();
+  ConsumerState<_TextStyleControls> createState() => _TextStyleControlsState();
 }
 
-class _TitleSectionState extends ConsumerState<_TitleSection> {
+class _TextStyleControlsState extends ConsumerState<_TextStyleControls> {
   late TextEditingController _textController;
   ClipModel? _clipAtDragStart;
 
@@ -796,13 +814,23 @@ class _TitleSectionState extends ConsumerState<_TitleSection> {
     }
   }
 
+  TextStyle _fontPreviewStyle(String family) {
+    const base = TextStyle(fontSize: 13, color: ColorTokens.textPrimary);
+    try {
+      return GoogleFonts.getFont(family, textStyle: base);
+    } catch (_) {
+      return base;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final clip = ref
             .watch(timelineStateProvider)
             .clips
             .cast<ClipModel?>()
-            .firstWhere((c) => c?.id == widget.clip.id, orElse: () => null) ??
+            .firstWhere((c) => c?.id == widget.clip.id,
+                orElse: () => null) ??
         widget.clip;
 
     if (_textController.text != (clip.titleText ?? '')) {
@@ -814,42 +842,52 @@ class _TitleSectionState extends ConsumerState<_TitleSection> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _SectionHeader(title: 'Title'),
         // Text content
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Row(
-            children: [
-              const SizedBox(
-                width: 80,
-                child: Text('Text', style: AppTypography.labelMedium),
+        _labeledRow(
+          'Text',
+          TextField(
+            controller: _textController,
+            style: AppTypography.bodySmall
+                .copyWith(color: ColorTokens.textPrimary),
+            decoration: _inputDecoration(),
+            onSubmitted: (v) => controller.updateTitleText(clip.id, v),
+          ),
+        ),
+        // Font family
+        _labeledRow(
+          'Font',
+          DropdownButtonHideUnderline(
+            child: Container(
+              height: 28,
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              decoration: BoxDecoration(
+                color: ColorTokens.backgroundSurface,
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: ColorTokens.borderSubtle),
               ),
-              Expanded(
-                child: TextField(
-                  controller: _textController,
-                  style: AppTypography.bodySmall
-                      .copyWith(color: ColorTokens.textPrimary),
-                  decoration: InputDecoration(
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 6, vertical: 4),
-                    filled: true,
-                    fillColor: ColorTokens.backgroundSurface,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(4),
-                      borderSide:
-                          const BorderSide(color: ColorTokens.borderSubtle),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(4),
-                      borderSide:
-                          const BorderSide(color: ColorTokens.borderSubtle),
-                    ),
-                  ),
-                  onSubmitted: (v) => controller.updateTitleText(clip.id, v),
-                ),
+              child: DropdownButton<String>(
+                value: _kFontFamilies.contains(clip.fontFamily)
+                    ? clip.fontFamily
+                    : _kFontFamilies.first,
+                isDense: true,
+                isExpanded: true,
+                dropdownColor: ColorTokens.backgroundElevated,
+                style: _fontPreviewStyle(clip.fontFamily),
+                items: _kFontFamilies
+                    .map(
+                      (f) => DropdownMenuItem(
+                        value: f,
+                        child: Text(f,
+                            style: _fontPreviewStyle(f),
+                            overflow: TextOverflow.ellipsis),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (v) {
+                  if (v != null) controller.updateFontFamily(clip.id, v);
+                },
               ),
-            ],
+            ),
           ),
         ),
         // Font size
@@ -881,9 +919,8 @@ class _TitleSectionState extends ConsumerState<_TitleSection> {
           child: Row(
             children: [
               const SizedBox(
-                width: 80,
-                child: Text('Align', style: AppTypography.labelMedium),
-              ),
+                  width: 80,
+                  child: Text('Align', style: AppTypography.labelMedium)),
               _AlignButton(
                 icon: Icons.format_align_left,
                 isActive: clip.titleAlignment == 'left',
@@ -918,12 +955,100 @@ class _TitleSectionState extends ConsumerState<_TitleSection> {
               _ColorSwatchRow(
                 selectedColor: clip.titleColorValue,
                 colors: _presetColors,
-                onSelected: (c) =>
-                    controller.updateTitleColor(clip.id, c),
+                onSelected: (c) => controller.updateTitleColor(clip.id, c),
               ),
             ],
           ),
         ),
+        // Animation
+        _labeledRow(
+          'Anim',
+          DropdownButtonHideUnderline(
+            child: Container(
+              height: 28,
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              decoration: BoxDecoration(
+                color: ColorTokens.backgroundSurface,
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: ColorTokens.borderSubtle),
+              ),
+              child: DropdownButton<TextAnimationType>(
+                value: clip.textAnimationType,
+                isDense: true,
+                isExpanded: true,
+                dropdownColor: ColorTokens.backgroundElevated,
+                style: AppTypography.bodySmall
+                    .copyWith(color: ColorTokens.textPrimary),
+                items: TextAnimationType.values
+                    .map(
+                      (a) => DropdownMenuItem(
+                        value: a,
+                        child: Text(a.displayName,
+                            style: AppTypography.bodySmall
+                                .copyWith(color: ColorTokens.textPrimary)),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (v) {
+                  if (v != null) {
+                    controller.updateTextAnimation(clip.id, v);
+                  }
+                },
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _labeledRow(String label, Widget child) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          SizedBox(
+              width: 80,
+              child: Text(label, style: AppTypography.labelMedium)),
+          Expanded(child: child),
+        ],
+      ),
+    );
+  }
+
+  InputDecoration _inputDecoration() {
+    return InputDecoration(
+      isDense: true,
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+      filled: true,
+      fillColor: ColorTokens.backgroundSurface,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(4),
+        borderSide: const BorderSide(color: ColorTokens.borderSubtle),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(4),
+        borderSide: const BorderSide(color: ColorTokens.borderSubtle),
+      ),
+    );
+  }
+}
+
+// ── Title Clip Section ────────────────────────────────────────────────────────
+
+class _TitleSection extends StatelessWidget {
+  const _TitleSection({required this.clip});
+
+  final ClipModel clip;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _SectionHeader(title: 'Title'),
+        _TextStyleControls(clip: clip),
       ],
     );
   }
@@ -936,7 +1061,7 @@ class _ColorCardSection extends ConsumerWidget {
 
   final ClipModel clip;
 
-  static const _presetColors = [
+  static const _bgColors = [
     0xFF000000, // black
     0xFFFFFFFF, // white
     0xFF1A1A1B, // dark grey
@@ -970,9 +1095,12 @@ class _ColorCardSection extends ConsumerWidget {
         const SizedBox(height: 6),
         _ColorSwatchRow(
           selectedColor: liveClip.cardColorValue,
-          colors: _presetColors,
+          colors: _bgColors,
           onSelected: (c) => controller.updateCardColor(liveClip.id, c),
         ),
+        const SizedBox(height: 10),
+        const _SectionHeader(title: 'Text Overlay'),
+        _TextStyleControls(clip: liveClip),
       ],
     );
   }

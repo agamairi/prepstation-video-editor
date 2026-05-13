@@ -606,6 +606,29 @@ class TimelineController {
     ));
   }
 
+  Future<void> updateFontFamily(String clipId, String fontFamily) async {
+    final clip = _findClip(clipId);
+    if (clip == null) return;
+    await execute(UpdateClipCommand(
+      before: clip,
+      after: clip.copyWith(fontFamily: fontFamily),
+      description: 'Font Family',
+    ));
+  }
+
+  Future<void> updateTextAnimation(
+    String clipId,
+    TextAnimationType animation,
+  ) async {
+    final clip = _findClip(clipId);
+    if (clip == null) return;
+    await execute(UpdateClipCommand(
+      before: clip,
+      after: clip.copyWith(textAnimationType: animation),
+      description: 'Text Animation',
+    ));
+  }
+
   Future<void> duplicateClip(String clipId) async {
     final clip = _findClip(clipId);
     if (clip == null) return;

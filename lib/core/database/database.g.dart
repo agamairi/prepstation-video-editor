@@ -2812,6 +2812,31 @@ class $ClipsTable extends Clips with TableInfo<$ClipsTable, Clip> {
     requiredDuringInsert: false,
     defaultValue: const Constant(0xFF000000),
   );
+  static const VerificationMeta _fontFamilyMeta = const VerificationMeta(
+    'fontFamily',
+  );
+  @override
+  late final GeneratedColumn<String> fontFamily = GeneratedColumn<String>(
+    'font_family',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('Roboto'),
+  );
+  static const VerificationMeta _textAnimationTypeMeta = const VerificationMeta(
+    'textAnimationType',
+  );
+  @override
+  late final GeneratedColumn<String> textAnimationType =
+      GeneratedColumn<String>(
+        'text_animation_type',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+        defaultValue: const Constant('none'),
+      );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -2840,6 +2865,8 @@ class $ClipsTable extends Clips with TableInfo<$ClipsTable, Clip> {
     titleColorValue,
     titleAlignment,
     cardColorValue,
+    fontFamily,
+    textAnimationType,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -3067,6 +3094,21 @@ class $ClipsTable extends Clips with TableInfo<$ClipsTable, Clip> {
         ),
       );
     }
+    if (data.containsKey('font_family')) {
+      context.handle(
+        _fontFamilyMeta,
+        fontFamily.isAcceptableOrUnknown(data['font_family']!, _fontFamilyMeta),
+      );
+    }
+    if (data.containsKey('text_animation_type')) {
+      context.handle(
+        _textAnimationTypeMeta,
+        textAnimationType.isAcceptableOrUnknown(
+          data['text_animation_type']!,
+          _textAnimationTypeMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -3180,6 +3222,14 @@ class $ClipsTable extends Clips with TableInfo<$ClipsTable, Clip> {
         DriftSqlType.int,
         data['${effectivePrefix}card_color_value'],
       )!,
+      fontFamily: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}font_family'],
+      )!,
+      textAnimationType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}text_animation_type'],
+      )!,
     );
   }
 
@@ -3216,6 +3266,8 @@ class Clip extends DataClass implements Insertable<Clip> {
   final int titleColorValue;
   final String titleAlignment;
   final int cardColorValue;
+  final String fontFamily;
+  final String textAnimationType;
   const Clip({
     required this.id,
     required this.trackId,
@@ -3243,6 +3295,8 @@ class Clip extends DataClass implements Insertable<Clip> {
     required this.titleColorValue,
     required this.titleAlignment,
     required this.cardColorValue,
+    required this.fontFamily,
+    required this.textAnimationType,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -3279,6 +3333,8 @@ class Clip extends DataClass implements Insertable<Clip> {
     map['title_color_value'] = Variable<int>(titleColorValue);
     map['title_alignment'] = Variable<String>(titleAlignment);
     map['card_color_value'] = Variable<int>(cardColorValue);
+    map['font_family'] = Variable<String>(fontFamily);
+    map['text_animation_type'] = Variable<String>(textAnimationType);
     return map;
   }
 
@@ -3316,6 +3372,8 @@ class Clip extends DataClass implements Insertable<Clip> {
       titleColorValue: Value(titleColorValue),
       titleAlignment: Value(titleAlignment),
       cardColorValue: Value(cardColorValue),
+      fontFamily: Value(fontFamily),
+      textAnimationType: Value(textAnimationType),
     );
   }
 
@@ -3355,6 +3413,8 @@ class Clip extends DataClass implements Insertable<Clip> {
       titleColorValue: serializer.fromJson<int>(json['titleColorValue']),
       titleAlignment: serializer.fromJson<String>(json['titleAlignment']),
       cardColorValue: serializer.fromJson<int>(json['cardColorValue']),
+      fontFamily: serializer.fromJson<String>(json['fontFamily']),
+      textAnimationType: serializer.fromJson<String>(json['textAnimationType']),
     );
   }
   @override
@@ -3389,6 +3449,8 @@ class Clip extends DataClass implements Insertable<Clip> {
       'titleColorValue': serializer.toJson<int>(titleColorValue),
       'titleAlignment': serializer.toJson<String>(titleAlignment),
       'cardColorValue': serializer.toJson<int>(cardColorValue),
+      'fontFamily': serializer.toJson<String>(fontFamily),
+      'textAnimationType': serializer.toJson<String>(textAnimationType),
     };
   }
 
@@ -3419,6 +3481,8 @@ class Clip extends DataClass implements Insertable<Clip> {
     int? titleColorValue,
     String? titleAlignment,
     int? cardColorValue,
+    String? fontFamily,
+    String? textAnimationType,
   }) => Clip(
     id: id ?? this.id,
     trackId: trackId ?? this.trackId,
@@ -3452,6 +3516,8 @@ class Clip extends DataClass implements Insertable<Clip> {
     titleColorValue: titleColorValue ?? this.titleColorValue,
     titleAlignment: titleAlignment ?? this.titleAlignment,
     cardColorValue: cardColorValue ?? this.cardColorValue,
+    fontFamily: fontFamily ?? this.fontFamily,
+    textAnimationType: textAnimationType ?? this.textAnimationType,
   );
   Clip copyWithCompanion(ClipsCompanion data) {
     return Clip(
@@ -3511,6 +3577,12 @@ class Clip extends DataClass implements Insertable<Clip> {
       cardColorValue: data.cardColorValue.present
           ? data.cardColorValue.value
           : this.cardColorValue,
+      fontFamily: data.fontFamily.present
+          ? data.fontFamily.value
+          : this.fontFamily,
+      textAnimationType: data.textAnimationType.present
+          ? data.textAnimationType.value
+          : this.textAnimationType,
     );
   }
 
@@ -3542,7 +3614,9 @@ class Clip extends DataClass implements Insertable<Clip> {
           ..write('titleFontSize: $titleFontSize, ')
           ..write('titleColorValue: $titleColorValue, ')
           ..write('titleAlignment: $titleAlignment, ')
-          ..write('cardColorValue: $cardColorValue')
+          ..write('cardColorValue: $cardColorValue, ')
+          ..write('fontFamily: $fontFamily, ')
+          ..write('textAnimationType: $textAnimationType')
           ..write(')'))
         .toString();
   }
@@ -3575,6 +3649,8 @@ class Clip extends DataClass implements Insertable<Clip> {
     titleColorValue,
     titleAlignment,
     cardColorValue,
+    fontFamily,
+    textAnimationType,
   ]);
   @override
   bool operator ==(Object other) =>
@@ -3605,7 +3681,9 @@ class Clip extends DataClass implements Insertable<Clip> {
           other.titleFontSize == this.titleFontSize &&
           other.titleColorValue == this.titleColorValue &&
           other.titleAlignment == this.titleAlignment &&
-          other.cardColorValue == this.cardColorValue);
+          other.cardColorValue == this.cardColorValue &&
+          other.fontFamily == this.fontFamily &&
+          other.textAnimationType == this.textAnimationType);
 }
 
 class ClipsCompanion extends UpdateCompanion<Clip> {
@@ -3635,6 +3713,8 @@ class ClipsCompanion extends UpdateCompanion<Clip> {
   final Value<int> titleColorValue;
   final Value<String> titleAlignment;
   final Value<int> cardColorValue;
+  final Value<String> fontFamily;
+  final Value<String> textAnimationType;
   final Value<int> rowid;
   const ClipsCompanion({
     this.id = const Value.absent(),
@@ -3663,6 +3743,8 @@ class ClipsCompanion extends UpdateCompanion<Clip> {
     this.titleColorValue = const Value.absent(),
     this.titleAlignment = const Value.absent(),
     this.cardColorValue = const Value.absent(),
+    this.fontFamily = const Value.absent(),
+    this.textAnimationType = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ClipsCompanion.insert({
@@ -3692,6 +3774,8 @@ class ClipsCompanion extends UpdateCompanion<Clip> {
     this.titleColorValue = const Value.absent(),
     this.titleAlignment = const Value.absent(),
     this.cardColorValue = const Value.absent(),
+    this.fontFamily = const Value.absent(),
+    this.textAnimationType = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        trackId = Value(trackId),
@@ -3728,6 +3812,8 @@ class ClipsCompanion extends UpdateCompanion<Clip> {
     Expression<int>? titleColorValue,
     Expression<String>? titleAlignment,
     Expression<int>? cardColorValue,
+    Expression<String>? fontFamily,
+    Expression<String>? textAnimationType,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -3759,6 +3845,8 @@ class ClipsCompanion extends UpdateCompanion<Clip> {
       if (titleColorValue != null) 'title_color_value': titleColorValue,
       if (titleAlignment != null) 'title_alignment': titleAlignment,
       if (cardColorValue != null) 'card_color_value': cardColorValue,
+      if (fontFamily != null) 'font_family': fontFamily,
+      if (textAnimationType != null) 'text_animation_type': textAnimationType,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -3790,6 +3878,8 @@ class ClipsCompanion extends UpdateCompanion<Clip> {
     Value<int>? titleColorValue,
     Value<String>? titleAlignment,
     Value<int>? cardColorValue,
+    Value<String>? fontFamily,
+    Value<String>? textAnimationType,
     Value<int>? rowid,
   }) {
     return ClipsCompanion(
@@ -3821,6 +3911,8 @@ class ClipsCompanion extends UpdateCompanion<Clip> {
       titleColorValue: titleColorValue ?? this.titleColorValue,
       titleAlignment: titleAlignment ?? this.titleAlignment,
       cardColorValue: cardColorValue ?? this.cardColorValue,
+      fontFamily: fontFamily ?? this.fontFamily,
+      textAnimationType: textAnimationType ?? this.textAnimationType,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -3910,6 +4002,12 @@ class ClipsCompanion extends UpdateCompanion<Clip> {
     if (cardColorValue.present) {
       map['card_color_value'] = Variable<int>(cardColorValue.value);
     }
+    if (fontFamily.present) {
+      map['font_family'] = Variable<String>(fontFamily.value);
+    }
+    if (textAnimationType.present) {
+      map['text_animation_type'] = Variable<String>(textAnimationType.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -3945,6 +4043,8 @@ class ClipsCompanion extends UpdateCompanion<Clip> {
           ..write('titleColorValue: $titleColorValue, ')
           ..write('titleAlignment: $titleAlignment, ')
           ..write('cardColorValue: $cardColorValue, ')
+          ..write('fontFamily: $fontFamily, ')
+          ..write('textAnimationType: $textAnimationType, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -7253,6 +7353,8 @@ typedef $$ClipsTableCreateCompanionBuilder =
       Value<int> titleColorValue,
       Value<String> titleAlignment,
       Value<int> cardColorValue,
+      Value<String> fontFamily,
+      Value<String> textAnimationType,
       Value<int> rowid,
     });
 typedef $$ClipsTableUpdateCompanionBuilder =
@@ -7283,6 +7385,8 @@ typedef $$ClipsTableUpdateCompanionBuilder =
       Value<int> titleColorValue,
       Value<String> titleAlignment,
       Value<int> cardColorValue,
+      Value<String> fontFamily,
+      Value<String> textAnimationType,
       Value<int> rowid,
     });
 
@@ -7489,6 +7593,16 @@ class $$ClipsTableFilterComposer extends Composer<_$AppDatabase, $ClipsTable> {
 
   ColumnFilters<int> get cardColorValue => $composableBuilder(
     column: $table.cardColorValue,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get fontFamily => $composableBuilder(
+    column: $table.fontFamily,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get textAnimationType => $composableBuilder(
+    column: $table.textAnimationType,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -7718,6 +7832,16 @@ class $$ClipsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get fontFamily => $composableBuilder(
+    column: $table.fontFamily,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get textAnimationType => $composableBuilder(
+    column: $table.textAnimationType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$TracksTableOrderingComposer get trackId {
     final $$TracksTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -7873,6 +7997,16 @@ class $$ClipsTableAnnotationComposer
 
   GeneratedColumn<int> get cardColorValue => $composableBuilder(
     column: $table.cardColorValue,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get fontFamily => $composableBuilder(
+    column: $table.fontFamily,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get textAnimationType => $composableBuilder(
+    column: $table.textAnimationType,
     builder: (column) => column,
   );
 
@@ -8032,6 +8166,8 @@ class $$ClipsTableTableManager
                 Value<int> titleColorValue = const Value.absent(),
                 Value<String> titleAlignment = const Value.absent(),
                 Value<int> cardColorValue = const Value.absent(),
+                Value<String> fontFamily = const Value.absent(),
+                Value<String> textAnimationType = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ClipsCompanion(
                 id: id,
@@ -8060,6 +8196,8 @@ class $$ClipsTableTableManager
                 titleColorValue: titleColorValue,
                 titleAlignment: titleAlignment,
                 cardColorValue: cardColorValue,
+                fontFamily: fontFamily,
+                textAnimationType: textAnimationType,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -8090,6 +8228,8 @@ class $$ClipsTableTableManager
                 Value<int> titleColorValue = const Value.absent(),
                 Value<String> titleAlignment = const Value.absent(),
                 Value<int> cardColorValue = const Value.absent(),
+                Value<String> fontFamily = const Value.absent(),
+                Value<String> textAnimationType = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ClipsCompanion.insert(
                 id: id,
@@ -8118,6 +8258,8 @@ class $$ClipsTableTableManager
                 titleColorValue: titleColorValue,
                 titleAlignment: titleAlignment,
                 cardColorValue: cardColorValue,
+                fontFamily: fontFamily,
+                textAnimationType: textAnimationType,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

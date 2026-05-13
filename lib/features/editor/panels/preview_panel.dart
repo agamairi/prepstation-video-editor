@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fluxedit/app/theme/color_tokens.dart';
 import 'package:fluxedit/app/theme/typography.dart';
+import 'package:fluxedit/core/constants/app_constants.dart';
 import 'package:fluxedit/core/effects/effect_model.dart';
 import 'package:fluxedit/core/effects/effect_type.dart';
 import 'package:fluxedit/core/project/project_model.dart';
@@ -14,6 +15,7 @@ import 'package:fluxedit/core/project/project_repository.dart';
 import 'package:fluxedit/core/timeline/clip_model.dart';
 import 'package:fluxedit/core/timeline/timeline_controller.dart';
 import 'package:fluxedit/core/timeline/timeline_state.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:video_player/video_player.dart';
 
 /// The clip currently under the playhead (top video track wins).
@@ -77,8 +79,7 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
     if (state.selectedClipIds.isNotEmpty) {
       final selectedId = state.selectedClipIds.first;
       try {
-        final selected =
-            state.clips.firstWhere((c) => c.id == selectedId);
+        final selected = state.clips.firstWhere((c) => c.id == selectedId);
         if (state.playhead < selected.startOnTimeline ||
             state.playhead >= selected.endOnTimeline) {
           seekTo = selected.startOnTimeline;
@@ -134,7 +135,6 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
 
   // ── Effect filters ──────────────────────────────────────────────────────────
 
-  /// Wraps [child] with Flutter filter widgets mirroring the active effects.
   Widget _applyEffectFilters(Widget child, List<EffectInstance> effects) {
     Widget result = child;
     for (final effect in effects.where((e) => e.isEnabled)) {
@@ -171,8 +171,7 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
                         radius: 1.2,
                         colors: [
                           Colors.transparent,
-                          Colors.black
-                              .withValues(alpha: strength * 0.85),
+                          Colors.black.withValues(alpha: strength * 0.85),
                         ],
                         stops: const [0.45, 1.0],
                       ),
@@ -190,27 +189,19 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
     return result;
   }
 
-  /// 20-element RGBA color matrix combining brightness, contrast, saturation.
-  ///
-  /// Flutter's [ColorFilter.matrix] expects offset values in the [0, 255]
-  /// range (same as Android ColorMatrix).
   List<double> _buildColorMatrix(Map<String, double> params) {
     final brightness = (params['brightness'] ?? 0.0).clamp(-1.0, 1.0);
     final contrast = (params['contrast'] ?? 1.0).clamp(0.0, 3.0);
     final saturation = (params['saturation'] ?? 1.0).clamp(0.0, 3.0);
 
-    // ITU-R BT.709 luminance weights
     const rLum = 0.2126;
     const gLum = 0.7152;
     const bLum = 0.0722;
 
-    // Saturation: interpolate between grayscale and full colour
     final sr = rLum * (1.0 - saturation);
     final sg = gLum * (1.0 - saturation);
     final sb = bLum * (1.0 - saturation);
 
-    // Contrast: scale and shift to keep midpoint at 0.5; brightness shifts on
-    // top. Offset column must be in [0, 255] for ColorFilter.matrix.
     final offset = ((1.0 - contrast) / 2.0 + brightness) * 255.0;
 
     return [
@@ -260,12 +251,19 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
     });
   }
 
+  // ── Animation helpers ───────────────────────────────────────────────────────
+
+  /// 0→1 progress of the clip's text-in animation at the current playhead.
+  double _animT(ClipModel clip, Duration playhead) {
+    final offsetMs =
+        (playhead - clip.startOnTimeline).inMilliseconds.toDouble();
+    return (offsetMs / AppConstants.textAnimationDurationMs).clamp(0.0, 1.0);
+  }
+
   // ── Build ───────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
-    // React to play/pause transitions via a derived bool provider so that
-    // the same-object ChangeNotifier issue doesn't prevent detection.
     ref.listen<bool>(_isPlayingProvider, (prev, isPlaying) {
       final state = ref.read(timelineStateProvider);
       if (isPlaying) {
@@ -285,38 +283,41 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
       });
     }
 
-    // Reset video controller when no video clip is under the playhead.
-    if (mediaId == null && _initialized) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        setState(() {
-          _controller?.dispose();
-          _controller = null;
-          _initialized = false;
-          _currentMediaId = null;
-        });
-      });
+    // When moving to a non-video clip/gap, just pause (don't dispose).
+    if (mediaId == null && _controller != null) {
+      _controller!.pause();
     }
 
     final effects = activeClip != null
         ? timelineState.effectsForClip(activeClip.id)
         : <EffectInstance>[];
 
+    // Compute animation progress for synthetic clips.
+    final animT = activeClip != null
+        ? _animT(activeClip, timelineState.playhead)
+        : 1.0;
+
     // Choose the content widget based on the active clip type.
     Widget contentWidget;
     if (activeClip?.type == ClipType.title) {
-      contentWidget = _TitlePreview(
+      contentWidget = _TextOverlayPreview(
         clip: activeClip!,
         compositionWidth: widget.project.composition.width,
         compositionHeight: widget.project.composition.height,
+        background: Colors.black,
+        animT: animT,
       );
     } else if (activeClip?.type == ClipType.colorCard) {
-      contentWidget = _ColorCardPreview(
+      contentWidget = _TextOverlayPreview(
         clip: activeClip!,
         compositionWidth: widget.project.composition.width,
         compositionHeight: widget.project.composition.height,
+        background: Color(activeClip.cardColorValue),
+        animT: animT,
       );
-    } else if (_initialized && _controller != null) {
+    } else if (activeClip?.type == ClipType.video &&
+        _initialized &&
+        _controller != null) {
       contentWidget = AspectRatio(
         aspectRatio: _controller!.value.aspectRatio,
         child: VideoPlayer(_controller!),
@@ -342,18 +343,36 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
   }
 }
 
-// ── Synthetic clip preview widgets ───────────────────────────────────────────
+// ── Text overlay preview (title and colorCard) ───────────────────────────────
 
-class _TitlePreview extends StatelessWidget {
-  const _TitlePreview({
+class _TextOverlayPreview extends StatelessWidget {
+  const _TextOverlayPreview({
     required this.clip,
     required this.compositionWidth,
     required this.compositionHeight,
+    required this.background,
+    required this.animT,
   });
 
   final ClipModel clip;
   final int compositionWidth;
   final int compositionHeight;
+  final Color background;
+  final double animT;
+
+  TextStyle _resolvedStyle() {
+    final base = TextStyle(
+      color: Color(clip.titleColorValue),
+      fontSize: clip.titleFontSize,
+      fontWeight: FontWeight.bold,
+      shadows: const [Shadow(blurRadius: 4, color: Colors.black54)],
+    );
+    try {
+      return GoogleFonts.getFont(clip.fontFamily, textStyle: base);
+    } catch (_) {
+      return base;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -362,47 +381,72 @@ class _TitlePreview extends StatelessWidget {
       'right' => TextAlign.right,
       _ => TextAlign.center,
     };
+
+    final text = clip.titleText ?? '';
+
+    Widget textWidget = text.isEmpty
+        ? const SizedBox.shrink()
+        : Text(text, textAlign: alignment, style: _resolvedStyle());
+
+    // Apply text animation based on animT (0=start, 1=fully in).
+    textWidget = _applyAnimation(textWidget, text);
+
     return AspectRatio(
       aspectRatio: compositionWidth / compositionHeight,
       child: Container(
-        color: Colors.black,
+        color: background,
         padding: const EdgeInsets.all(32),
-        child: Center(
-          child: Text(
-            clip.titleText ?? '',
-            textAlign: alignment,
-            style: TextStyle(
-              color: Color(clip.titleColorValue),
-              fontSize: clip.titleFontSize,
-              fontWeight: FontWeight.bold,
-              shadows: const [
-                Shadow(blurRadius: 4, color: Colors.black54),
-              ],
-            ),
-          ),
-        ),
+        child: Center(child: textWidget),
       ),
     );
   }
-}
 
-class _ColorCardPreview extends StatelessWidget {
-  const _ColorCardPreview({
-    required this.clip,
-    required this.compositionWidth,
-    required this.compositionHeight,
-  });
-
-  final ClipModel clip;
-  final int compositionWidth;
-  final int compositionHeight;
-
-  @override
-  Widget build(BuildContext context) {
-    return AspectRatio(
-      aspectRatio: compositionWidth / compositionHeight,
-      child: ColoredBox(color: Color(clip.cardColorValue)),
-    );
+  Widget _applyAnimation(Widget child, String fullText) {
+    final t = animT;
+    switch (clip.textAnimationType) {
+      case TextAnimationType.none:
+        return child;
+      case TextAnimationType.fadeIn:
+        return Opacity(opacity: t, child: child);
+      case TextAnimationType.slideUp:
+        return Transform.translate(
+          offset: Offset(0, (1 - t) * 40),
+          child: Opacity(opacity: t, child: child),
+        );
+      case TextAnimationType.slideDown:
+        return Transform.translate(
+          offset: Offset(0, -(1 - t) * 40),
+          child: Opacity(opacity: t, child: child),
+        );
+      case TextAnimationType.slideLeft:
+        return Transform.translate(
+          offset: Offset((1 - t) * 60, 0),
+          child: Opacity(opacity: t, child: child),
+        );
+      case TextAnimationType.slideRight:
+        return Transform.translate(
+          offset: Offset(-(1 - t) * 60, 0),
+          child: Opacity(opacity: t, child: child),
+        );
+      case TextAnimationType.zoomIn:
+        return Transform.scale(
+          scale: 0.3 + 0.7 * t,
+          child: Opacity(opacity: t, child: child),
+        );
+      case TextAnimationType.typewriter:
+        if (fullText.isEmpty) return child;
+        final visible =
+            (fullText.length * t).round().clamp(0, fullText.length);
+        return Text(
+          fullText.substring(0, visible),
+          textAlign: switch (clip.titleAlignment) {
+            'left' => TextAlign.left,
+            'right' => TextAlign.right,
+            _ => TextAlign.center,
+          },
+          style: _resolvedStyle(),
+        );
+    }
   }
 }
 
@@ -428,10 +472,7 @@ class _EmptyPreview extends StatelessWidget {
               color: ColorTokens.textDisabled,
             ),
             const SizedBox(height: 12),
-            Text(
-              '$width×$height',
-              style: AppTypography.bodySmall,
-            ),
+            Text('$width×$height', style: AppTypography.bodySmall),
           ],
         ),
       ),
@@ -491,9 +532,7 @@ class _ZoomSelectorState extends State<_ZoomSelector> {
       dropdownColor: ColorTokens.backgroundElevated,
       isDense: true,
       items: ['Fit', '25%', '50%', '100%', '200%']
-          .map(
-            (z) => DropdownMenuItem(value: z, child: Text(z)),
-          )
+          .map((z) => DropdownMenuItem(value: z, child: Text(z)))
           .toList(),
       onChanged: (v) => setState(() => _zoom = v ?? 'Fit'),
     );

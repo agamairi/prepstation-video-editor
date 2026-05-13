@@ -224,7 +224,7 @@ class _TimelineCanvasState extends State<TimelineCanvas> {
   }
 }
 
-class _ClipGestureArea extends StatelessWidget {
+class _ClipGestureArea extends StatefulWidget {
   const _ClipGestureArea({
     required this.clip,
     required this.isSelected,
@@ -250,25 +250,57 @@ class _ClipGestureArea extends StatelessWidget {
   final ValueChanged<Offset>? onContextMenu;
 
   @override
+  State<_ClipGestureArea> createState() => _ClipGestureAreaState();
+}
+
+class _ClipGestureAreaState extends State<_ClipGestureArea> {
+  /// Whether a long-press drag is currently in progress.
+  bool _isLongPressDragging = false;
+
+  /// Global x where the long press started (used for first drag delta).
+  double _longPressOriginX = 0;
+
+  @override
   Widget build(BuildContext context) {
     return Stack(
       children: [
         // Main clip body — opaque so it wins the arena over background scroll
         Positioned.fill(
-          left: trimHandleWidth,
-          right: trimHandleWidth,
+          left: widget.trimHandleWidth,
+          right: widget.trimHandleWidth,
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onTap: onTap,
-            onLongPressStart: onContextMenu != null
-                ? (d) => onContextMenu!(d.globalPosition)
+            onTap: widget.onTap,
+            // Right-click context menu (desktop)
+            onSecondaryTapDown: widget.onContextMenu != null
+                ? (d) => widget.onContextMenu!(d.globalPosition)
                 : null,
-            onSecondaryTapDown: onContextMenu != null
-                ? (d) => onContextMenu!(d.globalPosition)
-                : null,
-            onHorizontalDragStart: (d) => onDragStart(d.globalPosition.dx),
-            onHorizontalDragUpdate: (d) => onDrag(d.globalPosition.dx),
-            onHorizontalDragEnd: (_) => onDragEnd(),
+            // Mouse / quick-touch drag (immediate, no hold required)
+            onHorizontalDragStart: (d) =>
+                widget.onDragStart(d.globalPosition.dx),
+            onHorizontalDragUpdate: (d) => widget.onDrag(d.globalPosition.dx),
+            onHorizontalDragEnd: (_) => widget.onDragEnd(),
+            // Long-press: hold to start drag on touch, or show menu if no drag
+            onLongPressStart: (d) {
+              _isLongPressDragging = false;
+              _longPressOriginX = d.globalPosition.dx;
+            },
+            onLongPressMoveUpdate: (d) {
+              if (!_isLongPressDragging) {
+                _isLongPressDragging = true;
+                widget.onDragStart(_longPressOriginX);
+              }
+              widget.onDrag(d.globalPosition.dx);
+              _longPressOriginX = d.globalPosition.dx;
+            },
+            onLongPressEnd: (d) {
+              if (_isLongPressDragging) {
+                widget.onDragEnd();
+              } else if (widget.onContextMenu != null) {
+                widget.onContextMenu!(d.globalPosition);
+              }
+              _isLongPressDragging = false;
+            },
           ),
         ),
         // Left trim handle
@@ -276,15 +308,15 @@ class _ClipGestureArea extends StatelessWidget {
           left: 0,
           top: 0,
           bottom: 0,
-          width: trimHandleWidth,
+          width: widget.trimHandleWidth,
           child: GestureDetector(
             onHorizontalDragUpdate: (d) =>
-                onTrimStartDrag(d.localPosition.dx),
+                widget.onTrimStartDrag(d.localPosition.dx),
             child: MouseRegion(
               cursor: SystemMouseCursors.resizeLeft,
               child: Container(
                 decoration: BoxDecoration(
-                  color: isSelected
+                  color: widget.isSelected
                       ? ColorTokens.accentPrimary
                       : ColorTokens.borderStrong,
                   borderRadius: const BorderRadius.only(
@@ -301,15 +333,15 @@ class _ClipGestureArea extends StatelessWidget {
           right: 0,
           top: 0,
           bottom: 0,
-          width: trimHandleWidth,
+          width: widget.trimHandleWidth,
           child: GestureDetector(
             onHorizontalDragUpdate: (d) =>
-                onTrimEndDrag(d.localPosition.dx),
+                widget.onTrimEndDrag(d.localPosition.dx),
             child: MouseRegion(
               cursor: SystemMouseCursors.resizeRight,
               child: Container(
                 decoration: BoxDecoration(
-                  color: isSelected
+                  color: widget.isSelected
                       ? ColorTokens.accentPrimary
                       : ColorTokens.borderStrong,
                   borderRadius: const BorderRadius.only(

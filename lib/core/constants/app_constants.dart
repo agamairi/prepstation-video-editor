@@ -79,6 +79,10 @@ abstract final class AppConstants {
   static const double defaultTitleFontSize = 48.0;
   static const int defaultTitleColor = 0xFFFFFFFF; // white
   static const int defaultCardColor = 0xFF000000; // black
+  static const String defaultFontFamily = 'Roboto';
+
+  // Text animation duration (ms into clip where animation completes)
+  static const int textAnimationDurationMs = 600;
 
   // Proxy resolution divisor
   static const int proxyResolutionDivisor = 4;

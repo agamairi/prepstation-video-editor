@@ -4,6 +4,31 @@ import 'package:fluxedit/core/constants/app_constants.dart';
 
 enum ClipType { video, audio, title, image, adjustment, colorCard }
 
+enum TextAnimationType {
+  none,
+  fadeIn,
+  slideUp,
+  slideDown,
+  slideLeft,
+  slideRight,
+  zoomIn,
+  typewriter;
+
+  String get displayName => switch (this) {
+        TextAnimationType.none => 'None',
+        TextAnimationType.fadeIn => 'Fade In',
+        TextAnimationType.slideUp => 'Slide Up',
+        TextAnimationType.slideDown => 'Slide Down',
+        TextAnimationType.slideLeft => 'Slide Left',
+        TextAnimationType.slideRight => 'Slide Right',
+        TextAnimationType.zoomIn => 'Zoom In',
+        TextAnimationType.typewriter => 'Typewriter',
+      };
+
+  static TextAnimationType fromId(String id) => TextAnimationType.values
+      .firstWhere((e) => e.name == id, orElse: () => TextAnimationType.none);
+}
+
 enum BlendMode2 {
   normal,
   multiply,
@@ -54,6 +79,8 @@ class ClipModel {
     this.titleColorValue = AppConstants.defaultTitleColor,
     this.titleAlignment = 'center',
     this.cardColorValue = AppConstants.defaultCardColor,
+    this.fontFamily = AppConstants.defaultFontFamily,
+    this.textAnimationType = TextAnimationType.none,
   });
 
   final String id;
@@ -93,6 +120,10 @@ class ClipModel {
   // Color-card clip field
   final int cardColorValue;
 
+  // Font & animation (title and colorCard clips)
+  final String fontFamily;
+  final TextAnimationType textAnimationType;
+
   Duration get duration => endOnTimeline - startOnTimeline;
   Duration get mediaDuration => mediaOutPoint - mediaInPoint;
 
@@ -131,6 +162,8 @@ class ClipModel {
     int? titleColorValue,
     String? titleAlignment,
     int? cardColorValue,
+    String? fontFamily,
+    TextAnimationType? textAnimationType,
   }) {
     return ClipModel(
       id: id ?? this.id,
@@ -165,6 +198,8 @@ class ClipModel {
       titleColorValue: titleColorValue ?? this.titleColorValue,
       titleAlignment: titleAlignment ?? this.titleAlignment,
       cardColorValue: cardColorValue ?? this.cardColorValue,
+      fontFamily: fontFamily ?? this.fontFamily,
+      textAnimationType: textAnimationType ?? this.textAnimationType,
     );
   }
 

@@ -19,7 +19,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -43,6 +43,14 @@ class AppDatabase extends _$AppDatabase {
         // 0xFF000000 = -16777216 as signed 64-bit (black)
         await customStatement(
           'ALTER TABLE clips ADD COLUMN card_color_value INTEGER NOT NULL DEFAULT -16777216',
+        );
+      }
+      if (from < 3) {
+        await customStatement(
+          "ALTER TABLE clips ADD COLUMN font_family TEXT NOT NULL DEFAULT 'Roboto'",
+        );
+        await customStatement(
+          "ALTER TABLE clips ADD COLUMN text_animation_type TEXT NOT NULL DEFAULT 'none'",
         );
       }
     },
