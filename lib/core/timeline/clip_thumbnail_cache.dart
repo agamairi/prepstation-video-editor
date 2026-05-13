@@ -1,24 +1,31 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:fluxedit/core/constants/app_constants.dart';
 import 'package:fluxedit/core/ffmpeg/thumbnail_generator.dart';
+import 'package:fluxedit/core/project/project_repository.dart';
 import 'package:fluxedit/core/timeline/clip_model.dart';
 
+/// Non-autoDispose so thumbnails survive navigation between screens.
 final clipThumbnailCacheProvider =
-    ChangeNotifierProvider.autoDispose<ClipThumbnailCache>(
-  (ref) => ClipThumbnailCache(ref.watch(thumbnailGeneratorProvider)),
+    ChangeNotifierProvider<ClipThumbnailCache>(
+  (ref) => ClipThumbnailCache(
+    ref.watch(thumbnailGeneratorProvider),
+    ref.watch(projectRepositoryProvider),
+  ),
 );
 
 class ClipThumbnailCache extends ChangeNotifier {
-  ClipThumbnailCache(this._generator);
+  ClipThumbnailCache(this._generator, this._repository);
 
   final ThumbnailGenerator _generator;
+  final ProjectRepository _repository;
 
   final Map<String, List<ui.Image>> _cache = {};
   final Set<String> _loading = {};
-  // Tracks clips that failed to generate — won't retry until cache is cleared.
   final Set<String> _failed = {};
 
   List<ui.Image>? thumbnailsForClip(String clipId) => _cache[clipId];
@@ -30,31 +37,58 @@ class ClipThumbnailCache extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Triggers thumbnail loading for [clip] if not already cached/loading.
+  ///
+  /// Fetches the asset from the repository itself, so it always reads
+  /// fresh data even for clips imported after the editor opened.
   Future<void> ensureLoaded({
     required ClipModel clip,
-    required String filePath,
-    required Duration mediaDuration,
-    int count = 6,
+    int videoCount = 6,
   }) async {
+    if (clip.type != ClipType.video && clip.type != ClipType.image) return;
     if (_cache.containsKey(clip.id)) return;
     if (_loading.contains(clip.id)) return;
     if (_failed.contains(clip.id)) return;
 
     _loading.add(clip.id);
-    notifyListeners(); // trigger loading-state repaint
+    // Defer notifyListeners() so it never fires during a build phase.
+    unawaited(Future.microtask(notifyListeners));
 
     try {
-      final paths = await _generator.generateTimelineThumbnails(
-        sourceFilePath: filePath,
-        assetId: clip.mediaId,
-        mediaDuration: mediaDuration,
-        count: count,
-      );
+      final asset = await _repository.getMediaAsset(clip.mediaId);
+      if (asset == null) {
+        _failed.add(clip.id);
+        return;
+      }
+
+      final List<String> paths;
+
+      if (clip.type == ClipType.image) {
+        // Images are single-frame — one thumbnail suffices.
+        final path = await _generator.generateThumbnail(
+          sourceFilePath: asset.filePath,
+          assetId: '${asset.id}_img',
+          timestamp: Duration.zero,
+          width: AppConstants.timelineThumbnailWidth,
+          height: AppConstants.timelineThumbnailHeight,
+        );
+        paths = path != null ? [path] : [];
+      } else {
+        if (asset.duration == Duration.zero) {
+          _failed.add(clip.id);
+          return;
+        }
+        paths = await _generator.generateTimelineThumbnails(
+          sourceFilePath: asset.filePath,
+          assetId: clip.mediaId,
+          mediaDuration: asset.duration,
+          count: videoCount,
+        );
+      }
 
       if (paths.isEmpty) {
         debugPrint(
-          '[ClipThumbnailCache] FFmpeg returned no thumbnails for '
-          'clip=${clip.id} asset=${clip.mediaId} path=$filePath',
+          '[ClipThumbnailCache] No thumbnails for clip=${clip.id}',
         );
         _failed.add(clip.id);
         return;
@@ -78,7 +112,7 @@ class ClipThumbnailCache extends ChangeNotifier {
         _failed.add(clip.id);
       }
     } catch (e) {
-      debugPrint('[ClipThumbnailCache] Error loading clip=${clip.id}: $e');
+      debugPrint('[ClipThumbnailCache] Error for clip=${clip.id}: $e');
       _failed.add(clip.id);
     } finally {
       _loading.remove(clip.id);

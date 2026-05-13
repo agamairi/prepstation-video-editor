@@ -121,11 +121,13 @@ class Clips extends Table {
   IntColumn get cardColorValue =>
       integer().withDefault(const Constant(0xFF000000))();
 
-  // Font & animation (title and colorCard clips)
+  // Font & animation (title, colorCard, and image clips)
   TextColumn get fontFamily =>
       text().withDefault(const Constant('Roboto'))();
   TextColumn get textAnimationType =>
       text().withDefault(const Constant('none'))();
+  IntColumn get textAnimationDurationMs =>
+      integer().withDefault(const Constant(600))();
 
   @override
   Set<Column<Object>> get primaryKey => {id};

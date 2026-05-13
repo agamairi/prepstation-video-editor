@@ -81,6 +81,7 @@ class ClipModel {
     this.cardColorValue = AppConstants.defaultCardColor,
     this.fontFamily = AppConstants.defaultFontFamily,
     this.textAnimationType = TextAnimationType.none,
+    this.textAnimationDurationMs = AppConstants.textAnimationDurationMs,
   });
 
   final String id;
@@ -120,9 +121,10 @@ class ClipModel {
   // Color-card clip field
   final int cardColorValue;
 
-  // Font & animation (title and colorCard clips)
+  // Font & animation (title, colorCard, and image clips)
   final String fontFamily;
   final TextAnimationType textAnimationType;
+  final int textAnimationDurationMs;
 
   Duration get duration => endOnTimeline - startOnTimeline;
   Duration get mediaDuration => mediaOutPoint - mediaInPoint;
@@ -164,6 +166,7 @@ class ClipModel {
     int? cardColorValue,
     String? fontFamily,
     TextAnimationType? textAnimationType,
+    int? textAnimationDurationMs,
   }) {
     return ClipModel(
       id: id ?? this.id,
@@ -200,6 +203,8 @@ class ClipModel {
       cardColorValue: cardColorValue ?? this.cardColorValue,
       fontFamily: fontFamily ?? this.fontFamily,
       textAnimationType: textAnimationType ?? this.textAnimationType,
+      textAnimationDurationMs:
+          textAnimationDurationMs ?? this.textAnimationDurationMs,
     );
   }
 

@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fluxedit/app/theme/color_tokens.dart';
 import 'package:fluxedit/app/theme/typography.dart';
-import 'package:fluxedit/core/constants/app_constants.dart';
 import 'package:fluxedit/core/effects/effect_model.dart';
 import 'package:fluxedit/core/effects/effect_type.dart';
 import 'package:fluxedit/core/project/project_model.dart';
@@ -26,6 +25,17 @@ final _activeClipProvider = Provider.autoDispose<ClipModel?>((ref) {
     if (clip != null) return clip;
   }
   return null;
+});
+
+/// Resolves the file path for an image clip's asset (null when not an image).
+final _activeImagePathProvider =
+    FutureProvider.autoDispose<String?>((ref) async {
+  final clip = ref.watch(_activeClipProvider);
+  if (clip?.type != ClipType.image) return null;
+  final asset = await ref
+      .read(projectRepositoryProvider)
+      .getMediaAsset(clip!.mediaId);
+  return asset?.proxyPath ?? asset?.filePath;
 });
 
 /// Derived bool provider so ref.listen sees value changes (not same-object
@@ -257,7 +267,8 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
   double _animT(ClipModel clip, Duration playhead) {
     final offsetMs =
         (playhead - clip.startOnTimeline).inMilliseconds.toDouble();
-    return (offsetMs / AppConstants.textAnimationDurationMs).clamp(0.0, 1.0);
+    final durMs = clip.textAnimationDurationMs.toDouble();
+    return (offsetMs / durMs).clamp(0.0, 1.0);
   }
 
   // ── Build ───────────────────────────────────────────────────────────────────
@@ -276,6 +287,7 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
     final mediaId = ref.watch(_currentClipPathProvider);
     final activeClip = ref.watch(_activeClipProvider);
     final timelineState = ref.watch(timelineStateProvider);
+    final imagePathAsync = ref.watch(_activeImagePathProvider);
 
     if (mediaId != null && mediaId != _currentMediaId) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -315,6 +327,14 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
         background: Color(activeClip.cardColorValue),
         animT: animT,
       );
+    } else if (activeClip?.type == ClipType.image) {
+      contentWidget = _TextOverlayPreview(
+        clip: activeClip!,
+        compositionWidth: widget.project.composition.width,
+        compositionHeight: widget.project.composition.height,
+        imagePath: imagePathAsync.value,
+        animT: animT,
+      );
     } else if (activeClip?.type == ClipType.video &&
         _initialized &&
         _controller != null) {
@@ -350,14 +370,18 @@ class _TextOverlayPreview extends StatelessWidget {
     required this.clip,
     required this.compositionWidth,
     required this.compositionHeight,
-    required this.background,
+    this.background,
+    this.imagePath,
     required this.animT,
   });
 
   final ClipModel clip;
   final int compositionWidth;
   final int compositionHeight;
-  final Color background;
+  /// Solid background colour — used for title and colorCard clips.
+  final Color? background;
+  /// File path of an image — used for image clips (overrides [background]).
+  final String? imagePath;
   final double animT;
 
   TextStyle _resolvedStyle() {
@@ -391,12 +415,30 @@ class _TextOverlayPreview extends StatelessWidget {
     // Apply text animation based on animT (0=start, 1=fully in).
     textWidget = _applyAnimation(textWidget, text);
 
+    Widget bgWidget;
+    if (imagePath != null) {
+      bgWidget = Image.file(
+        File(imagePath!),
+        fit: BoxFit.contain,
+        errorBuilder: (_, _, _) =>
+            ColoredBox(color: background ?? Colors.black),
+      );
+    } else {
+      bgWidget = ColoredBox(color: background ?? Colors.black);
+    }
+
     return AspectRatio(
       aspectRatio: compositionWidth / compositionHeight,
-      child: Container(
-        color: background,
-        padding: const EdgeInsets.all(32),
-        child: Center(child: textWidget),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          bgWidget,
+          if (text.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.all(32),
+              child: Center(child: textWidget),
+            ),
+        ],
       ),
     );
   }

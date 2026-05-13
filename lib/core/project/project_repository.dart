@@ -204,6 +204,7 @@ class ProjectRepository {
         cardColorValue: Value(clip.cardColorValue),
         fontFamily: Value(clip.fontFamily),
         textAnimationType: Value(clip.textAnimationType.name),
+        textAnimationDurationMs: Value(clip.textAnimationDurationMs),
       ),
     );
   }
@@ -362,6 +363,7 @@ class ProjectRepository {
       cardColorValue: row.cardColorValue,
       fontFamily: row.fontFamily,
       textAnimationType: TextAnimationType.fromId(row.textAnimationType),
+      textAnimationDurationMs: row.textAnimationDurationMs,
     );
   }
 }

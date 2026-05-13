@@ -272,6 +272,10 @@ class _ClipInspectorState extends ConsumerState<_ClipInspector> {
               const SizedBox(height: 12),
               _ColorCardSection(clip: clip),
             ],
+            if (clip.type == ClipType.image) ...[
+              const SizedBox(height: 12),
+              _ImageClipSection(clip: clip),
+            ],
             const SizedBox(height: 12),
             _EffectsSection(clipId: clip.id),
             if (clip.type == ClipType.video) ...[
@@ -960,7 +964,7 @@ class _TextStyleControlsState extends ConsumerState<_TextStyleControls> {
             ],
           ),
         ),
-        // Animation
+        // Animation type
         _labeledRow(
           'Anim',
           DropdownButtonHideUnderline(
@@ -990,14 +994,37 @@ class _TextStyleControlsState extends ConsumerState<_TextStyleControls> {
                     )
                     .toList(),
                 onChanged: (v) {
-                  if (v != null) {
-                    controller.updateTextAnimation(clip.id, v);
-                  }
+                  if (v != null) controller.updateTextAnimation(clip.id, v);
                 },
               ),
             ),
           ),
         ),
+        // Animation duration (only when an animation is active)
+        if (clip.textAnimationType != TextAnimationType.none)
+          _SliderRow(
+            label: 'Duration',
+            value: clip.textAnimationDurationMs.toDouble().clamp(100.0, 5000.0),
+            min: 100,
+            max: 5000,
+            displayText:
+                '${(clip.textAnimationDurationMs / 1000.0).toStringAsFixed(1)}s',
+            onChangeStart: (_) => _clipAtDragStart = _latestClip(),
+            onChanged: (v) {
+              final c = _latestClip();
+              if (c != null) {
+                ref.read(timelineStateProvider).updateClip(
+                      c.copyWith(textAnimationDurationMs: v.round()),
+                    );
+              }
+            },
+            onChangeEnd: (v) {
+              if (_clipAtDragStart != null) {
+                controller.updateAnimationDuration(clip.id, v.round());
+                _clipAtDragStart = null;
+              }
+            },
+          ),
       ],
     );
   }
@@ -1186,6 +1213,26 @@ class _ColorSwatchRow extends StatelessWidget {
             ),
           )
           .toList(),
+    );
+  }
+}
+
+// ── Image Clip Section ────────────────────────────────────────────────────────
+
+class _ImageClipSection extends StatelessWidget {
+  const _ImageClipSection({required this.clip});
+
+  final ClipModel clip;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _SectionHeader(title: 'Image'),
+        const _SectionHeader(title: 'Text Overlay'),
+        _TextStyleControls(clip: clip),
+      ],
     );
   }
 }

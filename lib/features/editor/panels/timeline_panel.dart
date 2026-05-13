@@ -5,18 +5,12 @@ import 'package:fluxedit/app/theme/typography.dart';
 import 'package:fluxedit/core/constants/app_constants.dart';
 import 'package:fluxedit/core/history/history_manager.dart';
 import 'package:fluxedit/core/project/project_model.dart';
-import 'package:fluxedit/core/project/project_repository.dart';
 import 'package:fluxedit/core/timeline/clip_model.dart';
 import 'package:fluxedit/core/timeline/clip_thumbnail_cache.dart';
 import 'package:fluxedit/core/timeline/timeline_controller.dart';
 import 'package:fluxedit/core/timeline/timeline_tool.dart';
 import 'package:fluxedit/core/timeline/track_model.dart';
 import 'package:fluxedit/widgets/timeline/timeline_canvas.dart';
-
-final _timelineAssetsProvider = FutureProvider.family<List<MediaAsset>, String>(
-  (ref, projectId) =>
-      ref.watch(projectRepositoryProvider).getMediaAssets(projectId),
-);
 
 class TimelinePanel extends ConsumerWidget {
   const TimelinePanel({super.key, required this.project});
@@ -425,35 +419,46 @@ class _LockButton extends ConsumerWidget {
   }
 }
 
-class _TimelineScrollArea extends ConsumerWidget {
+class _TimelineScrollArea extends ConsumerStatefulWidget {
   const _TimelineScrollArea({required this.projectId});
 
   final String projectId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_TimelineScrollArea> createState() =>
+      _TimelineScrollAreaState();
+}
+
+class _TimelineScrollAreaState extends ConsumerState<_TimelineScrollArea> {
+  /// Clip IDs for which thumbnail loading has already been requested.
+  final Set<String> _thumbnailsRequested = {};
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(timelineStateProvider);
     final tool = ref.watch(timelineToolProvider);
     final thumbCache = ref.watch(clipThumbnailCacheProvider);
-    final assetsAsync = ref.watch(_timelineAssetsProvider(projectId));
 
-    // Trigger thumbnail loading after the current frame to avoid calling
-    // notifyListeners() during the build phase.
-    assetsAsync.whenData((assets) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        final assetMap = {for (final a in assets) a.id: a};
-        for (final clip in state.clips) {
-          if (clip.type != ClipType.video) continue;
-          final asset = assetMap[clip.mediaId];
-          if (asset == null) continue;
-          thumbCache.ensureLoaded(
-            clip: clip,
-            filePath: asset.filePath,
-            mediaDuration: asset.duration,
-          );
+    // Trigger thumbnail loading for video/image clips not yet requested.
+    // Uses a microtask so notifyListeners() in the cache never fires during
+    // the current build phase.
+    final needsThumb = state.clips
+        .where(
+          (c) =>
+              (c.type == ClipType.video || c.type == ClipType.image) &&
+              !_thumbnailsRequested.contains(c.id),
+        )
+        .toList();
+
+    if (needsThumb.isNotEmpty) {
+      Future.microtask(() {
+        if (!mounted) return;
+        for (final clip in needsThumb) {
+          _thumbnailsRequested.add(clip.id);
+          thumbCache.ensureLoaded(clip: clip);
         }
       });
-    });
+    }
 
     return GestureDetector(
       onTapDown: (details) {
@@ -507,7 +512,7 @@ class _TimelineScrollArea extends ConsumerWidget {
                 .trimClipEnd(clipId, newTime);
           },
           onClipContextMenu: (clipId, position) =>
-              _showClipContextMenu(context, ref, clipId, position),
+              _showClipContextMenu(clipId, position),
           thumbnails: {
             for (final entry in state.clips)
               if (thumbCache.thumbnailsForClip(entry.id) != null)
@@ -522,12 +527,7 @@ class _TimelineScrollArea extends ConsumerWidget {
     );
   }
 
-  Future<void> _showClipContextMenu(
-    BuildContext context,
-    WidgetRef ref,
-    String clipId,
-    Offset position,
-  ) async {
+  Future<void> _showClipContextMenu(String clipId, Offset position) async {
     final controller = ref.read(timelineControllerProvider);
     final timelineState = ref.read(timelineStateProvider);
 

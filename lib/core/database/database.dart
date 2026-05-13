@@ -19,7 +19,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -51,6 +51,11 @@ class AppDatabase extends _$AppDatabase {
         );
         await customStatement(
           "ALTER TABLE clips ADD COLUMN text_animation_type TEXT NOT NULL DEFAULT 'none'",
+        );
+      }
+      if (from < 4) {
+        await customStatement(
+          'ALTER TABLE clips ADD COLUMN text_animation_duration_ms INTEGER NOT NULL DEFAULT 600',
         );
       }
     },

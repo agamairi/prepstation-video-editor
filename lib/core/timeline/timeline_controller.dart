@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fluxedit/core/audio/waveform_generator.dart';
 import 'package:fluxedit/core/constants/app_constants.dart';
+import 'package:fluxedit/core/constants/media_constants.dart';
 import 'package:fluxedit/core/effects/effect_model.dart';
 import 'package:fluxedit/core/effects/effect_registry.dart';
 import 'package:fluxedit/core/effects/effect_type.dart';
@@ -129,14 +130,28 @@ class TimelineController {
     Duration? startTime,
   }) async {
     final actualStart = startTime ?? _nextAvailableTime(trackId);
-    final clipDuration = asset.duration;
-    if (clipDuration == Duration.zero) return null;
+
+    // Still images report 0 duration from FFprobe — use a sensible default.
+    var clipDuration = asset.duration;
+    if (clipDuration == Duration.zero) {
+      clipDuration = const Duration(seconds: 5);
+    }
+
+    final isImage = _isImagePath(asset.filePath);
+    final ClipType type;
+    if (isImage) {
+      type = ClipType.image;
+    } else if (asset.hasVideo) {
+      type = ClipType.video;
+    } else {
+      type = ClipType.audio;
+    }
 
     final clip = ClipModel(
       id: 'clip_${_uuid.v4()}',
       trackId: trackId,
       mediaId: asset.id,
-      type: asset.hasVideo ? ClipType.video : ClipType.audio,
+      type: type,
       startOnTimeline: actualStart,
       endOnTimeline: actualStart + clipDuration,
       mediaInPoint: Duration.zero,
@@ -629,6 +644,17 @@ class TimelineController {
     ));
   }
 
+  Future<void> updateAnimationDuration(String clipId, int durationMs) async {
+    final clip = _findClip(clipId);
+    if (clip == null) return;
+    await execute(UpdateClipCommand(
+      before: clip,
+      after: clip.copyWith(
+          textAnimationDurationMs: durationMs.clamp(100, 5000)),
+      description: 'Animation Duration',
+    ));
+  }
+
   Future<void> duplicateClip(String clipId) async {
     final clip = _findClip(clipId);
     if (clip == null) return;
@@ -676,6 +702,11 @@ class TimelineController {
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────
+
+  static bool _isImagePath(String filePath) {
+    final ext = filePath.split('.').last.toLowerCase();
+    return MediaConstants.imageExtensions.contains(ext);
+  }
 
   Duration _nextAvailableTime(String trackId) {
     final clips = state.clipsForTrack(trackId);
