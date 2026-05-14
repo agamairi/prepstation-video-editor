@@ -50,7 +50,6 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
       _focusNode.requestFocus();
     });
 
-    // Periodic auto-save: update project dateModified every 30 s.
     _autoSaveTimer = Timer.periodic(AppConstants.autoSaveInterval, (_) {
       _saveProjectMeta();
     });
@@ -66,8 +65,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
   }
 
   Future<void> _saveProjectMeta() async {
-    final project =
-        ref.read(_projectProvider(widget.projectId)).value;
+    final project = ref.read(_projectProvider(widget.projectId)).value;
     if (project == null || !mounted) return;
     await ref.read(projectRepositoryProvider).saveProject(
           project.copyWith(dateModified: DateTime.now()),
@@ -97,7 +95,6 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
     final controller = ref.read(timelineControllerProvider);
     final timelineState = ref.read(timelineStateProvider);
 
-    // Cmd+Z / Ctrl+Z → Undo
     if ((isMeta || HardwareKeyboard.instance.isControlPressed) &&
         key == LogicalKeyboardKey.keyZ &&
         !isShift) {
@@ -105,7 +102,6 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
       return KeyEventResult.handled;
     }
 
-    // Cmd+Shift+Z / Ctrl+Shift+Z → Redo
     if ((isMeta || HardwareKeyboard.instance.isControlPressed) &&
         key == LogicalKeyboardKey.keyZ &&
         isShift) {
@@ -113,20 +109,17 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
       return KeyEventResult.handled;
     }
 
-    // Cmd+B / Ctrl+B → Split at playhead
     if ((isMeta || HardwareKeyboard.instance.isControlPressed) &&
         key == LogicalKeyboardKey.keyB) {
       controller.splitAtPlayhead();
       return KeyEventResult.handled;
     }
 
-    // Space → Play / Pause
     if (key == LogicalKeyboardKey.space) {
       timelineState.setPlaying(!timelineState.isPlaying);
       return KeyEventResult.handled;
     }
 
-    // J → Step back one frame
     if (key == LogicalKeyboardKey.keyJ) {
       final fps = ref
               .read(_projectProvider(widget.projectId))
@@ -134,19 +127,16 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
               ?.composition
               .frameRate ??
           30.0;
-      final frameDur =
-          Duration(microseconds: (1000000 / fps).round());
+      final frameDur = Duration(microseconds: (1000000 / fps).round());
       timelineState.setPlayhead(timelineState.playhead - frameDur);
       return KeyEventResult.handled;
     }
 
-    // K → Pause
     if (key == LogicalKeyboardKey.keyK) {
       timelineState.setPlaying(false);
       return KeyEventResult.handled;
     }
 
-    // L → Step forward one frame
     if (key == LogicalKeyboardKey.keyL) {
       final fps = ref
               .read(_projectProvider(widget.projectId))
@@ -154,13 +144,11 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
               ?.composition
               .frameRate ??
           30.0;
-      final frameDur =
-          Duration(microseconds: (1000000 / fps).round());
+      final frameDur = Duration(microseconds: (1000000 / fps).round());
       timelineState.setPlayhead(timelineState.playhead + frameDur);
       return KeyEventResult.handled;
     }
 
-    // Delete / Backspace → Ripple-delete selected clip
     if (key == LogicalKeyboardKey.delete ||
         key == LogicalKeyboardKey.backspace) {
       final selected = timelineState.selectedClipIds;
@@ -171,19 +159,16 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
       return KeyEventResult.handled;
     }
 
-    // V → Select tool
     if (key == LogicalKeyboardKey.keyV) {
       ref.read(timelineToolProvider.notifier).state = TimelineTool.select;
       return KeyEventResult.handled;
     }
 
-    // B → Blade tool
     if (key == LogicalKeyboardKey.keyB) {
       ref.read(timelineToolProvider.notifier).state = TimelineTool.blade;
       return KeyEventResult.handled;
     }
 
-    // Escape → Clear selection, return to select tool
     if (key == LogicalKeyboardKey.escape) {
       timelineState.clearSelection();
       ref.read(timelineToolProvider.notifier).state = TimelineTool.select;
@@ -202,13 +187,16 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
           ? Focus(
               focusNode: _focusNode,
               onKeyEvent: _handleKey,
-              child: _EditorLayout(project: project, savedIndicator: _savedIndicator),
+              child: _EditorLayout(
+                project: project,
+                savedIndicator: _savedIndicator,
+              ),
             )
           : const Scaffold(
               body: Center(child: Text('Project not found')),
             ),
       loading: () => const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+        body: Center(child: CircularProgressIndicator(strokeWidth: 2)),
       ),
       error: (e, _) => Scaffold(
         body: Center(child: Text('Error: $e')),
@@ -216,6 +204,8 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
     );
   }
 }
+
+// ── Layout ────────────────────────────────────────────────────────────────────
 
 class _EditorLayout extends ConsumerWidget {
   const _EditorLayout({required this.project, required this.savedIndicator});
@@ -237,6 +227,8 @@ class _EditorLayout extends ConsumerWidget {
   }
 }
 
+// ── App bar ───────────────────────────────────────────────────────────────────
+
 class _EditorAppBar extends ConsumerWidget implements PreferredSizeWidget {
   const _EditorAppBar({required this.project, required this.savedIndicator});
 
@@ -244,71 +236,237 @@ class _EditorAppBar extends ConsumerWidget implements PreferredSizeWidget {
   final bool savedIndicator;
 
   @override
-  Size get preferredSize => const Size.fromHeight(44);
+  Size get preferredSize => const Size.fromHeight(48);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final timelineState = ref.watch(timelineStateProvider);
 
-    return AppBar(
-      backgroundColor: ColorTokens.backgroundPanel,
-      titleSpacing: 8,
-      title: Row(
+    return Container(
+      height: 48,
+      decoration: const BoxDecoration(
+        color: ColorTokens.backgroundPanel,
+        border: Border(
+          bottom: BorderSide(color: ColorTokens.borderSubtle),
+        ),
+      ),
+      child: Row(
         children: [
-          Text(project.name, style: AppTypography.headlineSmall),
-          const SizedBox(width: 16),
-          _TimecodeDisplay(
-            playhead: timelineState.playhead,
-            frameRate: project.composition.frameRate,
-          ),
-          if (savedIndicator) ...[
-            const SizedBox(width: 10),
-            const Icon(Icons.check_circle, size: 14, color: Color(0xFF4CAF50)),
-            const SizedBox(width: 4),
-            const Text(
-              'Saved',
-              style: TextStyle(fontSize: 11, color: Color(0xFF4CAF50)),
+          // Left zone — project name + save state
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(left: 16),
+              child: Row(
+                children: [
+                  Text(
+                    project.name,
+                    style: AppTypography.headlineSmall,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(width: 8),
+                  AnimatedOpacity(
+                    opacity: savedIndicator ? 1.0 : 0.0,
+                    duration: const Duration(milliseconds: 300),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 7,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: ColorTokens.success.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Text(
+                        'Saved',
+                        style: TextStyle(
+                          fontFamily: 'SF Pro Display',
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                          color: ColorTokens.success,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ],
+          ),
+          // Center zone — transport controls
+          _TransportPill(timelineState: timelineState),
+          // Right zone — timecode, help, export
+          Expanded(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                _TimecodeDisplay(
+                  playhead: timelineState.playhead,
+                  frameRate: project.composition.frameRate,
+                ),
+                const SizedBox(width: 4),
+                _AppBarIconButton(
+                  icon: Icons.help_outline_rounded,
+                  tooltip: 'Help & Shortcuts (?)',
+                  onPressed: () => showHelpDialog(context),
+                ),
+                const SizedBox(width: 4),
+                _ExportButton(project: project),
+                const SizedBox(width: 12),
+              ],
+            ),
+          ),
         ],
       ),
-      actions: [
-        _TransportControls(timelineState: timelineState),
-        const SizedBox(width: 8),
-        IconButton(
-          icon: const Icon(Icons.help_outline, size: 18),
-          tooltip: 'Help & Shortcuts',
-          onPressed: () => showHelpDialog(context),
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-        ),
-        const SizedBox(width: 4),
-        TextButton.icon(
-          onPressed: () => _showExportDialog(context),
-          icon: const Icon(Icons.upload, size: 16),
-          label: const Text('Export'),
-          style: TextButton.styleFrom(
-            foregroundColor: ColorTokens.accentPrimary,
-          ),
-        ),
-        const SizedBox(width: 8),
-      ],
-    );
-  }
-
-  void _showExportDialog(BuildContext context) {
-    showDialog<void>(
-      context: context,
-      builder: (_) => ExportDialog(project: project),
     );
   }
 }
 
-class _TimecodeDisplay extends StatelessWidget {
-  const _TimecodeDisplay({
-    required this.playhead,
-    required this.frameRate,
+class _TransportPill extends ConsumerWidget {
+  const _TransportPill({required this.timelineState});
+
+  final TimelineState timelineState;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Container(
+      height: 32,
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      decoration: BoxDecoration(
+        color: ColorTokens.backgroundSurface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: ColorTokens.borderDefault),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _TransportBtn(
+            icon: Icons.skip_previous_rounded,
+            tooltip: 'Go to Start',
+            onPressed: () =>
+                ref.read(timelineStateProvider).setPlayhead(Duration.zero),
+          ),
+          _TransportBtn(
+            icon: timelineState.isPlaying
+                ? Icons.pause_rounded
+                : Icons.play_arrow_rounded,
+            tooltip:
+                timelineState.isPlaying ? 'Pause (Space)' : 'Play (Space)',
+            size: 22,
+            onPressed: () => ref
+                .read(timelineStateProvider)
+                .setPlaying(!timelineState.isPlaying),
+          ),
+          _TransportBtn(
+            icon: Icons.skip_next_rounded,
+            tooltip: 'Go to End',
+            onPressed: () => ref
+                .read(timelineStateProvider)
+                .setPlayhead(timelineState.duration),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TransportBtn extends StatelessWidget {
+  const _TransportBtn({
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+    this.size = 18,
   });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onPressed;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onPressed,
+        child: SizedBox(
+          width: 32,
+          height: 32,
+          child: Icon(icon, size: size, color: ColorTokens.textPrimary),
+        ),
+      ),
+    );
+  }
+}
+
+class _AppBarIconButton extends StatelessWidget {
+  const _AppBarIconButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: onPressed,
+        child: SizedBox(
+          width: 32,
+          height: 32,
+          child: Icon(icon, size: 17, color: ColorTokens.textSecondary),
+        ),
+      ),
+    );
+  }
+}
+
+class _ExportButton extends StatelessWidget {
+  const _ExportButton({required this.project});
+
+  final ProjectModel project;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => showDialog<void>(
+        context: context,
+        builder: (_) => ExportDialog(project: project),
+      ),
+      child: Container(
+        height: 28,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          color: ColorTokens.accentPrimary,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: const Center(
+          child: Text(
+            'Export',
+            style: TextStyle(
+              fontFamily: 'SF Pro Display',
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+              letterSpacing: -0.1,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Timecode ──────────────────────────────────────────────────────────────────
+
+class _TimecodeDisplay extends StatelessWidget {
+  const _TimecodeDisplay({required this.playhead, required this.frameRate});
 
   final Duration playhead;
   final double frameRate;
@@ -318,11 +476,10 @@ class _TimecodeDisplay extends StatelessWidget {
     final h = playhead.inHours;
     final m = playhead.inMinutes.remainder(60);
     final s = playhead.inSeconds.remainder(60);
-    final f = (playhead.inMilliseconds.remainder(1000) / (1000 / frameRate))
-        .floor();
+    final f =
+        (playhead.inMilliseconds.remainder(1000) / (1000 / frameRate)).floor();
 
-    final timecode =
-        '${h.toString().padLeft(2, '0')}:'
+    final timecode = '${h.toString().padLeft(2, '0')}:'
         '${m.toString().padLeft(2, '0')}:'
         '${s.toString().padLeft(2, '0')}:'
         '${f.toString().padLeft(2, '0')}';
@@ -331,50 +488,14 @@ class _TimecodeDisplay extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: ColorTokens.backgroundDeep,
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(6),
       ),
       child: Text(timecode, style: AppTypography.timecode),
     );
   }
 }
 
-class _TransportControls extends ConsumerWidget {
-  const _TransportControls({required this.timelineState});
-
-  final TimelineState timelineState;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        IconButton(
-          icon: const Icon(Icons.skip_previous, size: 18),
-          tooltip: 'Go to Start (Home)',
-          onPressed: () =>
-              ref.read(timelineStateProvider).setPlayhead(Duration.zero),
-        ),
-        IconButton(
-          icon: Icon(
-            timelineState.isPlaying ? Icons.pause : Icons.play_arrow,
-            size: 20,
-          ),
-          tooltip: timelineState.isPlaying ? 'Pause (Space)' : 'Play (Space)',
-          onPressed: () => ref
-              .read(timelineStateProvider)
-              .setPlaying(!timelineState.isPlaying),
-        ),
-        IconButton(
-          icon: const Icon(Icons.skip_next, size: 18),
-          tooltip: 'Go to End (End)',
-          onPressed: () => ref
-              .read(timelineStateProvider)
-              .setPlayhead(timelineState.duration),
-        ),
-      ],
-    );
-  }
-}
+// ── Desktop layout ────────────────────────────────────────────────────────────
 
 class _DesktopLayout extends StatelessWidget {
   const _DesktopLayout({required this.project});
@@ -416,6 +537,8 @@ class _DesktopLayout extends StatelessWidget {
   }
 }
 
+// ── Mobile layout ─────────────────────────────────────────────────────────────
+
 class _MobileLayout extends ConsumerStatefulWidget {
   const _MobileLayout({required this.project});
 
@@ -452,17 +575,17 @@ class _MobileLayoutState extends ConsumerState<_MobileLayout>
         maxChildSize: 0.9,
         builder: (_, scrollController) => Container(
           decoration: const BoxDecoration(
-            color: Color(0xFF1E1E21),
-            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+            color: ColorTokens.inspectorBackground,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
           ),
           child: Column(
             children: [
               Container(
-                margin: const EdgeInsets.symmetric(vertical: 8),
+                margin: const EdgeInsets.symmetric(vertical: 10),
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF505057),
+                  color: ColorTokens.borderStrong,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -482,22 +605,27 @@ class _MobileLayoutState extends ConsumerState<_MobileLayout>
 
     return Column(
       children: [
-        // Tab bar: Media | Preview
         Container(
-          color: const Color(0xFF222224),
+          color: ColorTokens.backgroundPanel,
           child: TabBar(
             controller: _tabs,
-            labelStyle: const TextStyle(fontSize: 12),
-            indicatorColor: const Color(0xFF4D9CFF),
-            labelColor: const Color(0xFF4D9CFF),
-            unselectedLabelColor: const Color(0xFFA0A0AA),
+            labelStyle: AppTypography.labelLarge,
+            indicatorColor: ColorTokens.accentPrimary,
+            labelColor: ColorTokens.accentPrimary,
+            unselectedLabelColor: ColorTokens.textSecondary,
+            indicatorSize: TabBarIndicatorSize.label,
             tabs: const [
-              Tab(icon: Icon(Icons.perm_media_outlined, size: 16), text: 'Media'),
-              Tab(icon: Icon(Icons.play_circle_outline, size: 16), text: 'Preview'),
+              Tab(
+                icon: Icon(Icons.perm_media_outlined, size: 16),
+                text: 'Media',
+              ),
+              Tab(
+                icon: Icon(Icons.play_circle_outline, size: 16),
+                text: 'Preview',
+              ),
             ],
           ),
         ),
-        // Top pane: tabbed between Media and Preview
         Expanded(
           flex: 5,
           child: Stack(
@@ -509,24 +637,22 @@ class _MobileLayoutState extends ConsumerState<_MobileLayout>
                   PreviewPanel(project: widget.project),
                 ],
               ),
-              // Inspector FAB — only visible when a clip is selected
               if (selectedIds.isNotEmpty)
                 Positioned(
                   right: 12,
                   bottom: 12,
                   child: FloatingActionButton.small(
                     heroTag: 'inspector_fab',
-                    backgroundColor: const Color(0xFF4D9CFF),
+                    backgroundColor: ColorTokens.accentPrimary,
                     tooltip: 'Edit Clip',
                     onPressed: _showInspector,
-                    child: const Icon(Icons.tune, size: 18),
+                    child: const Icon(Icons.tune, size: 18, color: Colors.white),
                   ),
                 ),
             ],
           ),
         ),
         const Divider(height: 1),
-        // Timeline always visible at bottom
         Expanded(
           flex: 5,
           child: TimelinePanel(project: widget.project),
