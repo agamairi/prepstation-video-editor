@@ -156,8 +156,9 @@ void main() {
       expect(p.containsKey('radius'), isTrue);
     });
 
-    test('lut returns empty map', () {
-      expect(EffectRegistry.defaultParameters(EffectType.lut), isEmpty);
+    test('lut returns intensity parameter', () {
+      final p = EffectRegistry.defaultParameters(EffectType.lut);
+      expect(p, {'intensity': 1.0});
     });
   });
 

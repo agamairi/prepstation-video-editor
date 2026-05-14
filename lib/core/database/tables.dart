@@ -129,6 +129,34 @@ class Clips extends Table {
   IntColumn get textAnimationDurationMs =>
       integer().withDefault(const Constant(600))();
 
+  // Transform
+  RealColumn get posX => real().withDefault(const Constant(0.0))();
+  RealColumn get posY => real().withDefault(const Constant(0.0))();
+  RealColumn get scaleX => real().withDefault(const Constant(1.0))();
+  RealColumn get scaleY => real().withDefault(const Constant(1.0))();
+  RealColumn get rotation => real().withDefault(const Constant(0.0))();
+  RealColumn get anchorX => real().withDefault(const Constant(0.5))();
+  RealColumn get anchorY => real().withDefault(const Constant(0.5))();
+
+  // Crop
+  RealColumn get cropLeft => real().withDefault(const Constant(0.0))();
+  RealColumn get cropRight => real().withDefault(const Constant(0.0))();
+  RealColumn get cropTop => real().withDefault(const Constant(0.0))();
+  RealColumn get cropBottom => real().withDefault(const Constant(0.0))();
+
+  // Clip flags
+  BoolColumn get isReversed =>
+      boolean().withDefault(const Constant(false))();
+  BoolColumn get isFrozen =>
+      boolean().withDefault(const Constant(false))();
+  BoolColumn get flipHorizontal =>
+      boolean().withDefault(const Constant(false))();
+  BoolColumn get flipVertical =>
+      boolean().withDefault(const Constant(false))();
+
+  // Per-clip volume
+  RealColumn get volume => real().withDefault(const Constant(1.0))();
+
   @override
   Set<Column<Object>> get primaryKey => {id};
 }
@@ -162,6 +190,21 @@ class EffectInstances extends Table {
       boolean().withDefault(const Constant(true))();
   TextColumn get parametersJson =>
       text().withDefault(const Constant('{}'))();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+}
+
+class Markers extends Table {
+  TextColumn get id => text()();
+  TextColumn get projectId =>
+      text().references(Projects, #id, onDelete: KeyAction.cascade)();
+  IntColumn get timeUs => integer()();
+  TextColumn get name => text().withDefault(const Constant(''))();
+  TextColumn get note => text().withDefault(const Constant(''))();
+  TextColumn get color =>
+      text().withDefault(const Constant('blue'))();
+  IntColumn get durationUs => integer().withDefault(const Constant(0))();
 
   @override
   Set<Column<Object>> get primaryKey => {id};

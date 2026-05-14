@@ -2849,6 +2849,200 @@ class $ClipsTable extends Clips with TableInfo<$ClipsTable, Clip> {
         requiredDuringInsert: false,
         defaultValue: const Constant(600),
       );
+  static const VerificationMeta _posXMeta = const VerificationMeta('posX');
+  @override
+  late final GeneratedColumn<double> posX = GeneratedColumn<double>(
+    'pos_x',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0.0),
+  );
+  static const VerificationMeta _posYMeta = const VerificationMeta('posY');
+  @override
+  late final GeneratedColumn<double> posY = GeneratedColumn<double>(
+    'pos_y',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0.0),
+  );
+  static const VerificationMeta _scaleXMeta = const VerificationMeta('scaleX');
+  @override
+  late final GeneratedColumn<double> scaleX = GeneratedColumn<double>(
+    'scale_x',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1.0),
+  );
+  static const VerificationMeta _scaleYMeta = const VerificationMeta('scaleY');
+  @override
+  late final GeneratedColumn<double> scaleY = GeneratedColumn<double>(
+    'scale_y',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1.0),
+  );
+  static const VerificationMeta _rotationMeta = const VerificationMeta(
+    'rotation',
+  );
+  @override
+  late final GeneratedColumn<double> rotation = GeneratedColumn<double>(
+    'rotation',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0.0),
+  );
+  static const VerificationMeta _anchorXMeta = const VerificationMeta(
+    'anchorX',
+  );
+  @override
+  late final GeneratedColumn<double> anchorX = GeneratedColumn<double>(
+    'anchor_x',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0.5),
+  );
+  static const VerificationMeta _anchorYMeta = const VerificationMeta(
+    'anchorY',
+  );
+  @override
+  late final GeneratedColumn<double> anchorY = GeneratedColumn<double>(
+    'anchor_y',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0.5),
+  );
+  static const VerificationMeta _cropLeftMeta = const VerificationMeta(
+    'cropLeft',
+  );
+  @override
+  late final GeneratedColumn<double> cropLeft = GeneratedColumn<double>(
+    'crop_left',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0.0),
+  );
+  static const VerificationMeta _cropRightMeta = const VerificationMeta(
+    'cropRight',
+  );
+  @override
+  late final GeneratedColumn<double> cropRight = GeneratedColumn<double>(
+    'crop_right',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0.0),
+  );
+  static const VerificationMeta _cropTopMeta = const VerificationMeta(
+    'cropTop',
+  );
+  @override
+  late final GeneratedColumn<double> cropTop = GeneratedColumn<double>(
+    'crop_top',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0.0),
+  );
+  static const VerificationMeta _cropBottomMeta = const VerificationMeta(
+    'cropBottom',
+  );
+  @override
+  late final GeneratedColumn<double> cropBottom = GeneratedColumn<double>(
+    'crop_bottom',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0.0),
+  );
+  static const VerificationMeta _isReversedMeta = const VerificationMeta(
+    'isReversed',
+  );
+  @override
+  late final GeneratedColumn<bool> isReversed = GeneratedColumn<bool>(
+    'is_reversed',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_reversed" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _isFrozenMeta = const VerificationMeta(
+    'isFrozen',
+  );
+  @override
+  late final GeneratedColumn<bool> isFrozen = GeneratedColumn<bool>(
+    'is_frozen',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_frozen" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _flipHorizontalMeta = const VerificationMeta(
+    'flipHorizontal',
+  );
+  @override
+  late final GeneratedColumn<bool> flipHorizontal = GeneratedColumn<bool>(
+    'flip_horizontal',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("flip_horizontal" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _flipVerticalMeta = const VerificationMeta(
+    'flipVertical',
+  );
+  @override
+  late final GeneratedColumn<bool> flipVertical = GeneratedColumn<bool>(
+    'flip_vertical',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("flip_vertical" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _volumeMeta = const VerificationMeta('volume');
+  @override
+  late final GeneratedColumn<double> volume = GeneratedColumn<double>(
+    'volume',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1.0),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -2880,6 +3074,22 @@ class $ClipsTable extends Clips with TableInfo<$ClipsTable, Clip> {
     fontFamily,
     textAnimationType,
     textAnimationDurationMs,
+    posX,
+    posY,
+    scaleX,
+    scaleY,
+    rotation,
+    anchorX,
+    anchorY,
+    cropLeft,
+    cropRight,
+    cropTop,
+    cropBottom,
+    isReversed,
+    isFrozen,
+    flipHorizontal,
+    flipVertical,
+    volume,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -3131,6 +3341,108 @@ class $ClipsTable extends Clips with TableInfo<$ClipsTable, Clip> {
         ),
       );
     }
+    if (data.containsKey('pos_x')) {
+      context.handle(
+        _posXMeta,
+        posX.isAcceptableOrUnknown(data['pos_x']!, _posXMeta),
+      );
+    }
+    if (data.containsKey('pos_y')) {
+      context.handle(
+        _posYMeta,
+        posY.isAcceptableOrUnknown(data['pos_y']!, _posYMeta),
+      );
+    }
+    if (data.containsKey('scale_x')) {
+      context.handle(
+        _scaleXMeta,
+        scaleX.isAcceptableOrUnknown(data['scale_x']!, _scaleXMeta),
+      );
+    }
+    if (data.containsKey('scale_y')) {
+      context.handle(
+        _scaleYMeta,
+        scaleY.isAcceptableOrUnknown(data['scale_y']!, _scaleYMeta),
+      );
+    }
+    if (data.containsKey('rotation')) {
+      context.handle(
+        _rotationMeta,
+        rotation.isAcceptableOrUnknown(data['rotation']!, _rotationMeta),
+      );
+    }
+    if (data.containsKey('anchor_x')) {
+      context.handle(
+        _anchorXMeta,
+        anchorX.isAcceptableOrUnknown(data['anchor_x']!, _anchorXMeta),
+      );
+    }
+    if (data.containsKey('anchor_y')) {
+      context.handle(
+        _anchorYMeta,
+        anchorY.isAcceptableOrUnknown(data['anchor_y']!, _anchorYMeta),
+      );
+    }
+    if (data.containsKey('crop_left')) {
+      context.handle(
+        _cropLeftMeta,
+        cropLeft.isAcceptableOrUnknown(data['crop_left']!, _cropLeftMeta),
+      );
+    }
+    if (data.containsKey('crop_right')) {
+      context.handle(
+        _cropRightMeta,
+        cropRight.isAcceptableOrUnknown(data['crop_right']!, _cropRightMeta),
+      );
+    }
+    if (data.containsKey('crop_top')) {
+      context.handle(
+        _cropTopMeta,
+        cropTop.isAcceptableOrUnknown(data['crop_top']!, _cropTopMeta),
+      );
+    }
+    if (data.containsKey('crop_bottom')) {
+      context.handle(
+        _cropBottomMeta,
+        cropBottom.isAcceptableOrUnknown(data['crop_bottom']!, _cropBottomMeta),
+      );
+    }
+    if (data.containsKey('is_reversed')) {
+      context.handle(
+        _isReversedMeta,
+        isReversed.isAcceptableOrUnknown(data['is_reversed']!, _isReversedMeta),
+      );
+    }
+    if (data.containsKey('is_frozen')) {
+      context.handle(
+        _isFrozenMeta,
+        isFrozen.isAcceptableOrUnknown(data['is_frozen']!, _isFrozenMeta),
+      );
+    }
+    if (data.containsKey('flip_horizontal')) {
+      context.handle(
+        _flipHorizontalMeta,
+        flipHorizontal.isAcceptableOrUnknown(
+          data['flip_horizontal']!,
+          _flipHorizontalMeta,
+        ),
+      );
+    }
+    if (data.containsKey('flip_vertical')) {
+      context.handle(
+        _flipVerticalMeta,
+        flipVertical.isAcceptableOrUnknown(
+          data['flip_vertical']!,
+          _flipVerticalMeta,
+        ),
+      );
+    }
+    if (data.containsKey('volume')) {
+      context.handle(
+        _volumeMeta,
+        volume.isAcceptableOrUnknown(data['volume']!, _volumeMeta),
+      );
+    }
     return context;
   }
 
@@ -3256,6 +3568,70 @@ class $ClipsTable extends Clips with TableInfo<$ClipsTable, Clip> {
         DriftSqlType.int,
         data['${effectivePrefix}text_animation_duration_ms'],
       )!,
+      posX: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}pos_x'],
+      )!,
+      posY: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}pos_y'],
+      )!,
+      scaleX: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}scale_x'],
+      )!,
+      scaleY: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}scale_y'],
+      )!,
+      rotation: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}rotation'],
+      )!,
+      anchorX: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}anchor_x'],
+      )!,
+      anchorY: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}anchor_y'],
+      )!,
+      cropLeft: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}crop_left'],
+      )!,
+      cropRight: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}crop_right'],
+      )!,
+      cropTop: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}crop_top'],
+      )!,
+      cropBottom: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}crop_bottom'],
+      )!,
+      isReversed: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_reversed'],
+      )!,
+      isFrozen: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_frozen'],
+      )!,
+      flipHorizontal: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}flip_horizontal'],
+      )!,
+      flipVertical: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}flip_vertical'],
+      )!,
+      volume: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}volume'],
+      )!,
     );
   }
 
@@ -3295,6 +3671,22 @@ class Clip extends DataClass implements Insertable<Clip> {
   final String fontFamily;
   final String textAnimationType;
   final int textAnimationDurationMs;
+  final double posX;
+  final double posY;
+  final double scaleX;
+  final double scaleY;
+  final double rotation;
+  final double anchorX;
+  final double anchorY;
+  final double cropLeft;
+  final double cropRight;
+  final double cropTop;
+  final double cropBottom;
+  final bool isReversed;
+  final bool isFrozen;
+  final bool flipHorizontal;
+  final bool flipVertical;
+  final double volume;
   const Clip({
     required this.id,
     required this.trackId,
@@ -3325,6 +3717,22 @@ class Clip extends DataClass implements Insertable<Clip> {
     required this.fontFamily,
     required this.textAnimationType,
     required this.textAnimationDurationMs,
+    required this.posX,
+    required this.posY,
+    required this.scaleX,
+    required this.scaleY,
+    required this.rotation,
+    required this.anchorX,
+    required this.anchorY,
+    required this.cropLeft,
+    required this.cropRight,
+    required this.cropTop,
+    required this.cropBottom,
+    required this.isReversed,
+    required this.isFrozen,
+    required this.flipHorizontal,
+    required this.flipVertical,
+    required this.volume,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -3364,6 +3772,22 @@ class Clip extends DataClass implements Insertable<Clip> {
     map['font_family'] = Variable<String>(fontFamily);
     map['text_animation_type'] = Variable<String>(textAnimationType);
     map['text_animation_duration_ms'] = Variable<int>(textAnimationDurationMs);
+    map['pos_x'] = Variable<double>(posX);
+    map['pos_y'] = Variable<double>(posY);
+    map['scale_x'] = Variable<double>(scaleX);
+    map['scale_y'] = Variable<double>(scaleY);
+    map['rotation'] = Variable<double>(rotation);
+    map['anchor_x'] = Variable<double>(anchorX);
+    map['anchor_y'] = Variable<double>(anchorY);
+    map['crop_left'] = Variable<double>(cropLeft);
+    map['crop_right'] = Variable<double>(cropRight);
+    map['crop_top'] = Variable<double>(cropTop);
+    map['crop_bottom'] = Variable<double>(cropBottom);
+    map['is_reversed'] = Variable<bool>(isReversed);
+    map['is_frozen'] = Variable<bool>(isFrozen);
+    map['flip_horizontal'] = Variable<bool>(flipHorizontal);
+    map['flip_vertical'] = Variable<bool>(flipVertical);
+    map['volume'] = Variable<double>(volume);
     return map;
   }
 
@@ -3404,6 +3828,22 @@ class Clip extends DataClass implements Insertable<Clip> {
       fontFamily: Value(fontFamily),
       textAnimationType: Value(textAnimationType),
       textAnimationDurationMs: Value(textAnimationDurationMs),
+      posX: Value(posX),
+      posY: Value(posY),
+      scaleX: Value(scaleX),
+      scaleY: Value(scaleY),
+      rotation: Value(rotation),
+      anchorX: Value(anchorX),
+      anchorY: Value(anchorY),
+      cropLeft: Value(cropLeft),
+      cropRight: Value(cropRight),
+      cropTop: Value(cropTop),
+      cropBottom: Value(cropBottom),
+      isReversed: Value(isReversed),
+      isFrozen: Value(isFrozen),
+      flipHorizontal: Value(flipHorizontal),
+      flipVertical: Value(flipVertical),
+      volume: Value(volume),
     );
   }
 
@@ -3448,6 +3888,22 @@ class Clip extends DataClass implements Insertable<Clip> {
       textAnimationDurationMs: serializer.fromJson<int>(
         json['textAnimationDurationMs'],
       ),
+      posX: serializer.fromJson<double>(json['posX']),
+      posY: serializer.fromJson<double>(json['posY']),
+      scaleX: serializer.fromJson<double>(json['scaleX']),
+      scaleY: serializer.fromJson<double>(json['scaleY']),
+      rotation: serializer.fromJson<double>(json['rotation']),
+      anchorX: serializer.fromJson<double>(json['anchorX']),
+      anchorY: serializer.fromJson<double>(json['anchorY']),
+      cropLeft: serializer.fromJson<double>(json['cropLeft']),
+      cropRight: serializer.fromJson<double>(json['cropRight']),
+      cropTop: serializer.fromJson<double>(json['cropTop']),
+      cropBottom: serializer.fromJson<double>(json['cropBottom']),
+      isReversed: serializer.fromJson<bool>(json['isReversed']),
+      isFrozen: serializer.fromJson<bool>(json['isFrozen']),
+      flipHorizontal: serializer.fromJson<bool>(json['flipHorizontal']),
+      flipVertical: serializer.fromJson<bool>(json['flipVertical']),
+      volume: serializer.fromJson<double>(json['volume']),
     );
   }
   @override
@@ -3487,6 +3943,22 @@ class Clip extends DataClass implements Insertable<Clip> {
       'textAnimationDurationMs': serializer.toJson<int>(
         textAnimationDurationMs,
       ),
+      'posX': serializer.toJson<double>(posX),
+      'posY': serializer.toJson<double>(posY),
+      'scaleX': serializer.toJson<double>(scaleX),
+      'scaleY': serializer.toJson<double>(scaleY),
+      'rotation': serializer.toJson<double>(rotation),
+      'anchorX': serializer.toJson<double>(anchorX),
+      'anchorY': serializer.toJson<double>(anchorY),
+      'cropLeft': serializer.toJson<double>(cropLeft),
+      'cropRight': serializer.toJson<double>(cropRight),
+      'cropTop': serializer.toJson<double>(cropTop),
+      'cropBottom': serializer.toJson<double>(cropBottom),
+      'isReversed': serializer.toJson<bool>(isReversed),
+      'isFrozen': serializer.toJson<bool>(isFrozen),
+      'flipHorizontal': serializer.toJson<bool>(flipHorizontal),
+      'flipVertical': serializer.toJson<bool>(flipVertical),
+      'volume': serializer.toJson<double>(volume),
     };
   }
 
@@ -3520,6 +3992,22 @@ class Clip extends DataClass implements Insertable<Clip> {
     String? fontFamily,
     String? textAnimationType,
     int? textAnimationDurationMs,
+    double? posX,
+    double? posY,
+    double? scaleX,
+    double? scaleY,
+    double? rotation,
+    double? anchorX,
+    double? anchorY,
+    double? cropLeft,
+    double? cropRight,
+    double? cropTop,
+    double? cropBottom,
+    bool? isReversed,
+    bool? isFrozen,
+    bool? flipHorizontal,
+    bool? flipVertical,
+    double? volume,
   }) => Clip(
     id: id ?? this.id,
     trackId: trackId ?? this.trackId,
@@ -3557,6 +4045,22 @@ class Clip extends DataClass implements Insertable<Clip> {
     textAnimationType: textAnimationType ?? this.textAnimationType,
     textAnimationDurationMs:
         textAnimationDurationMs ?? this.textAnimationDurationMs,
+    posX: posX ?? this.posX,
+    posY: posY ?? this.posY,
+    scaleX: scaleX ?? this.scaleX,
+    scaleY: scaleY ?? this.scaleY,
+    rotation: rotation ?? this.rotation,
+    anchorX: anchorX ?? this.anchorX,
+    anchorY: anchorY ?? this.anchorY,
+    cropLeft: cropLeft ?? this.cropLeft,
+    cropRight: cropRight ?? this.cropRight,
+    cropTop: cropTop ?? this.cropTop,
+    cropBottom: cropBottom ?? this.cropBottom,
+    isReversed: isReversed ?? this.isReversed,
+    isFrozen: isFrozen ?? this.isFrozen,
+    flipHorizontal: flipHorizontal ?? this.flipHorizontal,
+    flipVertical: flipVertical ?? this.flipVertical,
+    volume: volume ?? this.volume,
   );
   Clip copyWithCompanion(ClipsCompanion data) {
     return Clip(
@@ -3625,6 +4129,30 @@ class Clip extends DataClass implements Insertable<Clip> {
       textAnimationDurationMs: data.textAnimationDurationMs.present
           ? data.textAnimationDurationMs.value
           : this.textAnimationDurationMs,
+      posX: data.posX.present ? data.posX.value : this.posX,
+      posY: data.posY.present ? data.posY.value : this.posY,
+      scaleX: data.scaleX.present ? data.scaleX.value : this.scaleX,
+      scaleY: data.scaleY.present ? data.scaleY.value : this.scaleY,
+      rotation: data.rotation.present ? data.rotation.value : this.rotation,
+      anchorX: data.anchorX.present ? data.anchorX.value : this.anchorX,
+      anchorY: data.anchorY.present ? data.anchorY.value : this.anchorY,
+      cropLeft: data.cropLeft.present ? data.cropLeft.value : this.cropLeft,
+      cropRight: data.cropRight.present ? data.cropRight.value : this.cropRight,
+      cropTop: data.cropTop.present ? data.cropTop.value : this.cropTop,
+      cropBottom: data.cropBottom.present
+          ? data.cropBottom.value
+          : this.cropBottom,
+      isReversed: data.isReversed.present
+          ? data.isReversed.value
+          : this.isReversed,
+      isFrozen: data.isFrozen.present ? data.isFrozen.value : this.isFrozen,
+      flipHorizontal: data.flipHorizontal.present
+          ? data.flipHorizontal.value
+          : this.flipHorizontal,
+      flipVertical: data.flipVertical.present
+          ? data.flipVertical.value
+          : this.flipVertical,
+      volume: data.volume.present ? data.volume.value : this.volume,
     );
   }
 
@@ -3659,7 +4187,23 @@ class Clip extends DataClass implements Insertable<Clip> {
           ..write('cardColorValue: $cardColorValue, ')
           ..write('fontFamily: $fontFamily, ')
           ..write('textAnimationType: $textAnimationType, ')
-          ..write('textAnimationDurationMs: $textAnimationDurationMs')
+          ..write('textAnimationDurationMs: $textAnimationDurationMs, ')
+          ..write('posX: $posX, ')
+          ..write('posY: $posY, ')
+          ..write('scaleX: $scaleX, ')
+          ..write('scaleY: $scaleY, ')
+          ..write('rotation: $rotation, ')
+          ..write('anchorX: $anchorX, ')
+          ..write('anchorY: $anchorY, ')
+          ..write('cropLeft: $cropLeft, ')
+          ..write('cropRight: $cropRight, ')
+          ..write('cropTop: $cropTop, ')
+          ..write('cropBottom: $cropBottom, ')
+          ..write('isReversed: $isReversed, ')
+          ..write('isFrozen: $isFrozen, ')
+          ..write('flipHorizontal: $flipHorizontal, ')
+          ..write('flipVertical: $flipVertical, ')
+          ..write('volume: $volume')
           ..write(')'))
         .toString();
   }
@@ -3695,6 +4239,22 @@ class Clip extends DataClass implements Insertable<Clip> {
     fontFamily,
     textAnimationType,
     textAnimationDurationMs,
+    posX,
+    posY,
+    scaleX,
+    scaleY,
+    rotation,
+    anchorX,
+    anchorY,
+    cropLeft,
+    cropRight,
+    cropTop,
+    cropBottom,
+    isReversed,
+    isFrozen,
+    flipHorizontal,
+    flipVertical,
+    volume,
   ]);
   @override
   bool operator ==(Object other) =>
@@ -3728,7 +4288,23 @@ class Clip extends DataClass implements Insertable<Clip> {
           other.cardColorValue == this.cardColorValue &&
           other.fontFamily == this.fontFamily &&
           other.textAnimationType == this.textAnimationType &&
-          other.textAnimationDurationMs == this.textAnimationDurationMs);
+          other.textAnimationDurationMs == this.textAnimationDurationMs &&
+          other.posX == this.posX &&
+          other.posY == this.posY &&
+          other.scaleX == this.scaleX &&
+          other.scaleY == this.scaleY &&
+          other.rotation == this.rotation &&
+          other.anchorX == this.anchorX &&
+          other.anchorY == this.anchorY &&
+          other.cropLeft == this.cropLeft &&
+          other.cropRight == this.cropRight &&
+          other.cropTop == this.cropTop &&
+          other.cropBottom == this.cropBottom &&
+          other.isReversed == this.isReversed &&
+          other.isFrozen == this.isFrozen &&
+          other.flipHorizontal == this.flipHorizontal &&
+          other.flipVertical == this.flipVertical &&
+          other.volume == this.volume);
 }
 
 class ClipsCompanion extends UpdateCompanion<Clip> {
@@ -3761,6 +4337,22 @@ class ClipsCompanion extends UpdateCompanion<Clip> {
   final Value<String> fontFamily;
   final Value<String> textAnimationType;
   final Value<int> textAnimationDurationMs;
+  final Value<double> posX;
+  final Value<double> posY;
+  final Value<double> scaleX;
+  final Value<double> scaleY;
+  final Value<double> rotation;
+  final Value<double> anchorX;
+  final Value<double> anchorY;
+  final Value<double> cropLeft;
+  final Value<double> cropRight;
+  final Value<double> cropTop;
+  final Value<double> cropBottom;
+  final Value<bool> isReversed;
+  final Value<bool> isFrozen;
+  final Value<bool> flipHorizontal;
+  final Value<bool> flipVertical;
+  final Value<double> volume;
   final Value<int> rowid;
   const ClipsCompanion({
     this.id = const Value.absent(),
@@ -3792,6 +4384,22 @@ class ClipsCompanion extends UpdateCompanion<Clip> {
     this.fontFamily = const Value.absent(),
     this.textAnimationType = const Value.absent(),
     this.textAnimationDurationMs = const Value.absent(),
+    this.posX = const Value.absent(),
+    this.posY = const Value.absent(),
+    this.scaleX = const Value.absent(),
+    this.scaleY = const Value.absent(),
+    this.rotation = const Value.absent(),
+    this.anchorX = const Value.absent(),
+    this.anchorY = const Value.absent(),
+    this.cropLeft = const Value.absent(),
+    this.cropRight = const Value.absent(),
+    this.cropTop = const Value.absent(),
+    this.cropBottom = const Value.absent(),
+    this.isReversed = const Value.absent(),
+    this.isFrozen = const Value.absent(),
+    this.flipHorizontal = const Value.absent(),
+    this.flipVertical = const Value.absent(),
+    this.volume = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ClipsCompanion.insert({
@@ -3824,6 +4432,22 @@ class ClipsCompanion extends UpdateCompanion<Clip> {
     this.fontFamily = const Value.absent(),
     this.textAnimationType = const Value.absent(),
     this.textAnimationDurationMs = const Value.absent(),
+    this.posX = const Value.absent(),
+    this.posY = const Value.absent(),
+    this.scaleX = const Value.absent(),
+    this.scaleY = const Value.absent(),
+    this.rotation = const Value.absent(),
+    this.anchorX = const Value.absent(),
+    this.anchorY = const Value.absent(),
+    this.cropLeft = const Value.absent(),
+    this.cropRight = const Value.absent(),
+    this.cropTop = const Value.absent(),
+    this.cropBottom = const Value.absent(),
+    this.isReversed = const Value.absent(),
+    this.isFrozen = const Value.absent(),
+    this.flipHorizontal = const Value.absent(),
+    this.flipVertical = const Value.absent(),
+    this.volume = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        trackId = Value(trackId),
@@ -3863,6 +4487,22 @@ class ClipsCompanion extends UpdateCompanion<Clip> {
     Expression<String>? fontFamily,
     Expression<String>? textAnimationType,
     Expression<int>? textAnimationDurationMs,
+    Expression<double>? posX,
+    Expression<double>? posY,
+    Expression<double>? scaleX,
+    Expression<double>? scaleY,
+    Expression<double>? rotation,
+    Expression<double>? anchorX,
+    Expression<double>? anchorY,
+    Expression<double>? cropLeft,
+    Expression<double>? cropRight,
+    Expression<double>? cropTop,
+    Expression<double>? cropBottom,
+    Expression<bool>? isReversed,
+    Expression<bool>? isFrozen,
+    Expression<bool>? flipHorizontal,
+    Expression<bool>? flipVertical,
+    Expression<double>? volume,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -3898,6 +4538,22 @@ class ClipsCompanion extends UpdateCompanion<Clip> {
       if (textAnimationType != null) 'text_animation_type': textAnimationType,
       if (textAnimationDurationMs != null)
         'text_animation_duration_ms': textAnimationDurationMs,
+      if (posX != null) 'pos_x': posX,
+      if (posY != null) 'pos_y': posY,
+      if (scaleX != null) 'scale_x': scaleX,
+      if (scaleY != null) 'scale_y': scaleY,
+      if (rotation != null) 'rotation': rotation,
+      if (anchorX != null) 'anchor_x': anchorX,
+      if (anchorY != null) 'anchor_y': anchorY,
+      if (cropLeft != null) 'crop_left': cropLeft,
+      if (cropRight != null) 'crop_right': cropRight,
+      if (cropTop != null) 'crop_top': cropTop,
+      if (cropBottom != null) 'crop_bottom': cropBottom,
+      if (isReversed != null) 'is_reversed': isReversed,
+      if (isFrozen != null) 'is_frozen': isFrozen,
+      if (flipHorizontal != null) 'flip_horizontal': flipHorizontal,
+      if (flipVertical != null) 'flip_vertical': flipVertical,
+      if (volume != null) 'volume': volume,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -3932,6 +4588,22 @@ class ClipsCompanion extends UpdateCompanion<Clip> {
     Value<String>? fontFamily,
     Value<String>? textAnimationType,
     Value<int>? textAnimationDurationMs,
+    Value<double>? posX,
+    Value<double>? posY,
+    Value<double>? scaleX,
+    Value<double>? scaleY,
+    Value<double>? rotation,
+    Value<double>? anchorX,
+    Value<double>? anchorY,
+    Value<double>? cropLeft,
+    Value<double>? cropRight,
+    Value<double>? cropTop,
+    Value<double>? cropBottom,
+    Value<bool>? isReversed,
+    Value<bool>? isFrozen,
+    Value<bool>? flipHorizontal,
+    Value<bool>? flipVertical,
+    Value<double>? volume,
     Value<int>? rowid,
   }) {
     return ClipsCompanion(
@@ -3967,6 +4639,22 @@ class ClipsCompanion extends UpdateCompanion<Clip> {
       textAnimationType: textAnimationType ?? this.textAnimationType,
       textAnimationDurationMs:
           textAnimationDurationMs ?? this.textAnimationDurationMs,
+      posX: posX ?? this.posX,
+      posY: posY ?? this.posY,
+      scaleX: scaleX ?? this.scaleX,
+      scaleY: scaleY ?? this.scaleY,
+      rotation: rotation ?? this.rotation,
+      anchorX: anchorX ?? this.anchorX,
+      anchorY: anchorY ?? this.anchorY,
+      cropLeft: cropLeft ?? this.cropLeft,
+      cropRight: cropRight ?? this.cropRight,
+      cropTop: cropTop ?? this.cropTop,
+      cropBottom: cropBottom ?? this.cropBottom,
+      isReversed: isReversed ?? this.isReversed,
+      isFrozen: isFrozen ?? this.isFrozen,
+      flipHorizontal: flipHorizontal ?? this.flipHorizontal,
+      flipVertical: flipVertical ?? this.flipVertical,
+      volume: volume ?? this.volume,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -4067,6 +4755,54 @@ class ClipsCompanion extends UpdateCompanion<Clip> {
         textAnimationDurationMs.value,
       );
     }
+    if (posX.present) {
+      map['pos_x'] = Variable<double>(posX.value);
+    }
+    if (posY.present) {
+      map['pos_y'] = Variable<double>(posY.value);
+    }
+    if (scaleX.present) {
+      map['scale_x'] = Variable<double>(scaleX.value);
+    }
+    if (scaleY.present) {
+      map['scale_y'] = Variable<double>(scaleY.value);
+    }
+    if (rotation.present) {
+      map['rotation'] = Variable<double>(rotation.value);
+    }
+    if (anchorX.present) {
+      map['anchor_x'] = Variable<double>(anchorX.value);
+    }
+    if (anchorY.present) {
+      map['anchor_y'] = Variable<double>(anchorY.value);
+    }
+    if (cropLeft.present) {
+      map['crop_left'] = Variable<double>(cropLeft.value);
+    }
+    if (cropRight.present) {
+      map['crop_right'] = Variable<double>(cropRight.value);
+    }
+    if (cropTop.present) {
+      map['crop_top'] = Variable<double>(cropTop.value);
+    }
+    if (cropBottom.present) {
+      map['crop_bottom'] = Variable<double>(cropBottom.value);
+    }
+    if (isReversed.present) {
+      map['is_reversed'] = Variable<bool>(isReversed.value);
+    }
+    if (isFrozen.present) {
+      map['is_frozen'] = Variable<bool>(isFrozen.value);
+    }
+    if (flipHorizontal.present) {
+      map['flip_horizontal'] = Variable<bool>(flipHorizontal.value);
+    }
+    if (flipVertical.present) {
+      map['flip_vertical'] = Variable<bool>(flipVertical.value);
+    }
+    if (volume.present) {
+      map['volume'] = Variable<double>(volume.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -4105,6 +4841,22 @@ class ClipsCompanion extends UpdateCompanion<Clip> {
           ..write('fontFamily: $fontFamily, ')
           ..write('textAnimationType: $textAnimationType, ')
           ..write('textAnimationDurationMs: $textAnimationDurationMs, ')
+          ..write('posX: $posX, ')
+          ..write('posY: $posY, ')
+          ..write('scaleX: $scaleX, ')
+          ..write('scaleY: $scaleY, ')
+          ..write('rotation: $rotation, ')
+          ..write('anchorX: $anchorX, ')
+          ..write('anchorY: $anchorY, ')
+          ..write('cropLeft: $cropLeft, ')
+          ..write('cropRight: $cropRight, ')
+          ..write('cropTop: $cropTop, ')
+          ..write('cropBottom: $cropBottom, ')
+          ..write('isReversed: $isReversed, ')
+          ..write('isFrozen: $isFrozen, ')
+          ..write('flipHorizontal: $flipHorizontal, ')
+          ..write('flipVertical: $flipVertical, ')
+          ..write('volume: $volume, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -5162,6 +5914,451 @@ class EffectInstancesCompanion extends UpdateCompanion<EffectInstanceRow> {
   }
 }
 
+class $MarkersTable extends Markers with TableInfo<$MarkersTable, Marker> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $MarkersTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _projectIdMeta = const VerificationMeta(
+    'projectId',
+  );
+  @override
+  late final GeneratedColumn<String> projectId = GeneratedColumn<String>(
+    'project_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES projects (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _timeUsMeta = const VerificationMeta('timeUs');
+  @override
+  late final GeneratedColumn<int> timeUs = GeneratedColumn<int>(
+    'time_us',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _noteMeta = const VerificationMeta('note');
+  @override
+  late final GeneratedColumn<String> note = GeneratedColumn<String>(
+    'note',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _colorMeta = const VerificationMeta('color');
+  @override
+  late final GeneratedColumn<String> color = GeneratedColumn<String>(
+    'color',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('blue'),
+  );
+  static const VerificationMeta _durationUsMeta = const VerificationMeta(
+    'durationUs',
+  );
+  @override
+  late final GeneratedColumn<int> durationUs = GeneratedColumn<int>(
+    'duration_us',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    projectId,
+    timeUs,
+    name,
+    note,
+    color,
+    durationUs,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'markers';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<Marker> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('project_id')) {
+      context.handle(
+        _projectIdMeta,
+        projectId.isAcceptableOrUnknown(data['project_id']!, _projectIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_projectIdMeta);
+    }
+    if (data.containsKey('time_us')) {
+      context.handle(
+        _timeUsMeta,
+        timeUs.isAcceptableOrUnknown(data['time_us']!, _timeUsMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_timeUsMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    }
+    if (data.containsKey('note')) {
+      context.handle(
+        _noteMeta,
+        note.isAcceptableOrUnknown(data['note']!, _noteMeta),
+      );
+    }
+    if (data.containsKey('color')) {
+      context.handle(
+        _colorMeta,
+        color.isAcceptableOrUnknown(data['color']!, _colorMeta),
+      );
+    }
+    if (data.containsKey('duration_us')) {
+      context.handle(
+        _durationUsMeta,
+        durationUs.isAcceptableOrUnknown(data['duration_us']!, _durationUsMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Marker map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Marker(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      projectId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}project_id'],
+      )!,
+      timeUs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}time_us'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      note: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}note'],
+      )!,
+      color: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}color'],
+      )!,
+      durationUs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}duration_us'],
+      )!,
+    );
+  }
+
+  @override
+  $MarkersTable createAlias(String alias) {
+    return $MarkersTable(attachedDatabase, alias);
+  }
+}
+
+class Marker extends DataClass implements Insertable<Marker> {
+  final String id;
+  final String projectId;
+  final int timeUs;
+  final String name;
+  final String note;
+  final String color;
+  final int durationUs;
+  const Marker({
+    required this.id,
+    required this.projectId,
+    required this.timeUs,
+    required this.name,
+    required this.note,
+    required this.color,
+    required this.durationUs,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['project_id'] = Variable<String>(projectId);
+    map['time_us'] = Variable<int>(timeUs);
+    map['name'] = Variable<String>(name);
+    map['note'] = Variable<String>(note);
+    map['color'] = Variable<String>(color);
+    map['duration_us'] = Variable<int>(durationUs);
+    return map;
+  }
+
+  MarkersCompanion toCompanion(bool nullToAbsent) {
+    return MarkersCompanion(
+      id: Value(id),
+      projectId: Value(projectId),
+      timeUs: Value(timeUs),
+      name: Value(name),
+      note: Value(note),
+      color: Value(color),
+      durationUs: Value(durationUs),
+    );
+  }
+
+  factory Marker.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Marker(
+      id: serializer.fromJson<String>(json['id']),
+      projectId: serializer.fromJson<String>(json['projectId']),
+      timeUs: serializer.fromJson<int>(json['timeUs']),
+      name: serializer.fromJson<String>(json['name']),
+      note: serializer.fromJson<String>(json['note']),
+      color: serializer.fromJson<String>(json['color']),
+      durationUs: serializer.fromJson<int>(json['durationUs']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'projectId': serializer.toJson<String>(projectId),
+      'timeUs': serializer.toJson<int>(timeUs),
+      'name': serializer.toJson<String>(name),
+      'note': serializer.toJson<String>(note),
+      'color': serializer.toJson<String>(color),
+      'durationUs': serializer.toJson<int>(durationUs),
+    };
+  }
+
+  Marker copyWith({
+    String? id,
+    String? projectId,
+    int? timeUs,
+    String? name,
+    String? note,
+    String? color,
+    int? durationUs,
+  }) => Marker(
+    id: id ?? this.id,
+    projectId: projectId ?? this.projectId,
+    timeUs: timeUs ?? this.timeUs,
+    name: name ?? this.name,
+    note: note ?? this.note,
+    color: color ?? this.color,
+    durationUs: durationUs ?? this.durationUs,
+  );
+  Marker copyWithCompanion(MarkersCompanion data) {
+    return Marker(
+      id: data.id.present ? data.id.value : this.id,
+      projectId: data.projectId.present ? data.projectId.value : this.projectId,
+      timeUs: data.timeUs.present ? data.timeUs.value : this.timeUs,
+      name: data.name.present ? data.name.value : this.name,
+      note: data.note.present ? data.note.value : this.note,
+      color: data.color.present ? data.color.value : this.color,
+      durationUs: data.durationUs.present
+          ? data.durationUs.value
+          : this.durationUs,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Marker(')
+          ..write('id: $id, ')
+          ..write('projectId: $projectId, ')
+          ..write('timeUs: $timeUs, ')
+          ..write('name: $name, ')
+          ..write('note: $note, ')
+          ..write('color: $color, ')
+          ..write('durationUs: $durationUs')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, projectId, timeUs, name, note, color, durationUs);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Marker &&
+          other.id == this.id &&
+          other.projectId == this.projectId &&
+          other.timeUs == this.timeUs &&
+          other.name == this.name &&
+          other.note == this.note &&
+          other.color == this.color &&
+          other.durationUs == this.durationUs);
+}
+
+class MarkersCompanion extends UpdateCompanion<Marker> {
+  final Value<String> id;
+  final Value<String> projectId;
+  final Value<int> timeUs;
+  final Value<String> name;
+  final Value<String> note;
+  final Value<String> color;
+  final Value<int> durationUs;
+  final Value<int> rowid;
+  const MarkersCompanion({
+    this.id = const Value.absent(),
+    this.projectId = const Value.absent(),
+    this.timeUs = const Value.absent(),
+    this.name = const Value.absent(),
+    this.note = const Value.absent(),
+    this.color = const Value.absent(),
+    this.durationUs = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  MarkersCompanion.insert({
+    required String id,
+    required String projectId,
+    required int timeUs,
+    this.name = const Value.absent(),
+    this.note = const Value.absent(),
+    this.color = const Value.absent(),
+    this.durationUs = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       projectId = Value(projectId),
+       timeUs = Value(timeUs);
+  static Insertable<Marker> custom({
+    Expression<String>? id,
+    Expression<String>? projectId,
+    Expression<int>? timeUs,
+    Expression<String>? name,
+    Expression<String>? note,
+    Expression<String>? color,
+    Expression<int>? durationUs,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (projectId != null) 'project_id': projectId,
+      if (timeUs != null) 'time_us': timeUs,
+      if (name != null) 'name': name,
+      if (note != null) 'note': note,
+      if (color != null) 'color': color,
+      if (durationUs != null) 'duration_us': durationUs,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  MarkersCompanion copyWith({
+    Value<String>? id,
+    Value<String>? projectId,
+    Value<int>? timeUs,
+    Value<String>? name,
+    Value<String>? note,
+    Value<String>? color,
+    Value<int>? durationUs,
+    Value<int>? rowid,
+  }) {
+    return MarkersCompanion(
+      id: id ?? this.id,
+      projectId: projectId ?? this.projectId,
+      timeUs: timeUs ?? this.timeUs,
+      name: name ?? this.name,
+      note: note ?? this.note,
+      color: color ?? this.color,
+      durationUs: durationUs ?? this.durationUs,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (projectId.present) {
+      map['project_id'] = Variable<String>(projectId.value);
+    }
+    if (timeUs.present) {
+      map['time_us'] = Variable<int>(timeUs.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (note.present) {
+      map['note'] = Variable<String>(note.value);
+    }
+    if (color.present) {
+      map['color'] = Variable<String>(color.value);
+    }
+    if (durationUs.present) {
+      map['duration_us'] = Variable<int>(durationUs.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MarkersCompanion(')
+          ..write('id: $id, ')
+          ..write('projectId: $projectId, ')
+          ..write('timeUs: $timeUs, ')
+          ..write('name: $name, ')
+          ..write('note: $note, ')
+          ..write('color: $color, ')
+          ..write('durationUs: $durationUs, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $ProjectSettingsTable extends ProjectSettings
     with TableInfo<$ProjectSettingsTable, ProjectSetting> {
   @override
@@ -5438,6 +6635,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $EffectInstancesTable effectInstances = $EffectInstancesTable(
     this,
   );
+  late final $MarkersTable markers = $MarkersTable(this);
   late final $ProjectSettingsTable projectSettings = $ProjectSettingsTable(
     this,
   );
@@ -5452,6 +6650,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     clips,
     keyframes,
     effectInstances,
+    markers,
     projectSettings,
   ];
   @override
@@ -5490,6 +6689,13 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         limitUpdateKind: UpdateKind.delete,
       ),
       result: [TableUpdate('effect_instances', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'projects',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('markers', kind: UpdateKind.delete)],
     ),
     WritePropagation(
       on: TableUpdateQuery.onTableName(
@@ -5570,6 +6776,25 @@ final class $$ProjectsTableReferences
     ).filter((f) => f.projectId.id.sqlEquals($_itemColumn<String>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_tracksRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$MarkersTable, List<Marker>> _markersRefsTable(
+    _$AppDatabase db,
+  ) => MultiTypedResultKey.fromTable(
+    db.markers,
+    aliasName: $_aliasNameGenerator(db.projects.id, db.markers.projectId),
+  );
+
+  $$MarkersTableProcessedTableManager get markersRefs {
+    final manager = $$MarkersTableTableManager(
+      $_db,
+      $_db.markers,
+    ).filter((f) => f.projectId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_markersRefsTable($_db));
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
@@ -5709,6 +6934,31 @@ class $$ProjectsTableFilterComposer
           }) => $$TracksTableFilterComposer(
             $db: $db,
             $table: $db.tracks,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> markersRefs(
+    Expression<bool> Function($$MarkersTableFilterComposer f) f,
+  ) {
+    final $$MarkersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.markers,
+      getReferencedColumn: (t) => t.projectId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MarkersTableFilterComposer(
+            $db: $db,
+            $table: $db.markers,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -5923,6 +7173,31 @@ class $$ProjectsTableAnnotationComposer
     return f(composer);
   }
 
+  Expression<T> markersRefs<T extends Object>(
+    Expression<T> Function($$MarkersTableAnnotationComposer a) f,
+  ) {
+    final $$MarkersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.markers,
+      getReferencedColumn: (t) => t.projectId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MarkersTableAnnotationComposer(
+            $db: $db,
+            $table: $db.markers,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
   Expression<T> projectSettingsRefs<T extends Object>(
     Expression<T> Function($$ProjectSettingsTableAnnotationComposer a) f,
   ) {
@@ -5965,6 +7240,7 @@ class $$ProjectsTableTableManager
           PrefetchHooks Function({
             bool mediaAssetsRefs,
             bool tracksRefs,
+            bool markersRefs,
             bool projectSettingsRefs,
           })
         > {
@@ -6051,6 +7327,7 @@ class $$ProjectsTableTableManager
               ({
                 mediaAssetsRefs = false,
                 tracksRefs = false,
+                markersRefs = false,
                 projectSettingsRefs = false,
               }) {
                 return PrefetchHooks(
@@ -6058,6 +7335,7 @@ class $$ProjectsTableTableManager
                   explicitlyWatchedTables: [
                     if (mediaAssetsRefs) db.mediaAssets,
                     if (tracksRefs) db.tracks,
+                    if (markersRefs) db.markers,
                     if (projectSettingsRefs) db.projectSettings,
                   ],
                   addJoins: null,
@@ -6099,6 +7377,27 @@ class $$ProjectsTableTableManager
                                 table,
                                 p0,
                               ).tracksRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.projectId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (markersRefs)
+                        await $_getPrefetchedData<
+                          Project,
+                          $ProjectsTable,
+                          Marker
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ProjectsTableReferences
+                              ._markersRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ProjectsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).markersRefs,
                           referencedItemsForCurrentItem:
                               (item, referencedItems) => referencedItems.where(
                                 (e) => e.projectId == item.id,
@@ -6149,6 +7448,7 @@ typedef $$ProjectsTableProcessedTableManager =
       PrefetchHooks Function({
         bool mediaAssetsRefs,
         bool tracksRefs,
+        bool markersRefs,
         bool projectSettingsRefs,
       })
     >;
@@ -7416,6 +8716,22 @@ typedef $$ClipsTableCreateCompanionBuilder =
       Value<String> fontFamily,
       Value<String> textAnimationType,
       Value<int> textAnimationDurationMs,
+      Value<double> posX,
+      Value<double> posY,
+      Value<double> scaleX,
+      Value<double> scaleY,
+      Value<double> rotation,
+      Value<double> anchorX,
+      Value<double> anchorY,
+      Value<double> cropLeft,
+      Value<double> cropRight,
+      Value<double> cropTop,
+      Value<double> cropBottom,
+      Value<bool> isReversed,
+      Value<bool> isFrozen,
+      Value<bool> flipHorizontal,
+      Value<bool> flipVertical,
+      Value<double> volume,
       Value<int> rowid,
     });
 typedef $$ClipsTableUpdateCompanionBuilder =
@@ -7449,6 +8765,22 @@ typedef $$ClipsTableUpdateCompanionBuilder =
       Value<String> fontFamily,
       Value<String> textAnimationType,
       Value<int> textAnimationDurationMs,
+      Value<double> posX,
+      Value<double> posY,
+      Value<double> scaleX,
+      Value<double> scaleY,
+      Value<double> rotation,
+      Value<double> anchorX,
+      Value<double> anchorY,
+      Value<double> cropLeft,
+      Value<double> cropRight,
+      Value<double> cropTop,
+      Value<double> cropBottom,
+      Value<bool> isReversed,
+      Value<bool> isFrozen,
+      Value<bool> flipHorizontal,
+      Value<bool> flipVertical,
+      Value<double> volume,
       Value<int> rowid,
     });
 
@@ -7670,6 +9002,86 @@ class $$ClipsTableFilterComposer extends Composer<_$AppDatabase, $ClipsTable> {
 
   ColumnFilters<int> get textAnimationDurationMs => $composableBuilder(
     column: $table.textAnimationDurationMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get posX => $composableBuilder(
+    column: $table.posX,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get posY => $composableBuilder(
+    column: $table.posY,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get scaleX => $composableBuilder(
+    column: $table.scaleX,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get scaleY => $composableBuilder(
+    column: $table.scaleY,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get rotation => $composableBuilder(
+    column: $table.rotation,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get anchorX => $composableBuilder(
+    column: $table.anchorX,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get anchorY => $composableBuilder(
+    column: $table.anchorY,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get cropLeft => $composableBuilder(
+    column: $table.cropLeft,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get cropRight => $composableBuilder(
+    column: $table.cropRight,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get cropTop => $composableBuilder(
+    column: $table.cropTop,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get cropBottom => $composableBuilder(
+    column: $table.cropBottom,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isReversed => $composableBuilder(
+    column: $table.isReversed,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isFrozen => $composableBuilder(
+    column: $table.isFrozen,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get flipHorizontal => $composableBuilder(
+    column: $table.flipHorizontal,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get flipVertical => $composableBuilder(
+    column: $table.flipVertical,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get volume => $composableBuilder(
+    column: $table.volume,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -7914,6 +9326,86 @@ class $$ClipsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<double> get posX => $composableBuilder(
+    column: $table.posX,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get posY => $composableBuilder(
+    column: $table.posY,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get scaleX => $composableBuilder(
+    column: $table.scaleX,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get scaleY => $composableBuilder(
+    column: $table.scaleY,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get rotation => $composableBuilder(
+    column: $table.rotation,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get anchorX => $composableBuilder(
+    column: $table.anchorX,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get anchorY => $composableBuilder(
+    column: $table.anchorY,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get cropLeft => $composableBuilder(
+    column: $table.cropLeft,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get cropRight => $composableBuilder(
+    column: $table.cropRight,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get cropTop => $composableBuilder(
+    column: $table.cropTop,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get cropBottom => $composableBuilder(
+    column: $table.cropBottom,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isReversed => $composableBuilder(
+    column: $table.isReversed,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isFrozen => $composableBuilder(
+    column: $table.isFrozen,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get flipHorizontal => $composableBuilder(
+    column: $table.flipHorizontal,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get flipVertical => $composableBuilder(
+    column: $table.flipVertical,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get volume => $composableBuilder(
+    column: $table.volume,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$TracksTableOrderingComposer get trackId {
     final $$TracksTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -8087,6 +9579,62 @@ class $$ClipsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<double> get posX =>
+      $composableBuilder(column: $table.posX, builder: (column) => column);
+
+  GeneratedColumn<double> get posY =>
+      $composableBuilder(column: $table.posY, builder: (column) => column);
+
+  GeneratedColumn<double> get scaleX =>
+      $composableBuilder(column: $table.scaleX, builder: (column) => column);
+
+  GeneratedColumn<double> get scaleY =>
+      $composableBuilder(column: $table.scaleY, builder: (column) => column);
+
+  GeneratedColumn<double> get rotation =>
+      $composableBuilder(column: $table.rotation, builder: (column) => column);
+
+  GeneratedColumn<double> get anchorX =>
+      $composableBuilder(column: $table.anchorX, builder: (column) => column);
+
+  GeneratedColumn<double> get anchorY =>
+      $composableBuilder(column: $table.anchorY, builder: (column) => column);
+
+  GeneratedColumn<double> get cropLeft =>
+      $composableBuilder(column: $table.cropLeft, builder: (column) => column);
+
+  GeneratedColumn<double> get cropRight =>
+      $composableBuilder(column: $table.cropRight, builder: (column) => column);
+
+  GeneratedColumn<double> get cropTop =>
+      $composableBuilder(column: $table.cropTop, builder: (column) => column);
+
+  GeneratedColumn<double> get cropBottom => $composableBuilder(
+    column: $table.cropBottom,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get isReversed => $composableBuilder(
+    column: $table.isReversed,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get isFrozen =>
+      $composableBuilder(column: $table.isFrozen, builder: (column) => column);
+
+  GeneratedColumn<bool> get flipHorizontal => $composableBuilder(
+    column: $table.flipHorizontal,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get flipVertical => $composableBuilder(
+    column: $table.flipVertical,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get volume =>
+      $composableBuilder(column: $table.volume, builder: (column) => column);
+
   $$TracksTableAnnotationComposer get trackId {
     final $$TracksTableAnnotationComposer composer = $composerBuilder(
       composer: this,
@@ -8246,6 +9794,22 @@ class $$ClipsTableTableManager
                 Value<String> fontFamily = const Value.absent(),
                 Value<String> textAnimationType = const Value.absent(),
                 Value<int> textAnimationDurationMs = const Value.absent(),
+                Value<double> posX = const Value.absent(),
+                Value<double> posY = const Value.absent(),
+                Value<double> scaleX = const Value.absent(),
+                Value<double> scaleY = const Value.absent(),
+                Value<double> rotation = const Value.absent(),
+                Value<double> anchorX = const Value.absent(),
+                Value<double> anchorY = const Value.absent(),
+                Value<double> cropLeft = const Value.absent(),
+                Value<double> cropRight = const Value.absent(),
+                Value<double> cropTop = const Value.absent(),
+                Value<double> cropBottom = const Value.absent(),
+                Value<bool> isReversed = const Value.absent(),
+                Value<bool> isFrozen = const Value.absent(),
+                Value<bool> flipHorizontal = const Value.absent(),
+                Value<bool> flipVertical = const Value.absent(),
+                Value<double> volume = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ClipsCompanion(
                 id: id,
@@ -8277,6 +9841,22 @@ class $$ClipsTableTableManager
                 fontFamily: fontFamily,
                 textAnimationType: textAnimationType,
                 textAnimationDurationMs: textAnimationDurationMs,
+                posX: posX,
+                posY: posY,
+                scaleX: scaleX,
+                scaleY: scaleY,
+                rotation: rotation,
+                anchorX: anchorX,
+                anchorY: anchorY,
+                cropLeft: cropLeft,
+                cropRight: cropRight,
+                cropTop: cropTop,
+                cropBottom: cropBottom,
+                isReversed: isReversed,
+                isFrozen: isFrozen,
+                flipHorizontal: flipHorizontal,
+                flipVertical: flipVertical,
+                volume: volume,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -8310,6 +9890,22 @@ class $$ClipsTableTableManager
                 Value<String> fontFamily = const Value.absent(),
                 Value<String> textAnimationType = const Value.absent(),
                 Value<int> textAnimationDurationMs = const Value.absent(),
+                Value<double> posX = const Value.absent(),
+                Value<double> posY = const Value.absent(),
+                Value<double> scaleX = const Value.absent(),
+                Value<double> scaleY = const Value.absent(),
+                Value<double> rotation = const Value.absent(),
+                Value<double> anchorX = const Value.absent(),
+                Value<double> anchorY = const Value.absent(),
+                Value<double> cropLeft = const Value.absent(),
+                Value<double> cropRight = const Value.absent(),
+                Value<double> cropTop = const Value.absent(),
+                Value<double> cropBottom = const Value.absent(),
+                Value<bool> isReversed = const Value.absent(),
+                Value<bool> isFrozen = const Value.absent(),
+                Value<bool> flipHorizontal = const Value.absent(),
+                Value<bool> flipVertical = const Value.absent(),
+                Value<double> volume = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ClipsCompanion.insert(
                 id: id,
@@ -8341,6 +9937,22 @@ class $$ClipsTableTableManager
                 fontFamily: fontFamily,
                 textAnimationType: textAnimationType,
                 textAnimationDurationMs: textAnimationDurationMs,
+                posX: posX,
+                posY: posY,
+                scaleX: scaleX,
+                scaleY: scaleY,
+                rotation: rotation,
+                anchorX: anchorX,
+                anchorY: anchorY,
+                cropLeft: cropLeft,
+                cropRight: cropRight,
+                cropTop: cropTop,
+                cropBottom: cropBottom,
+                isReversed: isReversed,
+                isFrozen: isFrozen,
+                flipHorizontal: flipHorizontal,
+                flipVertical: flipVertical,
+                volume: volume,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -9255,6 +10867,363 @@ typedef $$EffectInstancesTableProcessedTableManager =
       EffectInstanceRow,
       PrefetchHooks Function({bool clipId})
     >;
+typedef $$MarkersTableCreateCompanionBuilder =
+    MarkersCompanion Function({
+      required String id,
+      required String projectId,
+      required int timeUs,
+      Value<String> name,
+      Value<String> note,
+      Value<String> color,
+      Value<int> durationUs,
+      Value<int> rowid,
+    });
+typedef $$MarkersTableUpdateCompanionBuilder =
+    MarkersCompanion Function({
+      Value<String> id,
+      Value<String> projectId,
+      Value<int> timeUs,
+      Value<String> name,
+      Value<String> note,
+      Value<String> color,
+      Value<int> durationUs,
+      Value<int> rowid,
+    });
+
+final class $$MarkersTableReferences
+    extends BaseReferences<_$AppDatabase, $MarkersTable, Marker> {
+  $$MarkersTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $ProjectsTable _projectIdTable(_$AppDatabase db) => db.projects
+      .createAlias($_aliasNameGenerator(db.markers.projectId, db.projects.id));
+
+  $$ProjectsTableProcessedTableManager get projectId {
+    final $_column = $_itemColumn<String>('project_id')!;
+
+    final manager = $$ProjectsTableTableManager(
+      $_db,
+      $_db.projects,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_projectIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$MarkersTableFilterComposer
+    extends Composer<_$AppDatabase, $MarkersTable> {
+  $$MarkersTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get timeUs => $composableBuilder(
+    column: $table.timeUs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get color => $composableBuilder(
+    column: $table.color,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get durationUs => $composableBuilder(
+    column: $table.durationUs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ProjectsTableFilterComposer get projectId {
+    final $$ProjectsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.projectId,
+      referencedTable: $db.projects,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProjectsTableFilterComposer(
+            $db: $db,
+            $table: $db.projects,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$MarkersTableOrderingComposer
+    extends Composer<_$AppDatabase, $MarkersTable> {
+  $$MarkersTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get timeUs => $composableBuilder(
+    column: $table.timeUs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get color => $composableBuilder(
+    column: $table.color,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get durationUs => $composableBuilder(
+    column: $table.durationUs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ProjectsTableOrderingComposer get projectId {
+    final $$ProjectsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.projectId,
+      referencedTable: $db.projects,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProjectsTableOrderingComposer(
+            $db: $db,
+            $table: $db.projects,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$MarkersTableAnnotationComposer
+    extends Composer<_$AppDatabase, $MarkersTable> {
+  $$MarkersTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get timeUs =>
+      $composableBuilder(column: $table.timeUs, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get note =>
+      $composableBuilder(column: $table.note, builder: (column) => column);
+
+  GeneratedColumn<String> get color =>
+      $composableBuilder(column: $table.color, builder: (column) => column);
+
+  GeneratedColumn<int> get durationUs => $composableBuilder(
+    column: $table.durationUs,
+    builder: (column) => column,
+  );
+
+  $$ProjectsTableAnnotationComposer get projectId {
+    final $$ProjectsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.projectId,
+      referencedTable: $db.projects,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProjectsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.projects,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$MarkersTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $MarkersTable,
+          Marker,
+          $$MarkersTableFilterComposer,
+          $$MarkersTableOrderingComposer,
+          $$MarkersTableAnnotationComposer,
+          $$MarkersTableCreateCompanionBuilder,
+          $$MarkersTableUpdateCompanionBuilder,
+          (Marker, $$MarkersTableReferences),
+          Marker,
+          PrefetchHooks Function({bool projectId})
+        > {
+  $$MarkersTableTableManager(_$AppDatabase db, $MarkersTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$MarkersTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$MarkersTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$MarkersTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> projectId = const Value.absent(),
+                Value<int> timeUs = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String> note = const Value.absent(),
+                Value<String> color = const Value.absent(),
+                Value<int> durationUs = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => MarkersCompanion(
+                id: id,
+                projectId: projectId,
+                timeUs: timeUs,
+                name: name,
+                note: note,
+                color: color,
+                durationUs: durationUs,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String projectId,
+                required int timeUs,
+                Value<String> name = const Value.absent(),
+                Value<String> note = const Value.absent(),
+                Value<String> color = const Value.absent(),
+                Value<int> durationUs = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => MarkersCompanion.insert(
+                id: id,
+                projectId: projectId,
+                timeUs: timeUs,
+                name: name,
+                note: note,
+                color: color,
+                durationUs: durationUs,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$MarkersTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({projectId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (projectId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.projectId,
+                                referencedTable: $$MarkersTableReferences
+                                    ._projectIdTable(db),
+                                referencedColumn: $$MarkersTableReferences
+                                    ._projectIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$MarkersTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $MarkersTable,
+      Marker,
+      $$MarkersTableFilterComposer,
+      $$MarkersTableOrderingComposer,
+      $$MarkersTableAnnotationComposer,
+      $$MarkersTableCreateCompanionBuilder,
+      $$MarkersTableUpdateCompanionBuilder,
+      (Marker, $$MarkersTableReferences),
+      Marker,
+      PrefetchHooks Function({bool projectId})
+    >;
 typedef $$ProjectSettingsTableCreateCompanionBuilder =
     ProjectSettingsCompanion Function({
       required String projectId,
@@ -9561,6 +11530,8 @@ class $AppDatabaseManager {
       $$KeyframesTableTableManager(_db, _db.keyframes);
   $$EffectInstancesTableTableManager get effectInstances =>
       $$EffectInstancesTableTableManager(_db, _db.effectInstances);
+  $$MarkersTableTableManager get markers =>
+      $$MarkersTableTableManager(_db, _db.markers);
   $$ProjectSettingsTableTableManager get projectSettings =>
       $$ProjectSettingsTableTableManager(_db, _db.projectSettings);
 }

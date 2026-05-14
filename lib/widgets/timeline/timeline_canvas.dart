@@ -382,6 +382,7 @@ class _TimelinePainter extends CustomPainter {
     _paintBackground(canvas, size);
     _paintRuler(canvas, size);
     _paintTracks(canvas, size);
+    _paintMarkers(canvas, size);
     _paintPlayhead(canvas, size);
     if (bladeX != null) _paintBladeCursor(canvas, size, bladeX!);
   }
@@ -745,6 +746,36 @@ class _TimelinePainter extends CustomPainter {
         Offset(x, midY + amp),
         waveformPaint,
       );
+    }
+  }
+
+  void _paintMarkers(Canvas canvas, Size size) {
+    final markers = timelineState.markers;
+    if (markers.isEmpty) return;
+
+    for (final marker in markers) {
+      final x = timelineState.timeToPixel(marker.time);
+      if (x < -10 || x > size.width + 10) continue;
+
+      final color = Color(marker.color.colorValue);
+      final paint = Paint()..color = color;
+
+      // Draw marker line
+      canvas.drawLine(
+        Offset(x, 0),
+        Offset(x, size.height),
+        paint..strokeWidth = 1.0,
+      );
+
+      // Draw marker triangle on ruler
+      final trianglePath = Path()
+        ..moveTo(x - 5, 0)
+        ..lineTo(x + 5, 0)
+        ..lineTo(x + 5, 8)
+        ..lineTo(x, 12)
+        ..lineTo(x - 5, 8)
+        ..close();
+      canvas.drawPath(trianglePath, paint..style = PaintingStyle.fill);
     }
   }
 

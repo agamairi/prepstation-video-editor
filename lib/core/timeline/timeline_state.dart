@@ -3,6 +3,7 @@ import 'package:fluxedit/core/constants/app_constants.dart';
 import 'package:fluxedit/core/effects/effect_model.dart';
 import 'package:fluxedit/core/timeline/clip_model.dart';
 import 'package:fluxedit/core/timeline/keyframe_model.dart';
+import 'package:fluxedit/core/timeline/marker_model.dart';
 import 'package:fluxedit/core/timeline/track_model.dart';
 
 /// The canonical timeline state. Uses [ChangeNotifier] so timeline widgets
@@ -43,6 +44,8 @@ class TimelineState extends ChangeNotifier {
 
   // clipId → parameterId → ParameterCurve
   final Map<String, Map<String, ParameterCurve>> _curvesByClipId = {};
+
+  List<MarkerModel> _markers = [];
 
   // ── Getters ───────────────────────────────────────────────────────────────
 
@@ -245,7 +248,11 @@ class TimelineState extends ChangeNotifier {
       check(clip.endOnTimeline);
     }
 
-    // Snap to markers (future)
+    // Snap to markers
+    for (final marker in _markers) {
+      check(marker.time);
+    }
+
     return nearest;
   }
 
@@ -276,6 +283,31 @@ class TimelineState extends ChangeNotifier {
         .map((e) => e.id == effect.id ? effect : e)
         .toList();
     _effectsByClipId[effect.clipId] = list;
+    notifyListeners();
+  }
+
+  // ── Marker state ──────────────────────────────────────────────────────────
+
+  List<MarkerModel> get markers => List.unmodifiable(_markers);
+
+  void setMarkers(List<MarkerModel> markers) {
+    _markers = List.from(markers);
+    notifyListeners();
+  }
+
+  void addMarker(MarkerModel marker) {
+    _markers = [..._markers, marker]
+      ..sort((a, b) => a.time.compareTo(b.time));
+    notifyListeners();
+  }
+
+  void removeMarker(String markerId) {
+    _markers = _markers.where((m) => m.id != markerId).toList();
+    notifyListeners();
+  }
+
+  void updateMarker(MarkerModel marker) {
+    _markers = _markers.map((m) => m.id == marker.id ? marker : m).toList();
     notifyListeners();
   }
 

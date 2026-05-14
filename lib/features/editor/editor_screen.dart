@@ -178,6 +178,58 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
       return KeyEventResult.handled;
     }
 
+    // Frame-accurate navigation: Left/Right arrows ±1 frame, Shift ±10 frames
+    if (key == LogicalKeyboardKey.arrowLeft) {
+      final fps = ref
+              .read(_projectProvider(widget.projectId))
+              .value
+              ?.composition
+              .frameRate ??
+          30.0;
+      controller.stepFrames(isShift ? -10 : -1, frameRate: fps);
+      return KeyEventResult.handled;
+    }
+
+    if (key == LogicalKeyboardKey.arrowRight) {
+      final fps = ref
+              .read(_projectProvider(widget.projectId))
+              .value
+              ?.composition
+              .frameRate ??
+          30.0;
+      controller.stepFrames(isShift ? 10 : 1, frameRate: fps);
+      return KeyEventResult.handled;
+    }
+
+    // Home/End: go to start/end
+    if (key == LogicalKeyboardKey.home) {
+      controller.goToStart();
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.end) {
+      controller.goToEnd();
+      return KeyEventResult.handled;
+    }
+
+    // Up/Down: seek to prev/next edit point
+    if (key == LogicalKeyboardKey.arrowUp) {
+      controller.seekToPreviousEdit();
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.arrowDown) {
+      controller.seekToNextEdit();
+      return KeyEventResult.handled;
+    }
+
+    // M: add marker at playhead
+    if (key == LogicalKeyboardKey.keyM) {
+      controller.addMarker(projectId: widget.projectId);
+      return KeyEventResult.handled;
+    }
+
+    // Shift+M: seek to next marker; Ctrl+Shift+M: prev marker
+    // (handled by M with modifiers above is simpler — separate shortcuts below)
+
     return KeyEventResult.ignored;
   }
 

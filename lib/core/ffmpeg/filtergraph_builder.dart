@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:fluxedit/core/effects/effect_model.dart';
 import 'package:fluxedit/core/effects/effect_registry.dart';
 import 'package:fluxedit/core/timeline/clip_model.dart';
@@ -6,6 +7,77 @@ import 'package:fluxedit/core/transitions/transition_type.dart';
 /// Builds FFmpeg filtergraph strings for export-time rendering.
 class FiltergraphBuilder {
   const FiltergraphBuilder();
+
+  /// Builds per-clip transform/crop/flip/reverse filter chain.
+  String _buildClipTransformChain(ClipModel clip) {
+    final filters = <String>[];
+
+    // Reverse
+    if (clip.isReversed) {
+      filters.add('reverse');
+    }
+
+    // Flip
+    if (clip.flipHorizontal) filters.add('hflip');
+    if (clip.flipVertical) filters.add('vflip');
+
+    // Crop (fraction-based: cropLeft 0.1 = remove 10% from left)
+    final cl = clip.cropLeft;
+    final cr = clip.cropRight;
+    final ct = clip.cropTop;
+    final cb = clip.cropBottom;
+    if (cl > 0 || cr > 0 || ct > 0 || cb > 0) {
+      filters.add(
+        'crop=w=iw*(${1.0 - cl - cr}):h=ih*(${1.0 - ct - cb})'
+        ':x=iw*$cl:y=ih*$ct',
+      );
+    }
+
+    // Scale (scaleX/scaleY relative to original)
+    if (clip.scaleX != 1.0 || clip.scaleY != 1.0) {
+      filters.add(
+        'scale=w=iw*${clip.scaleX}:h=ih*${clip.scaleY}'
+        ':flags=lanczos',
+      );
+    }
+
+    // Rotation (degrees → radians for FFmpeg rotate filter)
+    if (clip.rotation != 0.0) {
+      final rad = clip.rotation * math.pi / 180.0;
+      filters.add(
+        "rotate=$rad:fillcolor=black@0:ow='hypot(iw,ih)':oh='hypot(iw,ih)'",
+      );
+    }
+
+    // Position (overlay onto black canvas at comp size is handled by
+    // the overlay step in the final graph — here we just pad if needed)
+    // We handle posX/posY via overlay in the export pipeline.
+
+    return filters.join(',');
+  }
+
+  /// Builds audio filters for a single clip (volume, reverse, audio effects).
+  String _buildClipAudioChain(
+    ClipModel clip,
+    List<EffectInstance> effects,
+  ) {
+    final filters = <String>[];
+
+    if (clip.isReversed) filters.add('areverse');
+    if (clip.volume != 1.0) filters.add('volume=${clip.volume}');
+
+    // Audio effects
+    final audioChain = EffectRegistry.buildAudioEffectChain('', '', effects);
+    if (audioChain.isNotEmpty) {
+      // buildAudioEffectChain returns [label]filters[label], extract just filters
+      final parts = audioChain.split(']');
+      if (parts.length > 2) {
+        filters.add(parts[1]);
+      }
+    }
+
+    return filters.join(',');
+  }
 
   /// Constructs a complete FFmpeg filtergraph for a list of clips on a single
   /// video track. When [effectsByClipId] is provided, per-clip effect chains
@@ -17,39 +89,65 @@ class FiltergraphBuilder {
     if (clips.isEmpty) return '';
 
     final effects = effectsByClipId ?? {};
-    final hasAnyEffects =
-        effects.values.any((list) => list.any((e) => e.isEnabled));
-
-    if (!hasAnyEffects) {
-      return _simpleConcatGraph(clips);
-    }
-
     final sb = StringBuffer();
+    var hasAnyChain = false;
 
-    // Per-clip effect chains
+    // Per-clip video chains (effects + transform)
     for (var i = 0; i < clips.length; i++) {
       final clip = clips[i];
       final clipEffects = effects[clip.id] ?? [];
-      final chain = EffectRegistry.buildClipEffectChain(
-        '$i:v',
-        'v$i',
-        clipEffects,
+      final videoEffects = clipEffects.where((e) => e.type.isVideoEffect).toList();
+
+      final effectChain = EffectRegistry.buildClipEffectChain(
+        '$i:v', 'v$i', videoEffects,
       );
-      if (chain.isNotEmpty) {
-        sb.write('$chain;');
+      final transformChain = _buildClipTransformChain(clip);
+      final audioChain = _buildClipAudioChain(clip, clipEffects);
+
+      if (effectChain.isNotEmpty || transformChain.isNotEmpty) {
+        hasAnyChain = true;
+        if (effectChain.isNotEmpty && transformChain.isNotEmpty) {
+          // Chain: effect output → transform
+          sb.write('$effectChain;[v$i]$transformChain[vt$i];');
+        } else if (effectChain.isNotEmpty) {
+          sb.write('$effectChain;');
+        } else {
+          sb.write('[$i:v]$transformChain[vt$i];');
+        }
+      }
+
+      if (audioChain.isNotEmpty) {
+        hasAnyChain = true;
+        sb.write('[$i:a]$audioChain[a$i];');
       }
     }
 
-    // Concat inputs: use effect output label if chain exists, else raw input
+    if (!hasAnyChain) return _simpleConcatGraph(clips);
+
+    // Concat inputs
     for (var i = 0; i < clips.length; i++) {
       final clip = clips[i];
       final clipEffects = effects[clip.id] ?? [];
-      final hasChain = EffectRegistry.buildClipEffectChain(
-        '$i:v',
-        'v$i',
-        clipEffects,
-      ).isNotEmpty;
-      sb.write(hasChain ? '[v$i][$i:a]' : '[$i:v][$i:a]');
+      final videoEffects = clipEffects.where((e) => e.type.isVideoEffect).toList();
+      final effectChain = EffectRegistry.buildClipEffectChain(
+        '$i:v', 'v$i', videoEffects,
+      );
+      final transformChain = _buildClipTransformChain(clip);
+      final audioChain = _buildClipAudioChain(clip, clipEffects);
+
+      // Video label
+      if (effectChain.isNotEmpty && transformChain.isNotEmpty) {
+        sb.write('[vt$i]');
+      } else if (effectChain.isNotEmpty) {
+        sb.write('[v$i]');
+      } else if (transformChain.isNotEmpty) {
+        sb.write('[vt$i]');
+      } else {
+        sb.write('[$i:v]');
+      }
+
+      // Audio label
+      sb.write(audioChain.isNotEmpty ? '[a$i]' : '[$i:a]');
     }
     sb.write('concat=n=${clips.length}:v=1:a=1[outv][outa]');
     return sb.toString();
@@ -79,11 +177,6 @@ class FiltergraphBuilder {
   }
 
   /// Builds a filtergraph that handles both cuts and transitions between clips.
-  ///
-  /// Adjacent clips where `clips[i].transitionOutId != null` are connected with
-  /// FFmpeg `xfade` (video) and `acrossfade` (audio). Remaining boundaries are
-  /// assembled with `concat`. Falls back to [buildConcatGraph] when no clip has
-  /// a transition set.
   String buildTransitionGraph(
     List<ClipModel> clips, {
     Map<String, List<EffectInstance>>? effectsByClipId,
@@ -98,27 +191,41 @@ class FiltergraphBuilder {
     final effects = effectsByClipId ?? {};
     final sb = StringBuffer();
 
-    // ── Step 1: Per-clip effect chains ─────────────────────────────────────
-    // clipVideoLabels[i] is the video label (without brackets) after effects.
+    // ── Step 1: Per-clip effect + transform chains ─────────────────────────
     final clipVideoLabels = List<String>.generate(clips.length, (i) => '$i:v');
+    final clipAudioLabels = List<String>.generate(clips.length, (i) => '$i:a');
+
     for (var i = 0; i < clips.length; i++) {
-      final clipEffects = (effects[clips[i].id] ?? [])
+      final clip = clips[i];
+      final clipEffects = (effects[clip.id] ?? [])
           .where((e) => e.isEnabled)
           .toList();
-      if (clipEffects.isNotEmpty) {
-        final outLabel = 'eff${i}v';
-        final chain =
-            EffectRegistry.buildClipEffectChain('$i:v', outLabel, clipEffects);
-        if (chain.isNotEmpty) {
-          sb.write('$chain;');
-          clipVideoLabels[i] = outLabel;
-        }
+      final videoEffects = clipEffects.where((e) => e.type.isVideoEffect).toList();
+
+      final effectChain = EffectRegistry.buildClipEffectChain(
+        '$i:v', 'eff${i}v', videoEffects,
+      );
+      final transformChain = _buildClipTransformChain(clip);
+
+      if (effectChain.isNotEmpty && transformChain.isNotEmpty) {
+        sb.write('$effectChain;[eff${i}v]$transformChain[vt$i];');
+        clipVideoLabels[i] = 'vt$i';
+      } else if (effectChain.isNotEmpty) {
+        sb.write('$effectChain;');
+        clipVideoLabels[i] = 'eff${i}v';
+      } else if (transformChain.isNotEmpty) {
+        sb.write('[$i:v]$transformChain[vt$i];');
+        clipVideoLabels[i] = 'vt$i';
+      }
+
+      final audioChain = _buildClipAudioChain(clip, clipEffects);
+      if (audioChain.isNotEmpty) {
+        sb.write('[$i:a]$audioChain[a$i];');
+        clipAudioLabels[i] = 'a$i';
       }
     }
 
     // ── Step 2: Partition clips into transition segments ───────────────────
-    // A segment is a maximal run of clips where each adjacent pair is connected
-    // by a transition. Cuts start a new segment.
     final segments = <List<int>>[];
     var segStart = 0;
     while (segStart < clips.length) {
@@ -131,7 +238,7 @@ class FiltergraphBuilder {
       segStart = segEnd + 1;
     }
 
-    // ── Step 3: Build xfade chains within each segment ─────────────────────
+    // ── Step 3: Build xfade chains within each segment ────────────────────
     final segVideoLabels = <String>[];
     final segAudioLabels = <String>[];
 
@@ -139,10 +246,10 @@ class FiltergraphBuilder {
       if (segIndices.length == 1) {
         final i = segIndices.first;
         segVideoLabels.add(clipVideoLabels[i]);
-        segAudioLabels.add('$i:a');
+        segAudioLabels.add(clipAudioLabels[i]);
       } else {
         var currVideoLabel = clipVideoLabels[segIndices.first];
-        var currAudioLabel = '${segIndices.first}:a';
+        var currAudioLabel = clipAudioLabels[segIndices.first];
         var accDurSecs =
             clips[segIndices.first].duration.inMicroseconds / 1e6;
         final segId = segIndices.first;
@@ -170,7 +277,7 @@ class FiltergraphBuilder {
             '[$outV];',
           );
           sb.write(
-            '[$currAudioLabel][$nextGlobalIdx:a]'
+            '[$currAudioLabel][${clipAudioLabels[nextGlobalIdx]}]'
             'acrossfade=d=${_fmt(durSecs)}'
             '[$outA];',
           );
@@ -187,9 +294,8 @@ class FiltergraphBuilder {
       }
     }
 
-    // ── Step 4: Concat segment outputs ─────────────────────────────────────
+    // ── Step 4: Concat segment outputs ────────────────────────────────────
     if (segments.length == 1) {
-      // Pass-through rename to standard [outv][outa] labels.
       sb.write('[${segVideoLabels.first}]null[outv];'
           '[${segAudioLabels.first}]anull[outa]');
     } else {

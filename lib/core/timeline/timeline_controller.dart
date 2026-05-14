@@ -19,6 +19,7 @@ import 'package:fluxedit/core/project/project_model.dart';
 import 'package:fluxedit/core/project/project_repository.dart';
 import 'package:fluxedit/core/timeline/clip_model.dart';
 import 'package:fluxedit/core/timeline/keyframe_model.dart';
+import 'package:fluxedit/core/timeline/marker_model.dart';
 import 'package:fluxedit/core/timeline/timeline_state.dart';
 import 'package:fluxedit/core/timeline/track_model.dart';
 import 'package:fluxedit/core/transitions/transition_type.dart';
@@ -75,6 +76,11 @@ class TimelineController {
     if (!_active) return;
     state.setTracks(tracks);
     state.setClips(clips);
+
+    final markers = await repository.getMarkers(projectId);
+    if (!_active) return;
+    state.setMarkers(markers);
+
     for (final clip in clips) {
       final effects = await repository.getEffectsForClip(clip.id);
       if (!_active) return;
@@ -663,6 +669,248 @@ class TimelineController {
           textAnimationDurationMs: durationMs.clamp(100, 5000)),
       description: 'Animation Duration',
     ));
+  }
+
+  // ── Transform operations (all undoable) ────────────────────────────────
+
+  Future<void> updateClipTransform(
+    String clipId, {
+    double? posX,
+    double? posY,
+    double? scaleX,
+    double? scaleY,
+    double? rotation,
+    double? anchorX,
+    double? anchorY,
+  }) async {
+    final clip = _findClip(clipId);
+    if (clip == null) return;
+    final updated = clip.copyWith(
+      posX: posX,
+      posY: posY,
+      scaleX: scaleX?.clamp(AppConstants.minScale, AppConstants.maxScale),
+      scaleY: scaleY?.clamp(AppConstants.minScale, AppConstants.maxScale),
+      rotation: rotation,
+      anchorX: anchorX?.clamp(0.0, 1.0),
+      anchorY: anchorY?.clamp(0.0, 1.0),
+    );
+    await execute(UpdateClipCommand(
+      before: clip,
+      after: updated,
+      description: 'Transform',
+    ));
+  }
+
+  // ── Crop operations (all undoable) ─────────────────────────────────────
+
+  Future<void> updateClipCrop(
+    String clipId, {
+    double? cropLeft,
+    double? cropRight,
+    double? cropTop,
+    double? cropBottom,
+  }) async {
+    final clip = _findClip(clipId);
+    if (clip == null) return;
+    final updated = clip.copyWith(
+      cropLeft: cropLeft?.clamp(AppConstants.minCrop, AppConstants.maxCrop),
+      cropRight: cropRight?.clamp(AppConstants.minCrop, AppConstants.maxCrop),
+      cropTop: cropTop?.clamp(AppConstants.minCrop, AppConstants.maxCrop),
+      cropBottom: cropBottom?.clamp(AppConstants.minCrop, AppConstants.maxCrop),
+    );
+    await execute(UpdateClipCommand(
+      before: clip,
+      after: updated,
+      description: 'Crop',
+    ));
+  }
+
+  // ── Flip/Reverse/Freeze operations (all undoable) ─────────────────────
+
+  Future<void> toggleFlipHorizontal(String clipId) async {
+    final clip = _findClip(clipId);
+    if (clip == null) return;
+    await execute(UpdateClipCommand(
+      before: clip,
+      after: clip.copyWith(flipHorizontal: !clip.flipHorizontal),
+      description: 'Flip Horizontal',
+    ));
+  }
+
+  Future<void> toggleFlipVertical(String clipId) async {
+    final clip = _findClip(clipId);
+    if (clip == null) return;
+    await execute(UpdateClipCommand(
+      before: clip,
+      after: clip.copyWith(flipVertical: !clip.flipVertical),
+      description: 'Flip Vertical',
+    ));
+  }
+
+  Future<void> toggleReverse(String clipId) async {
+    final clip = _findClip(clipId);
+    if (clip == null) return;
+    await execute(UpdateClipCommand(
+      before: clip,
+      after: clip.copyWith(isReversed: !clip.isReversed),
+      description: 'Reverse Clip',
+    ));
+  }
+
+  Future<void> toggleFreezeFrame(String clipId) async {
+    final clip = _findClip(clipId);
+    if (clip == null) return;
+    await execute(UpdateClipCommand(
+      before: clip,
+      after: clip.copyWith(isFrozen: !clip.isFrozen),
+      description: 'Freeze Frame',
+    ));
+  }
+
+  // ── Volume operations (all undoable) ──────────────────────────────────
+
+  Future<void> updateClipVolume(String clipId, double volume) async {
+    final clip = _findClip(clipId);
+    if (clip == null) return;
+    final clamped = volume.clamp(AppConstants.minVolume, AppConstants.maxVolume);
+    await execute(UpdateClipCommand(
+      before: clip,
+      after: clip.copyWith(volume: clamped),
+      description: 'Set Volume',
+    ));
+  }
+
+  // ── Marker operations ────────────────────────────────────────────────
+
+  Future<MarkerModel> addMarker({
+    required String projectId,
+    String name = '',
+    MarkerColor color = MarkerColor.blue,
+    Duration? time,
+  }) async {
+    final marker = MarkerModel(
+      id: 'marker_${_uuid.v4()}',
+      projectId: projectId,
+      time: time ?? state.playhead,
+      name: name,
+      color: color,
+    );
+    state.addMarker(marker);
+    await repository.saveMarker(marker);
+    return marker;
+  }
+
+  Future<void> removeMarker(String markerId) async {
+    state.removeMarker(markerId);
+    await repository.deleteMarker(markerId);
+  }
+
+  Future<void> updateMarker(MarkerModel marker) async {
+    state.updateMarker(marker);
+    await repository.saveMarker(marker);
+  }
+
+  /// Seeks playhead to the next marker after current position.
+  void seekToNextMarker() {
+    final markers = state.markers;
+    if (markers.isEmpty) return;
+    for (final m in markers) {
+      if (m.time > state.playhead) {
+        state.setPlayhead(m.time);
+        return;
+      }
+    }
+  }
+
+  /// Seeks playhead to the previous marker before current position.
+  void seekToPreviousMarker() {
+    final markers = state.markers;
+    if (markers.isEmpty) return;
+    for (var i = markers.length - 1; i >= 0; i--) {
+      if (markers[i].time < state.playhead) {
+        state.setPlayhead(markers[i].time);
+        return;
+      }
+    }
+  }
+
+  // ── Frame navigation ─────────────────────────────────────────────────
+
+  /// Steps the playhead by [frames] frames. Positive = forward, negative = back.
+  void stepFrames(int frames, {double frameRate = AppConstants.defaultFrameRate}) {
+    final frameDurationUs = (1000000.0 / frameRate).round();
+    final newTime = state.playhead + Duration(microseconds: frameDurationUs * frames);
+    state.setPlayhead(newTime);
+  }
+
+  /// Moves playhead to the start of the timeline.
+  void goToStart() => state.setPlayhead(Duration.zero);
+
+  /// Moves playhead to the end of the timeline.
+  void goToEnd() => state.setPlayhead(state.duration);
+
+  /// Seeks playhead to the next clip boundary (start or end).
+  void seekToNextEdit() {
+    final playhead = state.playhead;
+    Duration? nearest;
+    for (final clip in state.clips) {
+      for (final edge in [clip.startOnTimeline, clip.endOnTimeline]) {
+        if (edge > playhead) {
+          if (nearest == null || edge < nearest) nearest = edge;
+        }
+      }
+    }
+    if (nearest != null) state.setPlayhead(nearest);
+  }
+
+  /// Seeks playhead to the previous clip boundary.
+  void seekToPreviousEdit() {
+    final playhead = state.playhead;
+    Duration? nearest;
+    for (final clip in state.clips) {
+      for (final edge in [clip.startOnTimeline, clip.endOnTimeline]) {
+        if (edge < playhead) {
+          if (nearest == null || edge > nearest) nearest = edge;
+        }
+      }
+    }
+    if (nearest != null) state.setPlayhead(nearest);
+  }
+
+  // ── Track controls ───────────────────────────────────────────────────
+
+  Future<void> toggleTrackVisibility(String trackId) async {
+    final track = state.tracks.firstWhere((t) => t.id == trackId);
+    final updated = track.copyWith(isVisible: !track.isVisible);
+    state.updateTrack(updated);
+    await repository.saveTrack(updated);
+  }
+
+  Future<void> updateTrackHeight(String trackId, double height) async {
+    final track = state.tracks.firstWhere((t) => t.id == trackId);
+    final clamped = height.clamp(
+      AppConstants.minTrackHeight,
+      AppConstants.maxTrackHeight,
+    );
+    final updated = track.copyWith(height: clamped);
+    state.updateTrack(updated);
+    await repository.saveTrack(updated);
+  }
+
+  Future<void> updateTrackVolume(String trackId, double volume) async {
+    final track = state.tracks.firstWhere((t) => t.id == trackId);
+    final updated = track.copyWith(
+      volume: volume.clamp(AppConstants.minVolume, AppConstants.maxVolume),
+    );
+    state.updateTrack(updated);
+    await repository.saveTrack(updated);
+  }
+
+  Future<void> updateTrackPan(String trackId, double pan) async {
+    final track = state.tracks.firstWhere((t) => t.id == trackId);
+    final updated = track.copyWith(pan: pan.clamp(-1.0, 1.0));
+    state.updateTrack(updated);
+    await repository.saveTrack(updated);
   }
 
   Future<void> duplicateClip(String clipId) async {

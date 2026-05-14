@@ -7,6 +7,7 @@ import 'package:fluxedit/core/effects/effect_type.dart';
 import 'package:fluxedit/core/project/project_model.dart';
 import 'package:fluxedit/core/timeline/clip_model.dart';
 import 'package:fluxedit/core/timeline/composition_model.dart';
+import 'package:fluxedit/core/timeline/marker_model.dart';
 import 'package:fluxedit/core/timeline/track_model.dart';
 
 final projectRepositoryProvider = Provider<ProjectRepository>(
@@ -205,6 +206,22 @@ class ProjectRepository {
         fontFamily: Value(clip.fontFamily),
         textAnimationType: Value(clip.textAnimationType.name),
         textAnimationDurationMs: Value(clip.textAnimationDurationMs),
+        posX: Value(clip.posX),
+        posY: Value(clip.posY),
+        scaleX: Value(clip.scaleX),
+        scaleY: Value(clip.scaleY),
+        rotation: Value(clip.rotation),
+        anchorX: Value(clip.anchorX),
+        anchorY: Value(clip.anchorY),
+        cropLeft: Value(clip.cropLeft),
+        cropRight: Value(clip.cropRight),
+        cropTop: Value(clip.cropTop),
+        cropBottom: Value(clip.cropBottom),
+        isReversed: Value(clip.isReversed),
+        isFrozen: Value(clip.isFrozen),
+        flipHorizontal: Value(clip.flipHorizontal),
+        flipVertical: Value(clip.flipVertical),
+        volume: Value(clip.volume),
       ),
     );
   }
@@ -239,6 +256,34 @@ class ProjectRepository {
   Future<void> deleteEffect(String id) async {
     await (_db.delete(_db.effectInstances)..where((t) => t.id.equals(id)))
         .go();
+  }
+
+  // ── Markers ──────────────────────────────────────────────────────────────
+
+  Future<List<MarkerModel>> getMarkers(String projectId) async {
+    final rows = await (_db.select(_db.markers)
+          ..where((t) => t.projectId.equals(projectId))
+          ..orderBy([(t) => OrderingTerm.asc(t.timeUs)]))
+        .get();
+    return rows.map(_markerFromRow).toList();
+  }
+
+  Future<void> saveMarker(MarkerModel marker) async {
+    await _db.into(_db.markers).insertOnConflictUpdate(
+      MarkersCompanion(
+        id: Value(marker.id),
+        projectId: Value(marker.projectId),
+        timeUs: Value(marker.time.inMicroseconds),
+        name: Value(marker.name),
+        note: Value(marker.note),
+        color: Value(marker.color.name),
+        durationUs: Value(marker.durationUs),
+      ),
+    );
+  }
+
+  Future<void> deleteMarker(String id) async {
+    await (_db.delete(_db.markers)..where((t) => t.id.equals(id))).go();
   }
 
   // ── Private converters ────────────────────────────────────────────────────
@@ -364,6 +409,34 @@ class ProjectRepository {
       fontFamily: row.fontFamily,
       textAnimationType: TextAnimationType.fromId(row.textAnimationType),
       textAnimationDurationMs: row.textAnimationDurationMs,
+      posX: row.posX,
+      posY: row.posY,
+      scaleX: row.scaleX,
+      scaleY: row.scaleY,
+      rotation: row.rotation,
+      anchorX: row.anchorX,
+      anchorY: row.anchorY,
+      cropLeft: row.cropLeft,
+      cropRight: row.cropRight,
+      cropTop: row.cropTop,
+      cropBottom: row.cropBottom,
+      isReversed: row.isReversed,
+      isFrozen: row.isFrozen,
+      flipHorizontal: row.flipHorizontal,
+      flipVertical: row.flipVertical,
+      volume: row.volume,
+    );
+  }
+
+  MarkerModel _markerFromRow(Marker row) {
+    return MarkerModel(
+      id: row.id,
+      projectId: row.projectId,
+      time: Duration(microseconds: row.timeUs),
+      name: row.name,
+      note: row.note,
+      color: MarkerColor.fromName(row.color),
+      durationUs: row.durationUs,
     );
   }
 }

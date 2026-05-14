@@ -84,6 +84,20 @@ abstract final class AppConstants {
   // Text animation duration (ms into clip where animation completes)
   static const int textAnimationDurationMs = 600;
 
+  // Transform
+  static const double minScale = 0.01;
+  static const double maxScale = 10.0;
+  static const double minRotation = -360.0;
+  static const double maxRotation = 360.0;
+
+  // Crop
+  static const double minCrop = 0.0;
+  static const double maxCrop = 0.99;
+
+  // Volume
+  static const double minVolume = 0.0;
+  static const double maxVolume = 4.0; // 400% for boost
+
   // Proxy resolution divisor
   static const int proxyResolutionDivisor = 4;
   static const int proxyCrf = 28;

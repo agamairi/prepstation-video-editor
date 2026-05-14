@@ -32,6 +32,18 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
   double _progress = 0;
   String _progressText = '';
   String _errorMessage = '';
+  bool _useCustom = false;
+
+  // Custom export settings
+  int _customWidth = 1920;
+  int _customHeight = 1080;
+  double _customFrameRate = 30.0;
+  VideoCodec _customVideoCodec = VideoCodec.h264;
+  AudioCodec _customAudioCodec = AudioCodec.aac;
+  ContainerFormat _customContainer = ContainerFormat.mp4;
+  int _customVideoBitRate = 8000;
+  int _customAudioBitRate = 192;
+  int? _customCrf = 23;
 
   @override
   void initState() {
@@ -153,65 +165,300 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
 
     return Padding(
       padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Preset', style: AppTypography.headlineSmall),
-          const SizedBox(height: 8),
-          DropdownButton<ExportPreset>(
-            value: _selectedPreset,
-            isExpanded: true,
-            dropdownColor: ColorTokens.backgroundElevated,
-            style: AppTypography.bodyMedium,
-            underline: Container(
-              height: 1,
-              color: ColorTokens.borderDefault,
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Text('Preset', style: AppTypography.headlineSmall),
+                const Spacer(),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('Custom', style: AppTypography.bodySmall),
+                    const SizedBox(width: 4),
+                    Switch(
+                      value: _useCustom,
+                      onChanged: (v) => setState(() => _useCustom = v),
+                      activeTrackColor: ColorTokens.accentPrimary,
+                    ),
+                  ],
+                ),
+              ],
             ),
-            items: CodecRegistry.presets
-                .map(
-                  (p) => DropdownMenuItem(
-                    value: p,
-                    child: Text(p.label),
-                  ),
-                )
-                .toList(),
-            onChanged: (p) {
-              if (p == null) return;
-              setState(() {
-                _selectedPreset = p;
-                _outputPath = _outputPath
-                    .replaceAll(
+            const SizedBox(height: 8),
+            if (!_useCustom) ...[
+              DropdownButton<ExportPreset>(
+                value: _selectedPreset,
+                isExpanded: true,
+                dropdownColor: ColorTokens.backgroundElevated,
+                style: AppTypography.bodyMedium,
+                underline: Container(
+                  height: 1,
+                  color: ColorTokens.borderDefault,
+                ),
+                items: CodecRegistry.presets
+                    .map(
+                      (p) => DropdownMenuItem(
+                        value: p,
+                        child: Text(p.label),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (p) {
+                  if (p == null) return;
+                  setState(() {
+                    _selectedPreset = p;
+                    _outputPath = _outputPath.replaceAll(
                       RegExp(r'\.\w+$'),
                       '.${p.containerExtension}',
                     );
-              });
-            },
-          ),
-          const SizedBox(height: 20),
-          const Text('Output File', style: AppTypography.headlineSmall),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  _outputPath.isEmpty ? 'Select output location...' : _outputPath,
-                  style: AppTypography.bodySmall,
-                  overflow: TextOverflow.ellipsis,
-                ),
+                  });
+                },
               ),
-              const SizedBox(width: 8),
-              TextButton(
-                onPressed: _pickOutputPath,
-                child: const Text('Browse'),
-              ),
+            ] else ...[
+              _buildCustomSettings(),
             ],
-          ),
-          const SizedBox(height: 20),
-          _buildPresetSummary(),
+            const SizedBox(height: 20),
+            const Text('Output File', style: AppTypography.headlineSmall),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    _outputPath.isEmpty
+                        ? 'Select output location...'
+                        : _outputPath,
+                    style: AppTypography.bodySmall,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                TextButton(
+                  onPressed: _pickOutputPath,
+                  child: const Text('Browse'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            if (_useCustom) _buildCustomSummary() else _buildPresetSummary(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCustomSettings() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Resolution
+        Row(
+          children: [
+            Expanded(
+              child: _CustomField(
+                label: 'Width',
+                value: _customWidth.toString(),
+                onChanged: (v) =>
+                    setState(() => _customWidth = int.tryParse(v) ?? 1920),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _CustomField(
+                label: 'Height',
+                value: _customHeight.toString(),
+                onChanged: (v) =>
+                    setState(() => _customHeight = int.tryParse(v) ?? 1080),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        // Frame rate
+        Row(
+          children: [
+            const SizedBox(
+              width: 80,
+              child: Text('Frame Rate', style: AppTypography.labelMedium),
+            ),
+            Expanded(
+              child: DropdownButton<double>(
+                value: _customFrameRate,
+                isExpanded: true,
+                dropdownColor: ColorTokens.backgroundElevated,
+                style: AppTypography.bodySmall,
+                underline: Container(height: 1, color: ColorTokens.borderDefault),
+                items: const [23.976, 24.0, 25.0, 29.97, 30.0, 50.0, 59.94, 60.0]
+                    .map((r) => DropdownMenuItem(value: r, child: Text('$r fps')))
+                    .toList(),
+                onChanged: (v) {
+                  if (v != null) setState(() => _customFrameRate = v);
+                },
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        // Video codec
+        Row(
+          children: [
+            const SizedBox(
+              width: 80,
+              child: Text('Video', style: AppTypography.labelMedium),
+            ),
+            Expanded(
+              child: DropdownButton<VideoCodec>(
+                value: _customVideoCodec,
+                isExpanded: true,
+                dropdownColor: ColorTokens.backgroundElevated,
+                style: AppTypography.bodySmall,
+                underline: Container(height: 1, color: ColorTokens.borderDefault),
+                items: VideoCodec.values
+                    .map((c) => DropdownMenuItem(
+                          value: c,
+                          child: Text(c.name.toUpperCase()),
+                        ))
+                    .toList(),
+                onChanged: (v) {
+                  if (v != null) setState(() => _customVideoCodec = v);
+                },
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        // Audio codec
+        Row(
+          children: [
+            const SizedBox(
+              width: 80,
+              child: Text('Audio', style: AppTypography.labelMedium),
+            ),
+            Expanded(
+              child: DropdownButton<AudioCodec>(
+                value: _customAudioCodec,
+                isExpanded: true,
+                dropdownColor: ColorTokens.backgroundElevated,
+                style: AppTypography.bodySmall,
+                underline: Container(height: 1, color: ColorTokens.borderDefault),
+                items: AudioCodec.values
+                    .map((c) => DropdownMenuItem(
+                          value: c,
+                          child: Text(c.name.toUpperCase()),
+                        ))
+                    .toList(),
+                onChanged: (v) {
+                  if (v != null) setState(() => _customAudioCodec = v);
+                },
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        // Container
+        Row(
+          children: [
+            const SizedBox(
+              width: 80,
+              child: Text('Container', style: AppTypography.labelMedium),
+            ),
+            Expanded(
+              child: DropdownButton<ContainerFormat>(
+                value: _customContainer,
+                isExpanded: true,
+                dropdownColor: ColorTokens.backgroundElevated,
+                style: AppTypography.bodySmall,
+                underline: Container(height: 1, color: ColorTokens.borderDefault),
+                items: ContainerFormat.values
+                    .map((c) => DropdownMenuItem(
+                          value: c,
+                          child: Text(c.name.toUpperCase()),
+                        ))
+                    .toList(),
+                onChanged: (v) {
+                  if (v != null) setState(() => _customContainer = v);
+                },
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        // Bitrate / CRF
+        Row(
+          children: [
+            Expanded(
+              child: _CustomField(
+                label: 'Video kbps',
+                value: _customVideoBitRate.toString(),
+                onChanged: (v) => setState(
+                    () => _customVideoBitRate = int.tryParse(v) ?? 8000),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _CustomField(
+                label: 'Audio kbps',
+                value: _customAudioBitRate.toString(),
+                onChanged: (v) => setState(
+                    () => _customAudioBitRate = int.tryParse(v) ?? 192),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _CustomField(
+                label: 'CRF (opt)',
+                value: _customCrf?.toString() ?? '',
+                onChanged: (v) =>
+                    setState(() => _customCrf = int.tryParse(v)),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCustomSummary() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: ColorTokens.backgroundSurface,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: ColorTokens.borderSubtle),
+      ),
+      child: Column(
+        children: [
+          _SummaryRow('Resolution', '$_customWidth×$_customHeight'),
+          _SummaryRow('Frame Rate', '$_customFrameRate fps'),
+          _SummaryRow('Video Codec', _customVideoCodec.name.toUpperCase()),
+          _SummaryRow('Audio Codec', _customAudioCodec.name.toUpperCase()),
+          _SummaryRow('Container', _customContainer.name.toUpperCase()),
+          _SummaryRow('Video Bit Rate', '$_customVideoBitRate kbps'),
+          _SummaryRow('Audio Bit Rate', '$_customAudioBitRate kbps'),
+          if (_customCrf != null) _SummaryRow('CRF', '$_customCrf'),
         ],
       ),
     );
   }
+
+  ExportPreset get _effectivePreset => _useCustom
+      ? ExportPreset(
+          id: 'custom',
+          label: 'Custom',
+          videoCodec: _customVideoCodec,
+          audioCodec: _customAudioCodec,
+          container: _customContainer,
+          width: _customWidth,
+          height: _customHeight,
+          frameRate: _customFrameRate,
+          videoBitRate: _customVideoBitRate,
+          audioBitRate: _customAudioBitRate,
+          crf: _customCrf,
+          isCustom: true,
+        )
+      : _selectedPreset;
 
   Widget _buildPresetSummary() {
     final p = _selectedPreset;
@@ -301,7 +548,7 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
       final repository = ref.read(projectRepositoryProvider);
       final engine = ref.read(ffmpegEngineProvider);
       const graphBuilder = FiltergraphBuilder();
-      final preset = _selectedPreset;
+      final preset = _effectivePreset;
 
       // Gather clips from all video tracks
       final clips = timeline.clips
@@ -383,6 +630,43 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
     if (mounted) {
       setState(() => _status = _ExportStatus.idle);
     }
+  }
+}
+
+class _CustomField extends StatelessWidget {
+  const _CustomField({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final String label;
+  final String value;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: AppTypography.labelMedium),
+        const SizedBox(height: 4),
+        TextFormField(
+          initialValue: value,
+          style: AppTypography.bodySmall,
+          decoration: InputDecoration(
+            isDense: true,
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(4),
+              borderSide: const BorderSide(color: ColorTokens.borderDefault),
+            ),
+          ),
+          onChanged: onChanged,
+        ),
+      ],
+    );
   }
 }
 

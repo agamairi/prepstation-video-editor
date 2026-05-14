@@ -2,6 +2,22 @@
 abstract final class AnimatedProperty {
   static const String opacity = 'opacity';
   static const String speed = 'speed';
+  static const String volume = 'volume';
+
+  // Transform
+  static const String posX = 'posX';
+  static const String posY = 'posY';
+  static const String scaleX = 'scaleX';
+  static const String scaleY = 'scaleY';
+  static const String rotation = 'rotation';
+  static const String anchorX = 'anchorX';
+  static const String anchorY = 'anchorY';
+
+  // Crop
+  static const String cropLeft = 'cropLeft';
+  static const String cropRight = 'cropRight';
+  static const String cropTop = 'cropTop';
+  static const String cropBottom = 'cropBottom';
 
   /// Returns the parameter ID for an effect parameter.
   static String effectParam(String effectId, String paramKey) =>

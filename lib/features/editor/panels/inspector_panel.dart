@@ -283,6 +283,43 @@ class _ClipInspectorState extends ConsumerState<_ClipInspector> {
               const SizedBox(height: 12),
               _ImageClipSection(clip: clip),
             ],
+            // Volume (for video/audio clips)
+            if (clip.type == ClipType.video || clip.type == ClipType.audio) ...[
+              _SliderRow(
+                label: 'Volume',
+                value: clip.volume,
+                min: AppConstants.minVolume,
+                max: AppConstants.maxVolume,
+                displayText: '${(clip.volume * 100).toStringAsFixed(0)}%',
+                onChangeStart: (_) => _clipAtDragStart = _findClip(),
+                onChangeEnd: (v) {
+                  if (_clipAtDragStart != null) {
+                    ref.read(timelineControllerProvider).updateClipVolume(
+                      widget.clipId, v,
+                    );
+                    _clipAtDragStart = null;
+                  }
+                },
+                onChanged: (v) {
+                  final c = _findClip();
+                  if (c != null) {
+                    ref.read(timelineStateProvider).updateClip(
+                      c.copyWith(volume: v),
+                    );
+                  }
+                },
+              ),
+            ],
+            if (clip.type == ClipType.video || clip.type == ClipType.image) ...[
+              const SizedBox(height: 12),
+              _TransformSection(clip: clip),
+              const SizedBox(height: 12),
+              _CropSection(clip: clip),
+            ],
+            if (clip.type == ClipType.video) ...[
+              const SizedBox(height: 12),
+              _ClipFlagsSection(clip: clip),
+            ],
             const SizedBox(height: 12),
             _EffectsSection(clipId: clip.id),
             if (clip.type == ClipType.video) ...[
@@ -597,9 +634,7 @@ class _AddEffectButton extends StatelessWidget {
       icon: const Icon(Icons.add, size: 16, color: ColorTokens.accentPrimary),
       tooltip: 'Add Effect',
       padding: EdgeInsets.zero,
-      itemBuilder: (_) => EffectType.values
-          .where((t) => t != EffectType.lut)
-          .map(
+      itemBuilder: (_) => EffectType.values.map(
             (t) => PopupMenuItem(
               value: t,
               child: Text(t.displayName, style: AppTypography.bodySmall),
@@ -1240,6 +1275,334 @@ class _ImageClipSection extends StatelessWidget {
         const _SectionHeader(title: 'Text Overlay'),
         _TextStyleControls(clip: clip),
       ],
+    );
+  }
+}
+
+// ── Transition Section ────────────────────────────────────────────────────────
+
+// ── Transform Section ────────────────────────────────────────────────────────
+
+class _TransformSection extends ConsumerStatefulWidget {
+  const _TransformSection({required this.clip});
+
+  final ClipModel clip;
+
+  @override
+  ConsumerState<_TransformSection> createState() => _TransformSectionState();
+}
+
+class _TransformSectionState extends ConsumerState<_TransformSection> {
+  ClipModel? _atDragStart;
+
+  ClipModel? _latestClip() {
+    try {
+      return ref
+          .read(timelineStateProvider)
+          .clips
+          .firstWhere((c) => c.id == widget.clip.id);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final clip = ref
+            .watch(timelineStateProvider)
+            .clips
+            .cast<ClipModel?>()
+            .firstWhere((c) => c?.id == widget.clip.id, orElse: () => null) ??
+        widget.clip;
+    final controller = ref.read(timelineControllerProvider);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _SectionHeader(title: 'Transform'),
+        _SliderRow(
+          label: 'Position X',
+          value: clip.posX,
+          min: -1920,
+          max: 1920,
+          displayText: clip.posX.toStringAsFixed(0),
+          onChangeStart: (_) => _atDragStart = _latestClip(),
+          onChanged: (v) {
+            final c = _latestClip();
+            if (c != null) {
+              ref.read(timelineStateProvider).updateClip(c.copyWith(posX: v));
+            }
+          },
+          onChangeEnd: (v) {
+            if (_atDragStart != null) {
+              controller.updateClipTransform(clip.id, posX: v);
+              _atDragStart = null;
+            }
+          },
+        ),
+        _SliderRow(
+          label: 'Position Y',
+          value: clip.posY,
+          min: -1080,
+          max: 1080,
+          displayText: clip.posY.toStringAsFixed(0),
+          onChangeStart: (_) => _atDragStart = _latestClip(),
+          onChanged: (v) {
+            final c = _latestClip();
+            if (c != null) {
+              ref.read(timelineStateProvider).updateClip(c.copyWith(posY: v));
+            }
+          },
+          onChangeEnd: (v) {
+            if (_atDragStart != null) {
+              controller.updateClipTransform(clip.id, posY: v);
+              _atDragStart = null;
+            }
+          },
+        ),
+        _SliderRow(
+          label: 'Scale X',
+          value: clip.scaleX,
+          min: AppConstants.minScale,
+          max: AppConstants.maxScale,
+          displayText: '${(clip.scaleX * 100).toStringAsFixed(0)}%',
+          onChangeStart: (_) => _atDragStart = _latestClip(),
+          onChanged: (v) {
+            final c = _latestClip();
+            if (c != null) {
+              ref.read(timelineStateProvider).updateClip(c.copyWith(scaleX: v));
+            }
+          },
+          onChangeEnd: (v) {
+            if (_atDragStart != null) {
+              controller.updateClipTransform(clip.id, scaleX: v);
+              _atDragStart = null;
+            }
+          },
+        ),
+        _SliderRow(
+          label: 'Scale Y',
+          value: clip.scaleY,
+          min: AppConstants.minScale,
+          max: AppConstants.maxScale,
+          displayText: '${(clip.scaleY * 100).toStringAsFixed(0)}%',
+          onChangeStart: (_) => _atDragStart = _latestClip(),
+          onChanged: (v) {
+            final c = _latestClip();
+            if (c != null) {
+              ref.read(timelineStateProvider).updateClip(c.copyWith(scaleY: v));
+            }
+          },
+          onChangeEnd: (v) {
+            if (_atDragStart != null) {
+              controller.updateClipTransform(clip.id, scaleY: v);
+              _atDragStart = null;
+            }
+          },
+        ),
+        _SliderRow(
+          label: 'Rotation',
+          value: clip.rotation,
+          min: AppConstants.minRotation,
+          max: AppConstants.maxRotation,
+          displayText: '${clip.rotation.toStringAsFixed(1)}°',
+          onChangeStart: (_) => _atDragStart = _latestClip(),
+          onChanged: (v) {
+            final c = _latestClip();
+            if (c != null) {
+              ref
+                  .read(timelineStateProvider)
+                  .updateClip(c.copyWith(rotation: v));
+            }
+          },
+          onChangeEnd: (v) {
+            if (_atDragStart != null) {
+              controller.updateClipTransform(clip.id, rotation: v);
+              _atDragStart = null;
+            }
+          },
+        ),
+      ],
+    );
+  }
+}
+
+// ── Crop Section ─────────────────────────────────────────────────────────────
+
+class _CropSection extends ConsumerStatefulWidget {
+  const _CropSection({required this.clip});
+
+  final ClipModel clip;
+
+  @override
+  ConsumerState<_CropSection> createState() => _CropSectionState();
+}
+
+class _CropSectionState extends ConsumerState<_CropSection> {
+  ClipModel? _atDragStart;
+
+  ClipModel? _latestClip() {
+    try {
+      return ref
+          .read(timelineStateProvider)
+          .clips
+          .firstWhere((c) => c.id == widget.clip.id);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final clip = ref
+            .watch(timelineStateProvider)
+            .clips
+            .cast<ClipModel?>()
+            .firstWhere((c) => c?.id == widget.clip.id, orElse: () => null) ??
+        widget.clip;
+    final controller = ref.read(timelineControllerProvider);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _SectionHeader(title: 'Crop'),
+        for (final entry in [
+          ('Left', clip.cropLeft, (double v) => controller.updateClipCrop(clip.id, cropLeft: v)),
+          ('Right', clip.cropRight, (double v) => controller.updateClipCrop(clip.id, cropRight: v)),
+          ('Top', clip.cropTop, (double v) => controller.updateClipCrop(clip.id, cropTop: v)),
+          ('Bottom', clip.cropBottom, (double v) => controller.updateClipCrop(clip.id, cropBottom: v)),
+        ])
+          _SliderRow(
+            label: entry.$1,
+            value: entry.$2,
+            min: 0,
+            max: 0.99,
+            displayText: '${(entry.$2 * 100).toStringAsFixed(0)}%',
+            onChangeStart: (_) => _atDragStart = _latestClip(),
+            onChanged: (v) {
+              final c = _latestClip();
+              if (c != null) {
+                final updated = switch (entry.$1) {
+                  'Left' => c.copyWith(cropLeft: v),
+                  'Right' => c.copyWith(cropRight: v),
+                  'Top' => c.copyWith(cropTop: v),
+                  'Bottom' => c.copyWith(cropBottom: v),
+                  _ => c,
+                };
+                ref.read(timelineStateProvider).updateClip(updated);
+              }
+            },
+            onChangeEnd: (v) {
+              if (_atDragStart != null) {
+                entry.$3(v);
+                _atDragStart = null;
+              }
+            },
+          ),
+      ],
+    );
+  }
+}
+
+// ── Clip Flags Section ───────────────────────────────────────────────────────
+
+class _ClipFlagsSection extends ConsumerWidget {
+  const _ClipFlagsSection({required this.clip});
+
+  final ClipModel clip;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final controller = ref.read(timelineControllerProvider);
+    final liveClip = ref
+            .watch(timelineStateProvider)
+            .clips
+            .cast<ClipModel?>()
+            .firstWhere((c) => c?.id == clip.id, orElse: () => null) ??
+        clip;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _SectionHeader(title: 'Clip Controls'),
+        Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: [
+            _FlagChip(
+              label: 'Flip H',
+              icon: Icons.flip,
+              isActive: liveClip.flipHorizontal,
+              onTap: () => controller.toggleFlipHorizontal(clip.id),
+            ),
+            _FlagChip(
+              label: 'Flip V',
+              icon: Icons.flip_camera_android,
+              isActive: liveClip.flipVertical,
+              onTap: () => controller.toggleFlipVertical(clip.id),
+            ),
+            _FlagChip(
+              label: 'Reverse',
+              icon: Icons.fast_rewind,
+              isActive: liveClip.isReversed,
+              onTap: () => controller.toggleReverse(clip.id),
+            ),
+            _FlagChip(
+              label: 'Freeze',
+              icon: Icons.ac_unit,
+              isActive: liveClip.isFrozen,
+              onTap: () => controller.toggleFreezeFrame(clip.id),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _FlagChip extends StatelessWidget {
+  const _FlagChip({
+    required this.label,
+    required this.icon,
+    required this.isActive,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool isActive;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: isActive
+              ? ColorTokens.accentPrimary.withValues(alpha: 0.2)
+              : ColorTokens.backgroundSurface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isActive
+                ? ColorTokens.accentPrimary
+                : ColorTokens.borderSubtle,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14,
+              color: isActive ? ColorTokens.accentPrimary : ColorTokens.textSecondary),
+            const SizedBox(width: 4),
+            Text(label,
+              style: AppTypography.labelSmall.copyWith(
+                color: isActive ? ColorTokens.accentPrimary : ColorTokens.textSecondary,
+              )),
+          ],
+        ),
+      ),
     );
   }
 }

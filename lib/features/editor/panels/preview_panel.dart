@@ -193,6 +193,16 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
           );
         case EffectType.grain:
         case EffectType.lut:
+        case EffectType.chromaKey:
+        case EffectType.sharpen:
+        case EffectType.denoise:
+        case EffectType.stabilize:
+        case EffectType.colorWheels:
+        case EffectType.curves:
+        case EffectType.audioEq:
+        case EffectType.audioCompressor:
+        case EffectType.audioNoiseReduction:
+        case EffectType.audioReverb:
           break;
       }
     }

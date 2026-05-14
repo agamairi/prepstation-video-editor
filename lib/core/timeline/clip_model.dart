@@ -82,6 +82,26 @@ class ClipModel {
     this.fontFamily = AppConstants.defaultFontFamily,
     this.textAnimationType = TextAnimationType.none,
     this.textAnimationDurationMs = AppConstants.textAnimationDurationMs,
+    // Transform
+    this.posX = 0.0,
+    this.posY = 0.0,
+    this.scaleX = 1.0,
+    this.scaleY = 1.0,
+    this.rotation = 0.0,
+    this.anchorX = 0.5,
+    this.anchorY = 0.5,
+    // Crop (fraction 0.0–1.0 from each edge)
+    this.cropLeft = 0.0,
+    this.cropRight = 0.0,
+    this.cropTop = 0.0,
+    this.cropBottom = 0.0,
+    // Clip flags
+    this.isReversed = false,
+    this.isFrozen = false,
+    this.flipHorizontal = false,
+    this.flipVertical = false,
+    // Volume (per-clip audio level)
+    this.volume = 1.0,
   });
 
   final String id;
@@ -126,6 +146,30 @@ class ClipModel {
   final TextAnimationType textAnimationType;
   final int textAnimationDurationMs;
 
+  // Transform (position in pixels relative to comp center, scale 1.0=100%)
+  final double posX;
+  final double posY;
+  final double scaleX;
+  final double scaleY;
+  final double rotation; // degrees
+  final double anchorX; // 0.0–1.0 (fraction of clip width)
+  final double anchorY; // 0.0–1.0 (fraction of clip height)
+
+  // Crop (fraction 0.0–1.0 removed from each edge)
+  final double cropLeft;
+  final double cropRight;
+  final double cropTop;
+  final double cropBottom;
+
+  // Clip flags
+  final bool isReversed;
+  final bool isFrozen; // freeze frame at playhead
+  final bool flipHorizontal;
+  final bool flipVertical;
+
+  // Per-clip audio volume
+  final double volume;
+
   Duration get duration => endOnTimeline - startOnTimeline;
   Duration get mediaDuration => mediaOutPoint - mediaInPoint;
 
@@ -167,6 +211,22 @@ class ClipModel {
     String? fontFamily,
     TextAnimationType? textAnimationType,
     int? textAnimationDurationMs,
+    double? posX,
+    double? posY,
+    double? scaleX,
+    double? scaleY,
+    double? rotation,
+    double? anchorX,
+    double? anchorY,
+    double? cropLeft,
+    double? cropRight,
+    double? cropTop,
+    double? cropBottom,
+    bool? isReversed,
+    bool? isFrozen,
+    bool? flipHorizontal,
+    bool? flipVertical,
+    double? volume,
   }) {
     return ClipModel(
       id: id ?? this.id,
@@ -205,6 +265,22 @@ class ClipModel {
       textAnimationType: textAnimationType ?? this.textAnimationType,
       textAnimationDurationMs:
           textAnimationDurationMs ?? this.textAnimationDurationMs,
+      posX: posX ?? this.posX,
+      posY: posY ?? this.posY,
+      scaleX: scaleX ?? this.scaleX,
+      scaleY: scaleY ?? this.scaleY,
+      rotation: rotation ?? this.rotation,
+      anchorX: anchorX ?? this.anchorX,
+      anchorY: anchorY ?? this.anchorY,
+      cropLeft: cropLeft ?? this.cropLeft,
+      cropRight: cropRight ?? this.cropRight,
+      cropTop: cropTop ?? this.cropTop,
+      cropBottom: cropBottom ?? this.cropBottom,
+      isReversed: isReversed ?? this.isReversed,
+      isFrozen: isFrozen ?? this.isFrozen,
+      flipHorizontal: flipHorizontal ?? this.flipHorizontal,
+      flipVertical: flipVertical ?? this.flipVertical,
+      volume: volume ?? this.volume,
     );
   }
 

@@ -12,6 +12,7 @@ part 'database.g.dart';
     Clips,
     Keyframes,
     EffectInstances,
+    Markers,
     ProjectSettings,
   ],
 )
@@ -19,28 +20,25 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (m) => m.createAll(),
     onUpgrade: (m, from, to) async {
       if (from < 2) {
-        // Raw SQL — avoids stale generated-type references before build_runner.
         await customStatement(
           'ALTER TABLE clips ADD COLUMN title_text TEXT',
         );
         await customStatement(
           'ALTER TABLE clips ADD COLUMN title_font_size REAL NOT NULL DEFAULT 48.0',
         );
-        // 0xFFFFFFFF = 4294967295 (white)
         await customStatement(
           'ALTER TABLE clips ADD COLUMN title_color_value INTEGER NOT NULL DEFAULT 4294967295',
         );
         await customStatement(
           "ALTER TABLE clips ADD COLUMN title_alignment TEXT NOT NULL DEFAULT 'center'",
         );
-        // 0xFF000000 = -16777216 as signed 64-bit (black)
         await customStatement(
           'ALTER TABLE clips ADD COLUMN card_color_value INTEGER NOT NULL DEFAULT -16777216',
         );
@@ -57,6 +55,72 @@ class AppDatabase extends _$AppDatabase {
         await customStatement(
           'ALTER TABLE clips ADD COLUMN text_animation_duration_ms INTEGER NOT NULL DEFAULT 600',
         );
+      }
+      if (from < 5) {
+        // Transform columns
+        await customStatement(
+          'ALTER TABLE clips ADD COLUMN pos_x REAL NOT NULL DEFAULT 0.0',
+        );
+        await customStatement(
+          'ALTER TABLE clips ADD COLUMN pos_y REAL NOT NULL DEFAULT 0.0',
+        );
+        await customStatement(
+          'ALTER TABLE clips ADD COLUMN scale_x REAL NOT NULL DEFAULT 1.0',
+        );
+        await customStatement(
+          'ALTER TABLE clips ADD COLUMN scale_y REAL NOT NULL DEFAULT 1.0',
+        );
+        await customStatement(
+          'ALTER TABLE clips ADD COLUMN rotation REAL NOT NULL DEFAULT 0.0',
+        );
+        await customStatement(
+          'ALTER TABLE clips ADD COLUMN anchor_x REAL NOT NULL DEFAULT 0.5',
+        );
+        await customStatement(
+          'ALTER TABLE clips ADD COLUMN anchor_y REAL NOT NULL DEFAULT 0.5',
+        );
+        // Crop columns
+        await customStatement(
+          'ALTER TABLE clips ADD COLUMN crop_left REAL NOT NULL DEFAULT 0.0',
+        );
+        await customStatement(
+          'ALTER TABLE clips ADD COLUMN crop_right REAL NOT NULL DEFAULT 0.0',
+        );
+        await customStatement(
+          'ALTER TABLE clips ADD COLUMN crop_top REAL NOT NULL DEFAULT 0.0',
+        );
+        await customStatement(
+          'ALTER TABLE clips ADD COLUMN crop_bottom REAL NOT NULL DEFAULT 0.0',
+        );
+        // Clip flags
+        await customStatement(
+          'ALTER TABLE clips ADD COLUMN is_reversed INTEGER NOT NULL DEFAULT 0',
+        );
+        await customStatement(
+          'ALTER TABLE clips ADD COLUMN is_frozen INTEGER NOT NULL DEFAULT 0',
+        );
+        await customStatement(
+          'ALTER TABLE clips ADD COLUMN flip_horizontal INTEGER NOT NULL DEFAULT 0',
+        );
+        await customStatement(
+          'ALTER TABLE clips ADD COLUMN flip_vertical INTEGER NOT NULL DEFAULT 0',
+        );
+        // Per-clip volume
+        await customStatement(
+          'ALTER TABLE clips ADD COLUMN volume REAL NOT NULL DEFAULT 1.0',
+        );
+        // Markers table
+        await customStatement('''
+          CREATE TABLE IF NOT EXISTS markers (
+            id TEXT NOT NULL PRIMARY KEY,
+            project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+            time_us INTEGER NOT NULL,
+            name TEXT NOT NULL DEFAULT '',
+            note TEXT NOT NULL DEFAULT '',
+            color TEXT NOT NULL DEFAULT 'blue',
+            duration_us INTEGER NOT NULL DEFAULT 0
+          )
+        ''');
       }
     },
   );
