@@ -6,13 +6,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fluxedit/app/theme/color_tokens.dart';
 import 'package:fluxedit/app/theme/typography.dart';
 import 'package:fluxedit/core/constants/app_constants.dart';
+import 'package:fluxedit/core/history/history_manager.dart';
 import 'package:fluxedit/core/project/project_model.dart';
 import 'package:fluxedit/core/project/project_repository.dart';
+import 'package:fluxedit/core/timeline/clip_model.dart';
 import 'package:fluxedit/core/timeline/timeline_controller.dart';
 import 'package:fluxedit/core/timeline/timeline_state.dart';
 import 'package:fluxedit/core/timeline/timeline_tool.dart';
 import 'package:fluxedit/features/editor/panels/inspector_panel.dart';
 import 'package:fluxedit/features/editor/panels/media_panel.dart';
+import 'package:fluxedit/features/editor/panels/portrait_timeline_strip.dart';
 import 'package:fluxedit/features/editor/panels/preview_panel.dart';
 import 'package:fluxedit/features/editor/panels/timeline_panel.dart';
 import 'package:fluxedit/features/export/export_dialog.dart';
@@ -215,14 +218,20 @@ class _EditorLayout extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isDesktop = MediaQuery.of(context).size.width > 900;
+    final size = MediaQuery.of(context).size;
+    final isDesktop = size.width > AppConstants.desktopBreakpoint;
+    final isPortrait =
+        size.width < AppConstants.portraitBreakpointWidth &&
+        size.height > size.width;
 
     return Scaffold(
       backgroundColor: ColorTokens.backgroundDeep,
       appBar: _EditorAppBar(project: project, savedIndicator: savedIndicator),
       body: isDesktop
           ? _DesktopLayout(project: project)
-          : _MobileLayout(project: project),
+          : isPortrait
+              ? _MobilePortraitLayout(project: project)
+              : _MobileLayout(project: project),
     );
   }
 }
@@ -658,6 +667,684 @@ class _MobileLayoutState extends ConsumerState<_MobileLayout>
           child: TimelinePanel(project: widget.project),
         ),
       ],
+    );
+  }
+}
+
+// ── Mobile portrait layout (VSCO-style) ───────────────────────────────────────
+
+enum _PortraitTool { media, adjust, tools }
+
+class _MobilePortraitLayout extends ConsumerStatefulWidget {
+  const _MobilePortraitLayout({required this.project});
+
+  final ProjectModel project;
+
+  @override
+  ConsumerState<_MobilePortraitLayout> createState() =>
+      _MobilePortraitLayoutState();
+}
+
+class _MobilePortraitLayoutState extends ConsumerState<_MobilePortraitLayout>
+    with SingleTickerProviderStateMixin {
+  _PortraitTool? _activeTool;
+  late final AnimationController _panelAnim;
+  late final Animation<double> _panelCurve;
+
+  @override
+  void initState() {
+    super.initState();
+    _panelAnim = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 220),
+    );
+    _panelCurve = CurvedAnimation(
+      parent: _panelAnim,
+      curve: Curves.easeOutCubic,
+      reverseCurve: Curves.easeInCubic,
+    );
+  }
+
+  @override
+  void dispose() {
+    _panelAnim.dispose();
+    super.dispose();
+  }
+
+  void _toggleTool(_PortraitTool tool) {
+    if (_activeTool == tool) {
+      setState(() => _activeTool = null);
+      _panelAnim.reverse();
+    } else {
+      setState(() => _activeTool = tool);
+      _panelAnim.forward();
+    }
+  }
+
+  void _showFullInspector() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => DraggableScrollableSheet(
+        initialChildSize: 0.65,
+        minChildSize: 0.35,
+        maxChildSize: 0.92,
+        builder: (_, scrollController) => Container(
+          decoration: const BoxDecoration(
+            color: ColorTokens.inspectorBackground,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              Container(
+                margin: const EdgeInsets.symmetric(vertical: 10),
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: ColorTokens.borderStrong,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Expanded(
+                child: InspectorPanel(projectId: widget.project.id),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        // Preview — takes the top portion of available space
+        Expanded(
+          flex: 5,
+          child: PreviewPanel(project: widget.project),
+        ),
+        // Timeline strip — compact horizontal clip view
+        const Divider(height: 1),
+        const PortraitTimelineStrip(),
+        // Animated tool panel
+        SizeTransition(
+          sizeFactor: _panelCurve,
+          axisAlignment: -1,
+          child: SizedBox(
+            height: AppConstants.portraitAdjustPanelHeight,
+            child: _buildToolPanel(),
+          ),
+        ),
+        // Bottom tool bar
+        const Divider(height: 1),
+        _PortraitToolBar(
+          activeTool: _activeTool,
+          project: widget.project,
+          onToggle: _toggleTool,
+          onMoreTap: _showFullInspector,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildToolPanel() {
+    return switch (_activeTool) {
+      _PortraitTool.media => _PortraitMediaPanel(projectId: widget.project.id),
+      _PortraitTool.adjust => _PortraitAdjustPanel(projectId: widget.project.id),
+      _PortraitTool.tools => _PortraitToolsPanel(project: widget.project),
+      null => const SizedBox.shrink(),
+    };
+  }
+}
+
+// ── Portrait tool bar ─────────────────────────────────────────────────────────
+
+class _PortraitToolBar extends ConsumerWidget {
+  const _PortraitToolBar({
+    required this.activeTool,
+    required this.project,
+    required this.onToggle,
+    required this.onMoreTap,
+  });
+
+  final _PortraitTool? activeTool;
+  final ProjectModel project;
+  final ValueChanged<_PortraitTool> onToggle;
+  final VoidCallback onMoreTap;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(timelineStateProvider);
+    final hasSelection = state.selectedClipIds.isNotEmpty;
+
+    return Container(
+      height: AppConstants.portraitToolBarHeight,
+      color: ColorTokens.backgroundPanel,
+      child: Row(
+        children: [
+          _ToolBarBtn(
+            icon: Icons.perm_media_outlined,
+            label: 'Media',
+            isActive: activeTool == _PortraitTool.media,
+            onTap: () => onToggle(_PortraitTool.media),
+          ),
+          _ToolBarBtn(
+            icon: Icons.tune,
+            label: 'Adjust',
+            isActive: activeTool == _PortraitTool.adjust,
+            enabled: hasSelection,
+            onTap: hasSelection ? () => onToggle(_PortraitTool.adjust) : null,
+          ),
+          _ToolBarBtn(
+            icon: Icons.content_cut,
+            label: 'Split',
+            onTap: hasSelection
+                ? () => ref.read(timelineControllerProvider).splitAtPlayhead()
+                : null,
+            enabled: hasSelection,
+          ),
+          _ToolBarBtn(
+            icon: Icons.build_outlined,
+            label: 'Tools',
+            isActive: activeTool == _PortraitTool.tools,
+            onTap: () => onToggle(_PortraitTool.tools),
+          ),
+          _ToolBarBtn(
+            icon: Icons.more_horiz,
+            label: 'More',
+            onTap: onMoreTap,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ToolBarBtn extends StatelessWidget {
+  const _ToolBarBtn({
+    required this.icon,
+    required this.label,
+    this.onTap,
+    this.isActive = false,
+    this.enabled = true,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback? onTap;
+  final bool isActive;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = !enabled
+        ? ColorTokens.textDisabled
+        : isActive
+            ? ColorTokens.accentPrimary
+            : ColorTokens.textSecondary;
+
+    return Expanded(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 22, color: color),
+            const SizedBox(height: 3),
+            Text(
+              label,
+              style: TextStyle(
+                fontFamily: 'SF Pro Display',
+                fontSize: 10,
+                fontWeight: FontWeight.w500,
+                color: color,
+                letterSpacing: 0.1,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Portrait media panel ──────────────────────────────────────────────────────
+
+class _PortraitMediaPanel extends StatelessWidget {
+  const _PortraitMediaPanel({required this.projectId});
+
+  final String projectId;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: ColorTokens.backgroundPanel,
+      child: MediaPanel(projectId: projectId),
+    );
+  }
+}
+
+// ── Portrait adjust panel (VSCO-style) ────────────────────────────────────────
+
+enum _AdjustParam { opacity, speed }
+
+class _PortraitAdjustPanel extends ConsumerStatefulWidget {
+  const _PortraitAdjustPanel({required this.projectId});
+
+  final String projectId;
+
+  @override
+  ConsumerState<_PortraitAdjustPanel> createState() =>
+      _PortraitAdjustPanelState();
+}
+
+class _PortraitAdjustPanelState extends ConsumerState<_PortraitAdjustPanel> {
+  _AdjustParam _active = _AdjustParam.opacity;
+  double? _liveValue;
+  ClipModel? _clipAtDragStart;
+
+  ClipModel? _selectedClip(TimelineState state) {
+    final id = state.selectedClipIds.firstOrNull;
+    if (id == null) return null;
+    try {
+      return state.clips.firstWhere((c) => c.id == id);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = ref.watch(timelineStateProvider);
+    final clip = _selectedClip(state);
+
+    return Container(
+      color: ColorTokens.backgroundPanel,
+      child: clip == null
+          ? const Center(
+              child: Text(
+                'Select a clip to adjust',
+                style: TextStyle(
+                  color: ColorTokens.textSecondary,
+                  fontSize: 13,
+                ),
+              ),
+            )
+          : _buildAdjustContent(clip, state),
+    );
+  }
+
+  Widget _buildAdjustContent(ClipModel clip, TimelineState state) {
+    final opacityVal = _active == _AdjustParam.opacity
+        ? (_liveValue ?? clip.opacity)
+        : clip.opacity;
+    final speedVal = _active == _AdjustParam.speed
+        ? (_liveValue ?? clip.speed)
+        : clip.speed;
+
+    return Column(
+      children: [
+        // Category chips row
+        Container(
+          height: 44,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            children: [
+              _AdjustChip(
+                label: 'Opacity',
+                value: '${(opacityVal * 100).round()}%',
+                isActive: _active == _AdjustParam.opacity,
+                onTap: () => setState(() {
+                  _active = _AdjustParam.opacity;
+                  _liveValue = null;
+                }),
+              ),
+              const SizedBox(width: 8),
+              _AdjustChip(
+                label: 'Speed',
+                value: '${speedVal.toStringAsFixed(2)}x',
+                isActive: _active == _AdjustParam.speed,
+                onTap: () => setState(() {
+                  _active = _AdjustParam.speed;
+                  _liveValue = null;
+                }),
+              ),
+            ],
+          ),
+        ),
+        // Current value display
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                _active == _AdjustParam.opacity ? 'Opacity' : 'Speed',
+                style: const TextStyle(
+                  color: ColorTokens.textSecondary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              Text(
+                _active == _AdjustParam.opacity
+                    ? '${(opacityVal * 100).round()}%'
+                    : '${speedVal.toStringAsFixed(2)}x',
+                style: const TextStyle(
+                  color: ColorTokens.textPrimary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  fontFamily: 'SF Pro Display',
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Slider
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: _active == _AdjustParam.opacity
+                ? _buildOpacitySlider(clip)
+                : _buildSpeedSlider(clip),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildOpacitySlider(ClipModel clip) {
+    final val = _liveValue ?? clip.opacity;
+    return SliderTheme(
+      data: SliderTheme.of(context).copyWith(
+        thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
+        trackHeight: 3,
+      ),
+      child: Slider(
+        value: val,
+        min: AppConstants.minOpacity,
+        max: AppConstants.maxOpacity,
+        activeColor: ColorTokens.accentPrimary,
+        inactiveColor: ColorTokens.sliderTrack,
+        onChangeStart: (_) => _clipAtDragStart = clip,
+        onChanged: (v) {
+          setState(() => _liveValue = v);
+          ref.read(timelineStateProvider).updateClip(clip.copyWith(opacity: v));
+        },
+        onChangeEnd: (v) {
+          if (_clipAtDragStart != null) {
+            ref
+                .read(timelineControllerProvider)
+                .updateClipOpacity(clip.id, v);
+            _clipAtDragStart = null;
+          }
+          setState(() => _liveValue = null);
+        },
+      ),
+    );
+  }
+
+  Widget _buildSpeedSlider(ClipModel clip) {
+    final val = (_liveValue ?? clip.speed).clamp(
+      AppConstants.minClipSpeed,
+      AppConstants.maxClipSpeed,
+    );
+    return SliderTheme(
+      data: SliderTheme.of(context).copyWith(
+        thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
+        trackHeight: 3,
+      ),
+      child: Slider(
+        value: val,
+        min: AppConstants.minClipSpeed,
+        max: 4.0,
+        activeColor: ColorTokens.accentPrimary,
+        inactiveColor: ColorTokens.sliderTrack,
+        onChangeStart: (_) => _clipAtDragStart = clip,
+        onChanged: (v) {
+          setState(() => _liveValue = v);
+          ref.read(timelineStateProvider).updateClip(clip.copyWith(speed: v));
+        },
+        onChangeEnd: (v) {
+          if (_clipAtDragStart != null) {
+            ref.read(timelineControllerProvider).updateClipSpeed(clip.id, v);
+            _clipAtDragStart = null;
+          }
+          setState(() => _liveValue = null);
+        },
+      ),
+    );
+  }
+}
+
+class _AdjustChip extends StatelessWidget {
+  const _AdjustChip({
+    required this.label,
+    required this.value,
+    required this.isActive,
+    required this.onTap,
+  });
+
+  final String label;
+  final String value;
+  final bool isActive;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        decoration: BoxDecoration(
+          color: isActive
+              ? ColorTokens.accentPrimary.withValues(alpha: 0.15)
+              : ColorTokens.backgroundSurface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isActive
+                ? ColorTokens.accentPrimary.withValues(alpha: 0.5)
+                : ColorTokens.borderDefault,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                color: isActive
+                    ? ColorTokens.accentPrimary
+                    : ColorTokens.textSecondary,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              value,
+              style: TextStyle(
+                color: isActive
+                    ? ColorTokens.accentPrimary
+                    : ColorTokens.textPrimary,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                fontFamily: 'SF Pro Display',
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Portrait tools panel ──────────────────────────────────────────────────────
+
+class _PortraitToolsPanel extends ConsumerWidget {
+  const _PortraitToolsPanel({required this.project});
+
+  final ProjectModel project;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final history = ref.watch(historyManagerProvider);
+    final tool = ref.watch(timelineToolProvider);
+    final state = ref.watch(timelineStateProvider);
+    final controller = ref.read(timelineControllerProvider);
+
+    return Container(
+      color: ColorTokens.backgroundPanel,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // History row
+          Row(
+            children: [
+              Expanded(
+                child: _ToolsPanelBtn(
+                  icon: Icons.undo,
+                  label: history.nextUndoDescription != null
+                      ? 'Undo: ${history.nextUndoDescription}'
+                      : 'Undo',
+                  enabled: history.canUndo,
+                  onTap: history.canUndo ? () => controller.undo() : null,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _ToolsPanelBtn(
+                  icon: Icons.redo,
+                  label: history.nextRedoDescription != null
+                      ? 'Redo: ${history.nextRedoDescription}'
+                      : 'Redo',
+                  enabled: history.canRedo,
+                  onTap: history.canRedo ? () => controller.redo() : null,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // Tool select row
+          Row(
+            children: [
+              Expanded(
+                child: _ToolsPanelBtn(
+                  icon: Icons.near_me,
+                  label: 'Select',
+                  isActive: tool == TimelineTool.select,
+                  onTap: () => ref.read(timelineToolProvider.notifier).state =
+                      TimelineTool.select,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _ToolsPanelBtn(
+                  icon: Icons.content_cut,
+                  label: 'Blade',
+                  isActive: tool == TimelineTool.blade,
+                  onTap: () => ref.read(timelineToolProvider.notifier).state =
+                      TimelineTool.blade,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // Split + snap row
+          Row(
+            children: [
+              Expanded(
+                child: _ToolsPanelBtn(
+                  icon: Icons.vertical_align_center,
+                  label: 'Split at Playhead',
+                  enabled: state.selectedClipIds.isNotEmpty,
+                  onTap: state.selectedClipIds.isNotEmpty
+                      ? () => controller.splitAtPlayhead()
+                      : null,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _ToolsPanelBtn(
+                  icon: state.snapEnabled
+                      ? Icons.grid_on
+                      : Icons.grid_off,
+                  label: state.snapEnabled ? 'Snap On' : 'Snap Off',
+                  isActive: state.snapEnabled,
+                  onTap: () => state.setSnapEnabled(!state.snapEnabled),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ToolsPanelBtn extends StatelessWidget {
+  const _ToolsPanelBtn({
+    required this.icon,
+    required this.label,
+    this.onTap,
+    this.isActive = false,
+    this.enabled = true,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback? onTap;
+  final bool isActive;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    final fgColor = !enabled
+        ? ColorTokens.textDisabled
+        : isActive
+            ? ColorTokens.accentPrimary
+            : ColorTokens.textPrimary;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 40,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: isActive
+              ? ColorTokens.accentPrimary.withValues(alpha: 0.12)
+              : ColorTokens.backgroundSurface,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isActive
+                ? ColorTokens.accentPrimary.withValues(alpha: 0.4)
+                : ColorTokens.borderDefault,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 16, color: fgColor),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: fgColor,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
