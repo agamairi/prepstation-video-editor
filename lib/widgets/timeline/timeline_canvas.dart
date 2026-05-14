@@ -32,6 +32,7 @@ class TimelineCanvas extends StatefulWidget {
     this.onClipContextMenu,
     this.waveforms = const {},
     this.thumbnails = const {},
+    this.loadingClipIds = const {},
   });
 
   final TimelineState timelineState;
@@ -50,6 +51,9 @@ class TimelineCanvas extends StatefulWidget {
 
   /// Optional timeline thumbnails keyed by clip ID.
   final Map<String, List<ui.Image>> thumbnails;
+
+  /// Clip IDs whose thumbnails are currently being generated.
+  final Set<String> loadingClipIds;
 
   @override
   State<TimelineCanvas> createState() => _TimelineCanvasState();
@@ -92,6 +96,7 @@ class _TimelineCanvasState extends State<TimelineCanvas> {
             rulerHeight: _rulerHeight,
             waveforms: widget.waveforms,
             thumbnails: widget.thumbnails,
+            loadingClipIds: widget.loadingClipIds,
             bladeX: widget.tool == TimelineTool.blade ? _bladeX : null,
           ),
           child: _buildGestureLayer(),
@@ -219,7 +224,7 @@ class _TimelineCanvasState extends State<TimelineCanvas> {
   }
 }
 
-class _ClipGestureArea extends StatelessWidget {
+class _ClipGestureArea extends StatefulWidget {
   const _ClipGestureArea({
     required this.clip,
     required this.isSelected,
@@ -245,25 +250,57 @@ class _ClipGestureArea extends StatelessWidget {
   final ValueChanged<Offset>? onContextMenu;
 
   @override
+  State<_ClipGestureArea> createState() => _ClipGestureAreaState();
+}
+
+class _ClipGestureAreaState extends State<_ClipGestureArea> {
+  /// Whether a long-press drag is currently in progress.
+  bool _isLongPressDragging = false;
+
+  /// Global x where the long press started (used for first drag delta).
+  double _longPressOriginX = 0;
+
+  @override
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        // Main clip body
+        // Main clip body — opaque so it wins the arena over background scroll
         Positioned.fill(
-          left: trimHandleWidth,
-          right: trimHandleWidth,
+          left: widget.trimHandleWidth,
+          right: widget.trimHandleWidth,
           child: GestureDetector(
-            onTap: onTap,
-            onLongPressStart: onContextMenu != null
-                ? (d) => onContextMenu!(d.globalPosition)
+            behavior: HitTestBehavior.opaque,
+            onTap: widget.onTap,
+            // Right-click context menu (desktop)
+            onSecondaryTapDown: widget.onContextMenu != null
+                ? (d) => widget.onContextMenu!(d.globalPosition)
                 : null,
-            onSecondaryTapDown: onContextMenu != null
-                ? (d) => onContextMenu!(d.globalPosition)
-                : null,
-            onHorizontalDragStart: (d) => onDragStart(d.globalPosition.dx),
-            onHorizontalDragUpdate: (d) => onDrag(d.globalPosition.dx),
-            onHorizontalDragEnd: (_) => onDragEnd(),
-            child: const ColoredBox(color: Colors.transparent),
+            // Mouse / quick-touch drag (immediate, no hold required)
+            onHorizontalDragStart: (d) =>
+                widget.onDragStart(d.globalPosition.dx),
+            onHorizontalDragUpdate: (d) => widget.onDrag(d.globalPosition.dx),
+            onHorizontalDragEnd: (_) => widget.onDragEnd(),
+            // Long-press: hold to start drag on touch, or show menu if no drag
+            onLongPressStart: (d) {
+              _isLongPressDragging = false;
+              _longPressOriginX = d.globalPosition.dx;
+            },
+            onLongPressMoveUpdate: (d) {
+              if (!_isLongPressDragging) {
+                _isLongPressDragging = true;
+                widget.onDragStart(_longPressOriginX);
+              }
+              widget.onDrag(d.globalPosition.dx);
+              _longPressOriginX = d.globalPosition.dx;
+            },
+            onLongPressEnd: (d) {
+              if (_isLongPressDragging) {
+                widget.onDragEnd();
+              } else if (widget.onContextMenu != null) {
+                widget.onContextMenu!(d.globalPosition);
+              }
+              _isLongPressDragging = false;
+            },
           ),
         ),
         // Left trim handle
@@ -271,15 +308,15 @@ class _ClipGestureArea extends StatelessWidget {
           left: 0,
           top: 0,
           bottom: 0,
-          width: trimHandleWidth,
+          width: widget.trimHandleWidth,
           child: GestureDetector(
             onHorizontalDragUpdate: (d) =>
-                onTrimStartDrag(d.localPosition.dx),
+                widget.onTrimStartDrag(d.localPosition.dx),
             child: MouseRegion(
               cursor: SystemMouseCursors.resizeLeft,
               child: Container(
                 decoration: BoxDecoration(
-                  color: isSelected
+                  color: widget.isSelected
                       ? ColorTokens.accentPrimary
                       : ColorTokens.borderStrong,
                   borderRadius: const BorderRadius.only(
@@ -296,15 +333,15 @@ class _ClipGestureArea extends StatelessWidget {
           right: 0,
           top: 0,
           bottom: 0,
-          width: trimHandleWidth,
+          width: widget.trimHandleWidth,
           child: GestureDetector(
             onHorizontalDragUpdate: (d) =>
-                onTrimEndDrag(d.localPosition.dx),
+                widget.onTrimEndDrag(d.localPosition.dx),
             child: MouseRegion(
               cursor: SystemMouseCursors.resizeRight,
               child: Container(
                 decoration: BoxDecoration(
-                  color: isSelected
+                  color: widget.isSelected
                       ? ColorTokens.accentPrimary
                       : ColorTokens.borderStrong,
                   borderRadius: const BorderRadius.only(
@@ -328,6 +365,7 @@ class _TimelinePainter extends CustomPainter {
     required this.rulerHeight,
     required this.waveforms,
     required this.thumbnails,
+    required this.loadingClipIds,
     this.bladeX,
   }) : super(repaint: timelineState);
 
@@ -336,6 +374,7 @@ class _TimelinePainter extends CustomPainter {
   final double rulerHeight;
   final Map<String, WaveformData> waveforms;
   final Map<String, List<ui.Image>> thumbnails;
+  final Set<String> loadingClipIds;
   final double? bladeX;
 
   @override
@@ -446,19 +485,53 @@ class _TimelinePainter extends CustomPainter {
     final rect = Rect.fromLTWH(left + 1, trackTop + 2, width - 2, track.height - 4);
     final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(3));
 
-    final baseColor = track.isVideo
-        ? (isSelected ? ColorTokens.clipVideoSelected : ColorTokens.clipVideo)
-        : (isSelected ? ColorTokens.clipAudioSelected : ColorTokens.clipAudio);
+    final Color baseColor;
+    switch (clip.type) {
+      case ClipType.title:
+        baseColor = isSelected
+            ? ColorTokens.accentSecondary
+            : ColorTokens.clipTitle;
+      case ClipType.colorCard:
+        final cardColor = Color(clip.cardColorValue);
+        // Darken slightly so unselected/selected states differ visually.
+        baseColor = isSelected
+            ? Color.lerp(cardColor, Colors.white, 0.25)!
+            : Color.lerp(cardColor, Colors.black, 0.15)!;
+      case ClipType.audio:
+        baseColor = isSelected
+            ? ColorTokens.clipAudioSelected
+            : ColorTokens.clipAudio;
+      case ClipType.video:
+      case ClipType.image:
+      case ClipType.adjustment:
+        baseColor = track.isVideo
+            ? (isSelected ? ColorTokens.clipVideoSelected : ColorTokens.clipVideo)
+            : (isSelected ? ColorTokens.clipAudioSelected : ColorTokens.clipAudio);
+    }
 
     paint.color = baseColor;
     canvas.drawRRect(rrect, paint);
 
     // Frame thumbnails tiled across video clip body
-    if (track.isVideo) {
+    if (clip.type == ClipType.video) {
       final clipImages = thumbnails[clip.id];
       if (clipImages != null && clipImages.isNotEmpty) {
         _paintThumbnails(canvas, rect, clipImages);
+      } else if (loadingClipIds.contains(clip.id)) {
+        _paintLoadingStripes(canvas, rect);
       }
+    }
+
+    // Color preview band at the top of color-card clips.
+    if (clip.type == ClipType.colorCard) {
+      canvas.drawRRect(
+        RRect.fromRectAndCorners(
+          Rect.fromLTWH(rect.left, rect.top, rect.width, 4),
+          topLeft: const Radius.circular(3),
+          topRight: const Radius.circular(3),
+        ),
+        Paint()..color = Color(clip.cardColorValue),
+      );
     }
 
     // Waveform for audio clips
@@ -488,8 +561,16 @@ class _TimelinePainter extends CustomPainter {
 
     // Label
     if (width > 40) {
+      final labelText = switch (clip.type) {
+        ClipType.title => clip.titleText?.isNotEmpty == true
+            ? 'T  ${clip.titleText}'
+            : 'T  Title',
+        ClipType.colorCard =>
+            clip.name.isNotEmpty ? clip.name : 'Color Card',
+        _ => clip.name.isNotEmpty ? clip.name : '  Clip',
+      };
       tp.text = TextSpan(
-        text: clip.name.isNotEmpty ? clip.name : '  Clip',
+        text: labelText,
         style: AppTypography.labelSmall.copyWith(
           color: Colors.white.withValues(alpha: 0.9),
         ),
@@ -497,6 +578,29 @@ class _TimelinePainter extends CustomPainter {
       tp.layout(maxWidth: width - 16);
       tp.paint(canvas, Offset(left + 8, trackTop + 6));
     }
+  }
+
+  void _paintLoadingStripes(Canvas canvas, Rect clipRect) {
+    const stripeW = 8.0;
+    const gap = 8.0;
+    final paint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.06)
+      ..style = PaintingStyle.fill;
+
+    canvas.save();
+    canvas.clipRect(clipRect);
+    var x = clipRect.left - clipRect.height;
+    while (x < clipRect.right) {
+      final path = Path()
+        ..moveTo(x, clipRect.bottom)
+        ..lineTo(x + clipRect.height, clipRect.top)
+        ..lineTo(x + clipRect.height + stripeW, clipRect.top)
+        ..lineTo(x + stripeW, clipRect.bottom)
+        ..close();
+      canvas.drawPath(path, paint);
+      x += stripeW + gap;
+    }
+    canvas.restore();
   }
 
   void _paintThumbnails(

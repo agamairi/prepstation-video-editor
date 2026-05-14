@@ -1,7 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:fluxedit/app/theme/color_tokens.dart';
+import 'package:fluxedit/core/constants/app_constants.dart';
 
-enum ClipType { video, audio, title, image, adjustment }
+enum ClipType { video, audio, title, image, adjustment, colorCard }
+
+enum TextAnimationType {
+  none,
+  fadeIn,
+  slideUp,
+  slideDown,
+  slideLeft,
+  slideRight,
+  zoomIn,
+  typewriter;
+
+  String get displayName => switch (this) {
+        TextAnimationType.none => 'None',
+        TextAnimationType.fadeIn => 'Fade In',
+        TextAnimationType.slideUp => 'Slide Up',
+        TextAnimationType.slideDown => 'Slide Down',
+        TextAnimationType.slideLeft => 'Slide Left',
+        TextAnimationType.slideRight => 'Slide Right',
+        TextAnimationType.zoomIn => 'Zoom In',
+        TextAnimationType.typewriter => 'Typewriter',
+      };
+
+  static TextAnimationType fromId(String id) => TextAnimationType.values
+      .firstWhere((e) => e.name == id, orElse: () => TextAnimationType.none);
+}
 
 enum BlendMode2 {
   normal,
@@ -48,6 +74,14 @@ class ClipModel {
     this.transitionOutId,
     this.transitionInDuration = Duration.zero,
     this.transitionOutDuration = Duration.zero,
+    this.titleText,
+    this.titleFontSize = AppConstants.defaultTitleFontSize,
+    this.titleColorValue = AppConstants.defaultTitleColor,
+    this.titleAlignment = 'center',
+    this.cardColorValue = AppConstants.defaultCardColor,
+    this.fontFamily = AppConstants.defaultFontFamily,
+    this.textAnimationType = TextAnimationType.none,
+    this.textAnimationDurationMs = AppConstants.textAnimationDurationMs,
   });
 
   final String id;
@@ -77,6 +111,20 @@ class ClipModel {
   final String? transitionOutId;
   final Duration transitionInDuration;
   final Duration transitionOutDuration;
+
+  // Title clip fields
+  final String? titleText;
+  final double titleFontSize;
+  final int titleColorValue;
+  final String titleAlignment; // 'left' | 'center' | 'right'
+
+  // Color-card clip field
+  final int cardColorValue;
+
+  // Font & animation (title, colorCard, and image clips)
+  final String fontFamily;
+  final TextAnimationType textAnimationType;
+  final int textAnimationDurationMs;
 
   Duration get duration => endOnTimeline - startOnTimeline;
   Duration get mediaDuration => mediaOutPoint - mediaInPoint;
@@ -111,6 +159,14 @@ class ClipModel {
     Object? transitionOutId = _omit,
     Duration? transitionInDuration,
     Duration? transitionOutDuration,
+    Object? titleText = _omit,
+    double? titleFontSize,
+    int? titleColorValue,
+    String? titleAlignment,
+    int? cardColorValue,
+    String? fontFamily,
+    TextAnimationType? textAnimationType,
+    int? textAnimationDurationMs,
   }) {
     return ClipModel(
       id: id ?? this.id,
@@ -140,6 +196,15 @@ class ClipModel {
       transitionInDuration: transitionInDuration ?? this.transitionInDuration,
       transitionOutDuration:
           transitionOutDuration ?? this.transitionOutDuration,
+      titleText: titleText == _omit ? this.titleText : titleText as String?,
+      titleFontSize: titleFontSize ?? this.titleFontSize,
+      titleColorValue: titleColorValue ?? this.titleColorValue,
+      titleAlignment: titleAlignment ?? this.titleAlignment,
+      cardColorValue: cardColorValue ?? this.cardColorValue,
+      fontFamily: fontFamily ?? this.fontFamily,
+      textAnimationType: textAnimationType ?? this.textAnimationType,
+      textAnimationDurationMs:
+          textAnimationDurationMs ?? this.textAnimationDurationMs,
     );
   }
 

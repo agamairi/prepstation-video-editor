@@ -197,6 +197,14 @@ class ProjectRepository {
         transitionOutDurationUs: Value(
           clip.transitionOutDuration.inMicroseconds,
         ),
+        titleText: Value(clip.titleText),
+        titleFontSize: Value(clip.titleFontSize),
+        titleColorValue: Value(clip.titleColorValue),
+        titleAlignment: Value(clip.titleAlignment),
+        cardColorValue: Value(clip.cardColorValue),
+        fontFamily: Value(clip.fontFamily),
+        textAnimationType: Value(clip.textAnimationType.name),
+        textAnimationDurationMs: Value(clip.textAnimationDurationMs),
       ),
     );
   }
@@ -348,6 +356,14 @@ class ProjectRepository {
       transitionOutDuration: Duration(
         microseconds: row.transitionOutDurationUs,
       ),
+      titleText: row.titleText,
+      titleFontSize: row.titleFontSize,
+      titleColorValue: row.titleColorValue,
+      titleAlignment: row.titleAlignment,
+      cardColorValue: row.cardColorValue,
+      fontFamily: row.fontFamily,
+      textAnimationType: TextAnimationType.fromId(row.textAnimationType),
+      textAnimationDurationMs: row.textAnimationDurationMs,
     );
   }
 }

@@ -5,18 +5,12 @@ import 'package:fluxedit/app/theme/typography.dart';
 import 'package:fluxedit/core/constants/app_constants.dart';
 import 'package:fluxedit/core/history/history_manager.dart';
 import 'package:fluxedit/core/project/project_model.dart';
-import 'package:fluxedit/core/project/project_repository.dart';
 import 'package:fluxedit/core/timeline/clip_model.dart';
 import 'package:fluxedit/core/timeline/clip_thumbnail_cache.dart';
 import 'package:fluxedit/core/timeline/timeline_controller.dart';
 import 'package:fluxedit/core/timeline/timeline_tool.dart';
 import 'package:fluxedit/core/timeline/track_model.dart';
 import 'package:fluxedit/widgets/timeline/timeline_canvas.dart';
-
-final _timelineAssetsProvider = FutureProvider.family<List<MediaAsset>, String>(
-  (ref, projectId) =>
-      ref.watch(projectRepositoryProvider).getMediaAssets(projectId),
-);
 
 class TimelinePanel extends ConsumerWidget {
   const TimelinePanel({super.key, required this.project});
@@ -25,6 +19,11 @@ class TimelinePanel extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(timelineStateProvider);
+    final tracksH =
+        state.tracks.fold(0.0, (sum, t) => sum + t.height);
+    final canvasH = AppConstants.timelineRulerHeight + tracksH;
+
     return Container(
       color: ColorTokens.backgroundBase,
       child: Column(
@@ -32,11 +31,20 @@ class TimelinePanel extends ConsumerWidget {
           _TimelineToolbar(project: project),
           const Divider(height: 1),
           Expanded(
-            child: Row(
-              children: [
-                _TrackHeaders(),
-                Expanded(child: _TimelineScrollArea(projectId: project.id)),
-              ],
+            child: SingleChildScrollView(
+              scrollDirection: Axis.vertical,
+              child: SizedBox(
+                height: canvasH,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _TrackHeaders(),
+                    Expanded(
+                      child: _TimelineScrollArea(projectId: project.id),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         ],
@@ -107,7 +115,7 @@ class _TimelineToolbar extends ConsumerWidget {
                 .state = TimelineTool.blade,
           ),
           const VerticalDivider(width: 16),
-          // Add tracks
+          // Add video / audio tracks
           IconButton(
             icon: const Icon(Icons.add, size: 16),
             tooltip: 'Add Video Track',
@@ -128,6 +136,9 @@ class _TimelineToolbar extends ConsumerWidget {
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
           ),
+          const VerticalDivider(width: 16),
+          // Add synthetic clips
+          _AddSyntheticButton(project: project),
           const SizedBox(width: 8),
           const VerticalDivider(width: 8),
           const SizedBox(width: 8),
@@ -155,7 +166,7 @@ class _TimelineToolbar extends ConsumerWidget {
           const SizedBox(width: 8),
           const VerticalDivider(width: 8),
           const SizedBox(width: 8),
-          // Snap
+          // Snap toggle
           IconButton(
             icon: Icon(
               state.snapEnabled ? Icons.grid_on : Icons.grid_off,
@@ -179,6 +190,67 @@ class _TimelineToolbar extends ConsumerWidget {
     );
   }
 }
+
+/// Popup menu for adding a Title or Color Card clip to the first video track.
+class _AddSyntheticButton extends ConsumerWidget {
+  const _AddSyntheticButton({required this.project});
+
+  final ProjectModel project;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return PopupMenuButton<_SyntheticClipType>(
+      tooltip: 'Add Title / Color Card',
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+      icon: const Icon(Icons.text_fields, size: 16),
+      onSelected: (type) {
+        final state = ref.read(timelineStateProvider);
+        final controller = ref.read(timelineControllerProvider);
+        final firstVideoTrack =
+            state.videoTracks.isNotEmpty ? state.videoTracks.first : null;
+        if (firstVideoTrack == null) return;
+
+        switch (type) {
+          case _SyntheticClipType.title:
+            controller.addTitleClip(
+              projectId: project.id,
+              trackId: firstVideoTrack.id,
+            );
+          case _SyntheticClipType.colorCard:
+            controller.addColorCardClip(
+              projectId: project.id,
+              trackId: firstVideoTrack.id,
+            );
+        }
+      },
+      itemBuilder: (_) => const [
+        PopupMenuItem(
+          value: _SyntheticClipType.title,
+          child: Row(
+            children: [
+              Icon(Icons.title, size: 16),
+              SizedBox(width: 8),
+              Text('Add Title'),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          value: _SyntheticClipType.colorCard,
+          child: Row(
+            children: [
+              Icon(Icons.rectangle, size: 16),
+              SizedBox(width: 8),
+              Text('Add Color Card'),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+enum _SyntheticClipType { title, colorCard }
 
 class _ToolButton extends StatelessWidget {
   const _ToolButton({
@@ -347,32 +419,46 @@ class _LockButton extends ConsumerWidget {
   }
 }
 
-class _TimelineScrollArea extends ConsumerWidget {
+class _TimelineScrollArea extends ConsumerStatefulWidget {
   const _TimelineScrollArea({required this.projectId});
 
   final String projectId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_TimelineScrollArea> createState() =>
+      _TimelineScrollAreaState();
+}
+
+class _TimelineScrollAreaState extends ConsumerState<_TimelineScrollArea> {
+  /// Clip IDs for which thumbnail loading has already been requested.
+  final Set<String> _thumbnailsRequested = {};
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(timelineStateProvider);
     final tool = ref.watch(timelineToolProvider);
     final thumbCache = ref.watch(clipThumbnailCacheProvider);
-    final assetsAsync = ref.watch(_timelineAssetsProvider(projectId));
 
-    // Trigger thumbnail loading for video clips that have a resolved asset.
-    assetsAsync.whenData((assets) {
-      final assetMap = {for (final a in assets) a.id: a};
-      for (final clip in state.clips) {
-        if (clip.type != ClipType.video) continue;
-        final asset = assetMap[clip.mediaId];
-        if (asset == null) continue;
-        thumbCache.ensureLoaded(
-          clip: clip,
-          filePath: asset.filePath,
-          mediaDuration: asset.duration,
-        );
-      }
-    });
+    // Trigger thumbnail loading for video/image clips not yet requested.
+    // Uses a microtask so notifyListeners() in the cache never fires during
+    // the current build phase.
+    final needsThumb = state.clips
+        .where(
+          (c) =>
+              (c.type == ClipType.video || c.type == ClipType.image) &&
+              !_thumbnailsRequested.contains(c.id),
+        )
+        .toList();
+
+    if (needsThumb.isNotEmpty) {
+      Future.microtask(() {
+        if (!mounted) return;
+        for (final clip in needsThumb) {
+          _thumbnailsRequested.add(clip.id);
+          thumbCache.ensureLoaded(clip: clip);
+        }
+      });
+    }
 
     return GestureDetector(
       onTapDown: (details) {
@@ -426,23 +512,22 @@ class _TimelineScrollArea extends ConsumerWidget {
                 .trimClipEnd(clipId, newTime);
           },
           onClipContextMenu: (clipId, position) =>
-              _showClipContextMenu(context, ref, clipId, position),
+              _showClipContextMenu(clipId, position),
           thumbnails: {
             for (final entry in state.clips)
               if (thumbCache.thumbnailsForClip(entry.id) != null)
                 entry.id: thumbCache.thumbnailsForClip(entry.id)!,
+          },
+          loadingClipIds: {
+            for (final entry in state.clips)
+              if (thumbCache.isLoading(entry.id)) entry.id,
           },
         ),
       ),
     );
   }
 
-  Future<void> _showClipContextMenu(
-    BuildContext context,
-    WidgetRef ref,
-    String clipId,
-    Offset position,
-  ) async {
+  Future<void> _showClipContextMenu(String clipId, Offset position) async {
     final controller = ref.read(timelineControllerProvider);
     final timelineState = ref.read(timelineStateProvider);
 
@@ -461,7 +546,8 @@ class _TimelineScrollArea extends ConsumerWidget {
         ),
         PopupMenuItem(
           value: _ClipAction.splitAtPlayhead,
-          child: _ContextMenuItem(icon: Icons.content_cut, label: 'Split at Playhead'),
+          child: _ContextMenuItem(
+              icon: Icons.content_cut, label: 'Split at Playhead'),
         ),
         PopupMenuItem(
           value: _ClipAction.duplicate,
@@ -484,19 +570,14 @@ class _TimelineScrollArea extends ConsumerWidget {
 
     switch (result) {
       case _ClipAction.edit:
-        // Inspector is always visible on desktop; on mobile the FAB opens it.
-        // Selecting the clip is sufficient to populate the inspector.
         break;
       case _ClipAction.splitAtPlayhead:
         await controller.splitAtPlayhead();
-        break;
       case _ClipAction.duplicate:
         await controller.duplicateClip(clipId);
-        break;
       case _ClipAction.delete:
         await controller.rippleDelete(clipId);
         timelineState.clearSelection();
-        break;
     }
   }
 }

@@ -2753,6 +2753,102 @@ class $ClipsTable extends Clips with TableInfo<$ClipsTable, Clip> {
         requiredDuringInsert: false,
         defaultValue: const Constant(0),
       );
+  static const VerificationMeta _titleTextMeta = const VerificationMeta(
+    'titleText',
+  );
+  @override
+  late final GeneratedColumn<String> titleText = GeneratedColumn<String>(
+    'title_text',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _titleFontSizeMeta = const VerificationMeta(
+    'titleFontSize',
+  );
+  @override
+  late final GeneratedColumn<double> titleFontSize = GeneratedColumn<double>(
+    'title_font_size',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(48.0),
+  );
+  static const VerificationMeta _titleColorValueMeta = const VerificationMeta(
+    'titleColorValue',
+  );
+  @override
+  late final GeneratedColumn<int> titleColorValue = GeneratedColumn<int>(
+    'title_color_value',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0xFFFFFFFF),
+  );
+  static const VerificationMeta _titleAlignmentMeta = const VerificationMeta(
+    'titleAlignment',
+  );
+  @override
+  late final GeneratedColumn<String> titleAlignment = GeneratedColumn<String>(
+    'title_alignment',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('center'),
+  );
+  static const VerificationMeta _cardColorValueMeta = const VerificationMeta(
+    'cardColorValue',
+  );
+  @override
+  late final GeneratedColumn<int> cardColorValue = GeneratedColumn<int>(
+    'card_color_value',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0xFF000000),
+  );
+  static const VerificationMeta _fontFamilyMeta = const VerificationMeta(
+    'fontFamily',
+  );
+  @override
+  late final GeneratedColumn<String> fontFamily = GeneratedColumn<String>(
+    'font_family',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('Roboto'),
+  );
+  static const VerificationMeta _textAnimationTypeMeta = const VerificationMeta(
+    'textAnimationType',
+  );
+  @override
+  late final GeneratedColumn<String> textAnimationType =
+      GeneratedColumn<String>(
+        'text_animation_type',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+        defaultValue: const Constant('none'),
+      );
+  static const VerificationMeta _textAnimationDurationMsMeta =
+      const VerificationMeta('textAnimationDurationMs');
+  @override
+  late final GeneratedColumn<int> textAnimationDurationMs =
+      GeneratedColumn<int>(
+        'text_animation_duration_ms',
+        aliasedName,
+        false,
+        type: DriftSqlType.int,
+        requiredDuringInsert: false,
+        defaultValue: const Constant(600),
+      );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -2776,6 +2872,14 @@ class $ClipsTable extends Clips with TableInfo<$ClipsTable, Clip> {
     transitionOutId,
     transitionInDurationUs,
     transitionOutDurationUs,
+    titleText,
+    titleFontSize,
+    titleColorValue,
+    titleAlignment,
+    cardColorValue,
+    fontFamily,
+    textAnimationType,
+    textAnimationDurationMs,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2961,6 +3065,72 @@ class $ClipsTable extends Clips with TableInfo<$ClipsTable, Clip> {
         ),
       );
     }
+    if (data.containsKey('title_text')) {
+      context.handle(
+        _titleTextMeta,
+        titleText.isAcceptableOrUnknown(data['title_text']!, _titleTextMeta),
+      );
+    }
+    if (data.containsKey('title_font_size')) {
+      context.handle(
+        _titleFontSizeMeta,
+        titleFontSize.isAcceptableOrUnknown(
+          data['title_font_size']!,
+          _titleFontSizeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('title_color_value')) {
+      context.handle(
+        _titleColorValueMeta,
+        titleColorValue.isAcceptableOrUnknown(
+          data['title_color_value']!,
+          _titleColorValueMeta,
+        ),
+      );
+    }
+    if (data.containsKey('title_alignment')) {
+      context.handle(
+        _titleAlignmentMeta,
+        titleAlignment.isAcceptableOrUnknown(
+          data['title_alignment']!,
+          _titleAlignmentMeta,
+        ),
+      );
+    }
+    if (data.containsKey('card_color_value')) {
+      context.handle(
+        _cardColorValueMeta,
+        cardColorValue.isAcceptableOrUnknown(
+          data['card_color_value']!,
+          _cardColorValueMeta,
+        ),
+      );
+    }
+    if (data.containsKey('font_family')) {
+      context.handle(
+        _fontFamilyMeta,
+        fontFamily.isAcceptableOrUnknown(data['font_family']!, _fontFamilyMeta),
+      );
+    }
+    if (data.containsKey('text_animation_type')) {
+      context.handle(
+        _textAnimationTypeMeta,
+        textAnimationType.isAcceptableOrUnknown(
+          data['text_animation_type']!,
+          _textAnimationTypeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('text_animation_duration_ms')) {
+      context.handle(
+        _textAnimationDurationMsMeta,
+        textAnimationDurationMs.isAcceptableOrUnknown(
+          data['text_animation_duration_ms']!,
+          _textAnimationDurationMsMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -3054,6 +3224,38 @@ class $ClipsTable extends Clips with TableInfo<$ClipsTable, Clip> {
         DriftSqlType.int,
         data['${effectivePrefix}transition_out_duration_us'],
       )!,
+      titleText: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}title_text'],
+      ),
+      titleFontSize: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}title_font_size'],
+      )!,
+      titleColorValue: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}title_color_value'],
+      )!,
+      titleAlignment: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}title_alignment'],
+      )!,
+      cardColorValue: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}card_color_value'],
+      )!,
+      fontFamily: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}font_family'],
+      )!,
+      textAnimationType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}text_animation_type'],
+      )!,
+      textAnimationDurationMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}text_animation_duration_ms'],
+      )!,
     );
   }
 
@@ -3085,6 +3287,14 @@ class Clip extends DataClass implements Insertable<Clip> {
   final String? transitionOutId;
   final int transitionInDurationUs;
   final int transitionOutDurationUs;
+  final String? titleText;
+  final double titleFontSize;
+  final int titleColorValue;
+  final String titleAlignment;
+  final int cardColorValue;
+  final String fontFamily;
+  final String textAnimationType;
+  final int textAnimationDurationMs;
   const Clip({
     required this.id,
     required this.trackId,
@@ -3107,6 +3317,14 @@ class Clip extends DataClass implements Insertable<Clip> {
     this.transitionOutId,
     required this.transitionInDurationUs,
     required this.transitionOutDurationUs,
+    this.titleText,
+    required this.titleFontSize,
+    required this.titleColorValue,
+    required this.titleAlignment,
+    required this.cardColorValue,
+    required this.fontFamily,
+    required this.textAnimationType,
+    required this.textAnimationDurationMs,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -3136,6 +3354,16 @@ class Clip extends DataClass implements Insertable<Clip> {
     }
     map['transition_in_duration_us'] = Variable<int>(transitionInDurationUs);
     map['transition_out_duration_us'] = Variable<int>(transitionOutDurationUs);
+    if (!nullToAbsent || titleText != null) {
+      map['title_text'] = Variable<String>(titleText);
+    }
+    map['title_font_size'] = Variable<double>(titleFontSize);
+    map['title_color_value'] = Variable<int>(titleColorValue);
+    map['title_alignment'] = Variable<String>(titleAlignment);
+    map['card_color_value'] = Variable<int>(cardColorValue);
+    map['font_family'] = Variable<String>(fontFamily);
+    map['text_animation_type'] = Variable<String>(textAnimationType);
+    map['text_animation_duration_ms'] = Variable<int>(textAnimationDurationMs);
     return map;
   }
 
@@ -3166,6 +3394,16 @@ class Clip extends DataClass implements Insertable<Clip> {
           : Value(transitionOutId),
       transitionInDurationUs: Value(transitionInDurationUs),
       transitionOutDurationUs: Value(transitionOutDurationUs),
+      titleText: titleText == null && nullToAbsent
+          ? const Value.absent()
+          : Value(titleText),
+      titleFontSize: Value(titleFontSize),
+      titleColorValue: Value(titleColorValue),
+      titleAlignment: Value(titleAlignment),
+      cardColorValue: Value(cardColorValue),
+      fontFamily: Value(fontFamily),
+      textAnimationType: Value(textAnimationType),
+      textAnimationDurationMs: Value(textAnimationDurationMs),
     );
   }
 
@@ -3200,6 +3438,16 @@ class Clip extends DataClass implements Insertable<Clip> {
       transitionOutDurationUs: serializer.fromJson<int>(
         json['transitionOutDurationUs'],
       ),
+      titleText: serializer.fromJson<String?>(json['titleText']),
+      titleFontSize: serializer.fromJson<double>(json['titleFontSize']),
+      titleColorValue: serializer.fromJson<int>(json['titleColorValue']),
+      titleAlignment: serializer.fromJson<String>(json['titleAlignment']),
+      cardColorValue: serializer.fromJson<int>(json['cardColorValue']),
+      fontFamily: serializer.fromJson<String>(json['fontFamily']),
+      textAnimationType: serializer.fromJson<String>(json['textAnimationType']),
+      textAnimationDurationMs: serializer.fromJson<int>(
+        json['textAnimationDurationMs'],
+      ),
     );
   }
   @override
@@ -3229,6 +3477,16 @@ class Clip extends DataClass implements Insertable<Clip> {
       'transitionOutDurationUs': serializer.toJson<int>(
         transitionOutDurationUs,
       ),
+      'titleText': serializer.toJson<String?>(titleText),
+      'titleFontSize': serializer.toJson<double>(titleFontSize),
+      'titleColorValue': serializer.toJson<int>(titleColorValue),
+      'titleAlignment': serializer.toJson<String>(titleAlignment),
+      'cardColorValue': serializer.toJson<int>(cardColorValue),
+      'fontFamily': serializer.toJson<String>(fontFamily),
+      'textAnimationType': serializer.toJson<String>(textAnimationType),
+      'textAnimationDurationMs': serializer.toJson<int>(
+        textAnimationDurationMs,
+      ),
     };
   }
 
@@ -3254,6 +3512,14 @@ class Clip extends DataClass implements Insertable<Clip> {
     Value<String?> transitionOutId = const Value.absent(),
     int? transitionInDurationUs,
     int? transitionOutDurationUs,
+    Value<String?> titleText = const Value.absent(),
+    double? titleFontSize,
+    int? titleColorValue,
+    String? titleAlignment,
+    int? cardColorValue,
+    String? fontFamily,
+    String? textAnimationType,
+    int? textAnimationDurationMs,
   }) => Clip(
     id: id ?? this.id,
     trackId: trackId ?? this.trackId,
@@ -3282,6 +3548,15 @@ class Clip extends DataClass implements Insertable<Clip> {
         transitionInDurationUs ?? this.transitionInDurationUs,
     transitionOutDurationUs:
         transitionOutDurationUs ?? this.transitionOutDurationUs,
+    titleText: titleText.present ? titleText.value : this.titleText,
+    titleFontSize: titleFontSize ?? this.titleFontSize,
+    titleColorValue: titleColorValue ?? this.titleColorValue,
+    titleAlignment: titleAlignment ?? this.titleAlignment,
+    cardColorValue: cardColorValue ?? this.cardColorValue,
+    fontFamily: fontFamily ?? this.fontFamily,
+    textAnimationType: textAnimationType ?? this.textAnimationType,
+    textAnimationDurationMs:
+        textAnimationDurationMs ?? this.textAnimationDurationMs,
   );
   Clip copyWithCompanion(ClipsCompanion data) {
     return Clip(
@@ -3328,6 +3603,28 @@ class Clip extends DataClass implements Insertable<Clip> {
       transitionOutDurationUs: data.transitionOutDurationUs.present
           ? data.transitionOutDurationUs.value
           : this.transitionOutDurationUs,
+      titleText: data.titleText.present ? data.titleText.value : this.titleText,
+      titleFontSize: data.titleFontSize.present
+          ? data.titleFontSize.value
+          : this.titleFontSize,
+      titleColorValue: data.titleColorValue.present
+          ? data.titleColorValue.value
+          : this.titleColorValue,
+      titleAlignment: data.titleAlignment.present
+          ? data.titleAlignment.value
+          : this.titleAlignment,
+      cardColorValue: data.cardColorValue.present
+          ? data.cardColorValue.value
+          : this.cardColorValue,
+      fontFamily: data.fontFamily.present
+          ? data.fontFamily.value
+          : this.fontFamily,
+      textAnimationType: data.textAnimationType.present
+          ? data.textAnimationType.value
+          : this.textAnimationType,
+      textAnimationDurationMs: data.textAnimationDurationMs.present
+          ? data.textAnimationDurationMs.value
+          : this.textAnimationDurationMs,
     );
   }
 
@@ -3354,7 +3651,15 @@ class Clip extends DataClass implements Insertable<Clip> {
           ..write('transitionInId: $transitionInId, ')
           ..write('transitionOutId: $transitionOutId, ')
           ..write('transitionInDurationUs: $transitionInDurationUs, ')
-          ..write('transitionOutDurationUs: $transitionOutDurationUs')
+          ..write('transitionOutDurationUs: $transitionOutDurationUs, ')
+          ..write('titleText: $titleText, ')
+          ..write('titleFontSize: $titleFontSize, ')
+          ..write('titleColorValue: $titleColorValue, ')
+          ..write('titleAlignment: $titleAlignment, ')
+          ..write('cardColorValue: $cardColorValue, ')
+          ..write('fontFamily: $fontFamily, ')
+          ..write('textAnimationType: $textAnimationType, ')
+          ..write('textAnimationDurationMs: $textAnimationDurationMs')
           ..write(')'))
         .toString();
   }
@@ -3382,6 +3687,14 @@ class Clip extends DataClass implements Insertable<Clip> {
     transitionOutId,
     transitionInDurationUs,
     transitionOutDurationUs,
+    titleText,
+    titleFontSize,
+    titleColorValue,
+    titleAlignment,
+    cardColorValue,
+    fontFamily,
+    textAnimationType,
+    textAnimationDurationMs,
   ]);
   @override
   bool operator ==(Object other) =>
@@ -3407,7 +3720,15 @@ class Clip extends DataClass implements Insertable<Clip> {
           other.transitionInId == this.transitionInId &&
           other.transitionOutId == this.transitionOutId &&
           other.transitionInDurationUs == this.transitionInDurationUs &&
-          other.transitionOutDurationUs == this.transitionOutDurationUs);
+          other.transitionOutDurationUs == this.transitionOutDurationUs &&
+          other.titleText == this.titleText &&
+          other.titleFontSize == this.titleFontSize &&
+          other.titleColorValue == this.titleColorValue &&
+          other.titleAlignment == this.titleAlignment &&
+          other.cardColorValue == this.cardColorValue &&
+          other.fontFamily == this.fontFamily &&
+          other.textAnimationType == this.textAnimationType &&
+          other.textAnimationDurationMs == this.textAnimationDurationMs);
 }
 
 class ClipsCompanion extends UpdateCompanion<Clip> {
@@ -3432,6 +3753,14 @@ class ClipsCompanion extends UpdateCompanion<Clip> {
   final Value<String?> transitionOutId;
   final Value<int> transitionInDurationUs;
   final Value<int> transitionOutDurationUs;
+  final Value<String?> titleText;
+  final Value<double> titleFontSize;
+  final Value<int> titleColorValue;
+  final Value<String> titleAlignment;
+  final Value<int> cardColorValue;
+  final Value<String> fontFamily;
+  final Value<String> textAnimationType;
+  final Value<int> textAnimationDurationMs;
   final Value<int> rowid;
   const ClipsCompanion({
     this.id = const Value.absent(),
@@ -3455,6 +3784,14 @@ class ClipsCompanion extends UpdateCompanion<Clip> {
     this.transitionOutId = const Value.absent(),
     this.transitionInDurationUs = const Value.absent(),
     this.transitionOutDurationUs = const Value.absent(),
+    this.titleText = const Value.absent(),
+    this.titleFontSize = const Value.absent(),
+    this.titleColorValue = const Value.absent(),
+    this.titleAlignment = const Value.absent(),
+    this.cardColorValue = const Value.absent(),
+    this.fontFamily = const Value.absent(),
+    this.textAnimationType = const Value.absent(),
+    this.textAnimationDurationMs = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ClipsCompanion.insert({
@@ -3479,6 +3816,14 @@ class ClipsCompanion extends UpdateCompanion<Clip> {
     this.transitionOutId = const Value.absent(),
     this.transitionInDurationUs = const Value.absent(),
     this.transitionOutDurationUs = const Value.absent(),
+    this.titleText = const Value.absent(),
+    this.titleFontSize = const Value.absent(),
+    this.titleColorValue = const Value.absent(),
+    this.titleAlignment = const Value.absent(),
+    this.cardColorValue = const Value.absent(),
+    this.fontFamily = const Value.absent(),
+    this.textAnimationType = const Value.absent(),
+    this.textAnimationDurationMs = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        trackId = Value(trackId),
@@ -3510,6 +3855,14 @@ class ClipsCompanion extends UpdateCompanion<Clip> {
     Expression<String>? transitionOutId,
     Expression<int>? transitionInDurationUs,
     Expression<int>? transitionOutDurationUs,
+    Expression<String>? titleText,
+    Expression<double>? titleFontSize,
+    Expression<int>? titleColorValue,
+    Expression<String>? titleAlignment,
+    Expression<int>? cardColorValue,
+    Expression<String>? fontFamily,
+    Expression<String>? textAnimationType,
+    Expression<int>? textAnimationDurationMs,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -3536,6 +3889,15 @@ class ClipsCompanion extends UpdateCompanion<Clip> {
         'transition_in_duration_us': transitionInDurationUs,
       if (transitionOutDurationUs != null)
         'transition_out_duration_us': transitionOutDurationUs,
+      if (titleText != null) 'title_text': titleText,
+      if (titleFontSize != null) 'title_font_size': titleFontSize,
+      if (titleColorValue != null) 'title_color_value': titleColorValue,
+      if (titleAlignment != null) 'title_alignment': titleAlignment,
+      if (cardColorValue != null) 'card_color_value': cardColorValue,
+      if (fontFamily != null) 'font_family': fontFamily,
+      if (textAnimationType != null) 'text_animation_type': textAnimationType,
+      if (textAnimationDurationMs != null)
+        'text_animation_duration_ms': textAnimationDurationMs,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -3562,6 +3924,14 @@ class ClipsCompanion extends UpdateCompanion<Clip> {
     Value<String?>? transitionOutId,
     Value<int>? transitionInDurationUs,
     Value<int>? transitionOutDurationUs,
+    Value<String?>? titleText,
+    Value<double>? titleFontSize,
+    Value<int>? titleColorValue,
+    Value<String>? titleAlignment,
+    Value<int>? cardColorValue,
+    Value<String>? fontFamily,
+    Value<String>? textAnimationType,
+    Value<int>? textAnimationDurationMs,
     Value<int>? rowid,
   }) {
     return ClipsCompanion(
@@ -3588,6 +3958,15 @@ class ClipsCompanion extends UpdateCompanion<Clip> {
           transitionInDurationUs ?? this.transitionInDurationUs,
       transitionOutDurationUs:
           transitionOutDurationUs ?? this.transitionOutDurationUs,
+      titleText: titleText ?? this.titleText,
+      titleFontSize: titleFontSize ?? this.titleFontSize,
+      titleColorValue: titleColorValue ?? this.titleColorValue,
+      titleAlignment: titleAlignment ?? this.titleAlignment,
+      cardColorValue: cardColorValue ?? this.cardColorValue,
+      fontFamily: fontFamily ?? this.fontFamily,
+      textAnimationType: textAnimationType ?? this.textAnimationType,
+      textAnimationDurationMs:
+          textAnimationDurationMs ?? this.textAnimationDurationMs,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -3662,6 +4041,32 @@ class ClipsCompanion extends UpdateCompanion<Clip> {
         transitionOutDurationUs.value,
       );
     }
+    if (titleText.present) {
+      map['title_text'] = Variable<String>(titleText.value);
+    }
+    if (titleFontSize.present) {
+      map['title_font_size'] = Variable<double>(titleFontSize.value);
+    }
+    if (titleColorValue.present) {
+      map['title_color_value'] = Variable<int>(titleColorValue.value);
+    }
+    if (titleAlignment.present) {
+      map['title_alignment'] = Variable<String>(titleAlignment.value);
+    }
+    if (cardColorValue.present) {
+      map['card_color_value'] = Variable<int>(cardColorValue.value);
+    }
+    if (fontFamily.present) {
+      map['font_family'] = Variable<String>(fontFamily.value);
+    }
+    if (textAnimationType.present) {
+      map['text_animation_type'] = Variable<String>(textAnimationType.value);
+    }
+    if (textAnimationDurationMs.present) {
+      map['text_animation_duration_ms'] = Variable<int>(
+        textAnimationDurationMs.value,
+      );
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -3692,6 +4097,14 @@ class ClipsCompanion extends UpdateCompanion<Clip> {
           ..write('transitionOutId: $transitionOutId, ')
           ..write('transitionInDurationUs: $transitionInDurationUs, ')
           ..write('transitionOutDurationUs: $transitionOutDurationUs, ')
+          ..write('titleText: $titleText, ')
+          ..write('titleFontSize: $titleFontSize, ')
+          ..write('titleColorValue: $titleColorValue, ')
+          ..write('titleAlignment: $titleAlignment, ')
+          ..write('cardColorValue: $cardColorValue, ')
+          ..write('fontFamily: $fontFamily, ')
+          ..write('textAnimationType: $textAnimationType, ')
+          ..write('textAnimationDurationMs: $textAnimationDurationMs, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -6995,6 +7408,14 @@ typedef $$ClipsTableCreateCompanionBuilder =
       Value<String?> transitionOutId,
       Value<int> transitionInDurationUs,
       Value<int> transitionOutDurationUs,
+      Value<String?> titleText,
+      Value<double> titleFontSize,
+      Value<int> titleColorValue,
+      Value<String> titleAlignment,
+      Value<int> cardColorValue,
+      Value<String> fontFamily,
+      Value<String> textAnimationType,
+      Value<int> textAnimationDurationMs,
       Value<int> rowid,
     });
 typedef $$ClipsTableUpdateCompanionBuilder =
@@ -7020,6 +7441,14 @@ typedef $$ClipsTableUpdateCompanionBuilder =
       Value<String?> transitionOutId,
       Value<int> transitionInDurationUs,
       Value<int> transitionOutDurationUs,
+      Value<String?> titleText,
+      Value<double> titleFontSize,
+      Value<int> titleColorValue,
+      Value<String> titleAlignment,
+      Value<int> cardColorValue,
+      Value<String> fontFamily,
+      Value<String> textAnimationType,
+      Value<int> textAnimationDurationMs,
       Value<int> rowid,
     });
 
@@ -7201,6 +7630,46 @@ class $$ClipsTableFilterComposer extends Composer<_$AppDatabase, $ClipsTable> {
 
   ColumnFilters<int> get transitionOutDurationUs => $composableBuilder(
     column: $table.transitionOutDurationUs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get titleText => $composableBuilder(
+    column: $table.titleText,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get titleFontSize => $composableBuilder(
+    column: $table.titleFontSize,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get titleColorValue => $composableBuilder(
+    column: $table.titleColorValue,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get titleAlignment => $composableBuilder(
+    column: $table.titleAlignment,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get cardColorValue => $composableBuilder(
+    column: $table.cardColorValue,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get fontFamily => $composableBuilder(
+    column: $table.fontFamily,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get textAnimationType => $composableBuilder(
+    column: $table.textAnimationType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get textAnimationDurationMs => $composableBuilder(
+    column: $table.textAnimationDurationMs,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -7405,6 +7874,46 @@ class $$ClipsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get titleText => $composableBuilder(
+    column: $table.titleText,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get titleFontSize => $composableBuilder(
+    column: $table.titleFontSize,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get titleColorValue => $composableBuilder(
+    column: $table.titleColorValue,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get titleAlignment => $composableBuilder(
+    column: $table.titleAlignment,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get cardColorValue => $composableBuilder(
+    column: $table.cardColorValue,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get fontFamily => $composableBuilder(
+    column: $table.fontFamily,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get textAnimationType => $composableBuilder(
+    column: $table.textAnimationType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get textAnimationDurationMs => $composableBuilder(
+    column: $table.textAnimationDurationMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$TracksTableOrderingComposer get trackId {
     final $$TracksTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -7537,6 +8046,44 @@ class $$ClipsTableAnnotationComposer
 
   GeneratedColumn<int> get transitionOutDurationUs => $composableBuilder(
     column: $table.transitionOutDurationUs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get titleText =>
+      $composableBuilder(column: $table.titleText, builder: (column) => column);
+
+  GeneratedColumn<double> get titleFontSize => $composableBuilder(
+    column: $table.titleFontSize,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get titleColorValue => $composableBuilder(
+    column: $table.titleColorValue,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get titleAlignment => $composableBuilder(
+    column: $table.titleAlignment,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get cardColorValue => $composableBuilder(
+    column: $table.cardColorValue,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get fontFamily => $composableBuilder(
+    column: $table.fontFamily,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get textAnimationType => $composableBuilder(
+    column: $table.textAnimationType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get textAnimationDurationMs => $composableBuilder(
+    column: $table.textAnimationDurationMs,
     builder: (column) => column,
   );
 
@@ -7691,6 +8238,14 @@ class $$ClipsTableTableManager
                 Value<String?> transitionOutId = const Value.absent(),
                 Value<int> transitionInDurationUs = const Value.absent(),
                 Value<int> transitionOutDurationUs = const Value.absent(),
+                Value<String?> titleText = const Value.absent(),
+                Value<double> titleFontSize = const Value.absent(),
+                Value<int> titleColorValue = const Value.absent(),
+                Value<String> titleAlignment = const Value.absent(),
+                Value<int> cardColorValue = const Value.absent(),
+                Value<String> fontFamily = const Value.absent(),
+                Value<String> textAnimationType = const Value.absent(),
+                Value<int> textAnimationDurationMs = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ClipsCompanion(
                 id: id,
@@ -7714,6 +8269,14 @@ class $$ClipsTableTableManager
                 transitionOutId: transitionOutId,
                 transitionInDurationUs: transitionInDurationUs,
                 transitionOutDurationUs: transitionOutDurationUs,
+                titleText: titleText,
+                titleFontSize: titleFontSize,
+                titleColorValue: titleColorValue,
+                titleAlignment: titleAlignment,
+                cardColorValue: cardColorValue,
+                fontFamily: fontFamily,
+                textAnimationType: textAnimationType,
+                textAnimationDurationMs: textAnimationDurationMs,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -7739,6 +8302,14 @@ class $$ClipsTableTableManager
                 Value<String?> transitionOutId = const Value.absent(),
                 Value<int> transitionInDurationUs = const Value.absent(),
                 Value<int> transitionOutDurationUs = const Value.absent(),
+                Value<String?> titleText = const Value.absent(),
+                Value<double> titleFontSize = const Value.absent(),
+                Value<int> titleColorValue = const Value.absent(),
+                Value<String> titleAlignment = const Value.absent(),
+                Value<int> cardColorValue = const Value.absent(),
+                Value<String> fontFamily = const Value.absent(),
+                Value<String> textAnimationType = const Value.absent(),
+                Value<int> textAnimationDurationMs = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ClipsCompanion.insert(
                 id: id,
@@ -7762,6 +8333,14 @@ class $$ClipsTableTableManager
                 transitionOutId: transitionOutId,
                 transitionInDurationUs: transitionInDurationUs,
                 transitionOutDurationUs: transitionOutDurationUs,
+                titleText: titleText,
+                titleFontSize: titleFontSize,
+                titleColorValue: titleColorValue,
+                titleAlignment: titleAlignment,
+                cardColorValue: cardColorValue,
+                fontFamily: fontFamily,
+                textAnimationType: textAnimationType,
+                textAnimationDurationMs: textAnimationDurationMs,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

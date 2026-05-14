@@ -12,6 +12,7 @@ import 'package:fluxedit/core/project/project_repository.dart';
 import 'package:fluxedit/core/timeline/clip_model.dart';
 import 'package:fluxedit/core/timeline/timeline_controller.dart';
 import 'package:fluxedit/core/transitions/transition_type.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class InspectorPanel extends ConsumerWidget {
   const InspectorPanel({super.key, required this.projectId});
@@ -263,6 +264,18 @@ class _ClipInspectorState extends ConsumerState<_ClipInspector> {
               _PropertyRow(label: 'Audio Codec', value: asset.audioCodec),
               _PropertyRow(label: 'Color Space', value: asset.colorSpace),
             ],
+            if (clip.type == ClipType.title) ...[
+              const SizedBox(height: 12),
+              _TitleSection(clip: clip),
+            ],
+            if (clip.type == ClipType.colorCard) ...[
+              const SizedBox(height: 12),
+              _ColorCardSection(clip: clip),
+            ],
+            if (clip.type == ClipType.image) ...[
+              const SizedBox(height: 12),
+              _ImageClipSection(clip: clip),
+            ],
             const SizedBox(height: 12),
             _EffectsSection(clipId: clip.id),
             if (clip.type == ClipType.video) ...[
@@ -421,14 +434,14 @@ class _SliderRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               SizedBox(
-                width: 80,
+                width: 84,
                 child: Text(label, style: AppTypography.labelMedium),
               ),
               Text(
@@ -444,11 +457,15 @@ class _SliderRow extends StatelessWidget {
           ),
           SliderTheme(
             data: SliderTheme.of(context).copyWith(
-              trackHeight: 2,
+              trackHeight: 4,
               thumbShape:
-                  const RoundSliderThumbShape(enabledThumbRadius: 6),
+                  const RoundSliderThumbShape(enabledThumbRadius: 10),
               overlayShape:
-                  const RoundSliderOverlayShape(overlayRadius: 12),
+                  const RoundSliderOverlayShape(overlayRadius: 22),
+              activeTrackColor: ColorTokens.accentPrimary,
+              thumbColor: ColorTokens.accentPrimary,
+              overlayColor:
+                  ColorTokens.accentPrimary.withValues(alpha: 0.12),
             ),
             child: Slider(
               value: value.clamp(min, max),
@@ -457,7 +474,6 @@ class _SliderRow extends StatelessWidget {
               onChangeStart: onChangeStart,
               onChanged: onChanged,
               onChangeEnd: onChangeEnd,
-              activeColor: ColorTokens.accentPrimary,
             ),
           ),
         ],
@@ -606,64 +622,121 @@ class _EffectRowState extends ConsumerState<_EffectRow> {
     final controller = ref.read(timelineControllerProvider);
     final ranges = EffectRegistry.parameterRanges(effect.type);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Checkbox(
-              value: effect.isEnabled,
-              onChanged: (_) => controller.toggleEffect(effect),
-              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              visualDensity: VisualDensity.compact,
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: ColorTokens.backgroundSurface,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: ColorTokens.borderSubtle),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Effect header row
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 4, 4, 4),
+            child: Row(
+              children: [
+                GestureDetector(
+                  onTap: () => controller.toggleEffect(effect),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    width: 36,
+                    height: 20,
+                    decoration: BoxDecoration(
+                      color: effect.isEnabled
+                          ? ColorTokens.accentPrimary
+                          : ColorTokens.backgroundElevated,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: effect.isEnabled
+                            ? ColorTokens.accentPrimary
+                            : ColorTokens.borderStrong,
+                      ),
+                    ),
+                    child: AnimatedAlign(
+                      duration: const Duration(milliseconds: 150),
+                      alignment: effect.isEnabled
+                          ? Alignment.centerRight
+                          : Alignment.centerLeft,
+                      child: Padding(
+                        padding: const EdgeInsets.all(2),
+                        child: Container(
+                          width: 14,
+                          height: 14,
+                          decoration: const BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    effect.displayName,
+                    style: AppTypography.labelMedium.copyWith(
+                      color: effect.isEnabled
+                          ? ColorTokens.textPrimary
+                          : ColorTokens.textSecondary,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  padding: const EdgeInsets.all(10),
+                  icon: const Icon(Icons.delete_outline, size: 16),
+                  color: ColorTokens.textSecondary,
+                  tooltip: 'Remove Effect',
+                  onPressed: () => controller.removeEffect(effect),
+                  constraints: const BoxConstraints(
+                    minWidth: 44,
+                    minHeight: 44,
+                  ),
+                ),
+              ],
             ),
-            Expanded(
-              child: Text(effect.displayName, style: AppTypography.labelMedium),
-            ),
-            SizedBox(
-              width: 24,
-              height: 24,
-              child: IconButton(
-                padding: EdgeInsets.zero,
-                icon: const Icon(Icons.close, size: 14),
-                color: ColorTokens.textSecondary,
-                tooltip: 'Remove',
-                onPressed: () => controller.removeEffect(effect),
+          ),
+          if (effect.isEnabled) ...[
+            const Divider(height: 1),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
+              child: Column(
+                children: ranges.entries.map((entry) {
+                  final key = entry.key;
+                  final (min, max) = entry.value;
+                  final value =
+                      (effect.parameters[key] ?? min).clamp(min, max);
+                  return _SliderRow(
+                    label: _formatParamName(key),
+                    value: value,
+                    min: min,
+                    max: max,
+                    displayText: value.toStringAsFixed(2),
+                    onChangeStart: (_) => _atDragStart = effect,
+                    onChanged: (v) {
+                      final updated = effect.copyWith(
+                        parameters: {...effect.parameters, key: v},
+                      );
+                      ref.read(timelineStateProvider).updateEffect(updated);
+                    },
+                    onChangeEnd: (v) {
+                      if (_atDragStart != null) {
+                        controller.updateEffectParameters(
+                          _atDragStart!,
+                          {..._atDragStart!.parameters, key: v},
+                        );
+                        _atDragStart = null;
+                      }
+                    },
+                  );
+                }).toList(),
               ),
             ),
           ],
-        ),
-        if (effect.isEnabled)
-          ...ranges.entries.map((entry) {
-            final key = entry.key;
-            final (min, max) = entry.value;
-            final value = (effect.parameters[key] ?? min).clamp(min, max);
-            return _SliderRow(
-              label: _formatParamName(key),
-              value: value,
-              min: min,
-              max: max,
-              displayText: value.toStringAsFixed(2),
-              onChangeStart: (_) => _atDragStart = effect,
-              onChanged: (v) {
-                final updated = effect.copyWith(
-                  parameters: {...effect.parameters, key: v},
-                );
-                ref.read(timelineStateProvider).updateEffect(updated);
-              },
-              onChangeEnd: (v) {
-                if (_atDragStart != null) {
-                  controller.updateEffectParameters(
-                    _atDragStart!,
-                    {..._atDragStart!.parameters, key: v},
-                  );
-                  _atDragStart = null;
-                }
-              },
-            );
-          }),
-        const Divider(height: 8),
-      ],
+        ],
+      ),
     );
   }
 
@@ -673,6 +746,494 @@ class _EffectRowState extends ConsumerState<_EffectRow> {
       (m) => ' ${m.group(0)}',
     );
     return result[0].toUpperCase() + result.substring(1);
+  }
+}
+
+// ── Curated font list ─────────────────────────────────────────────────────────
+
+const _kFontFamilies = [
+  'Roboto',
+  'Montserrat',
+  'Poppins',
+  'Inter',
+  'Oswald',
+  'Raleway',
+  'Nunito',
+  'Bebas Neue',
+  'Playfair Display',
+  'Dancing Script',
+  'Permanent Marker',
+  'Anton',
+];
+
+// ── Shared text-style controls (used by Title and ColorCard sections) ─────────
+
+class _TextStyleControls extends ConsumerStatefulWidget {
+  const _TextStyleControls({required this.clip});
+
+  final ClipModel clip;
+
+  @override
+  ConsumerState<_TextStyleControls> createState() => _TextStyleControlsState();
+}
+
+class _TextStyleControlsState extends ConsumerState<_TextStyleControls> {
+  late TextEditingController _textController;
+  ClipModel? _clipAtDragStart;
+
+  static const _presetColors = [
+    0xFFFFFFFF, // white
+    0xFF000000, // black
+    0xFFFF5252, // red
+    0xFFFFB340, // orange
+    0xFFFFEB3B, // yellow
+    0xFF34C47A, // green
+    0xFF4D9CFF, // blue
+    0xFF9B6DFF, // purple
+    0xFFFF6B9D, // pink
+    0xFF40D9F3, // cyan
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _textController =
+        TextEditingController(text: widget.clip.titleText ?? '');
+  }
+
+  @override
+  void dispose() {
+    _textController.dispose();
+    super.dispose();
+  }
+
+  ClipModel? _latestClip() {
+    try {
+      return ref
+          .read(timelineStateProvider)
+          .clips
+          .firstWhere((c) => c.id == widget.clip.id);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  TextStyle _fontPreviewStyle(String family) {
+    const base = TextStyle(fontSize: 13, color: ColorTokens.textPrimary);
+    try {
+      return GoogleFonts.getFont(family, textStyle: base);
+    } catch (_) {
+      return base;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final clip = ref
+            .watch(timelineStateProvider)
+            .clips
+            .cast<ClipModel?>()
+            .firstWhere((c) => c?.id == widget.clip.id,
+                orElse: () => null) ??
+        widget.clip;
+
+    if (_textController.text != (clip.titleText ?? '')) {
+      _textController.text = clip.titleText ?? '';
+    }
+
+    final controller = ref.read(timelineControllerProvider);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Text content
+        _labeledRow(
+          'Text',
+          TextField(
+            controller: _textController,
+            style: AppTypography.bodySmall
+                .copyWith(color: ColorTokens.textPrimary),
+            decoration: _inputDecoration(),
+            onSubmitted: (v) => controller.updateTitleText(clip.id, v),
+          ),
+        ),
+        // Font family
+        _labeledRow(
+          'Font',
+          DropdownButtonHideUnderline(
+            child: Container(
+              height: 28,
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              decoration: BoxDecoration(
+                color: ColorTokens.backgroundSurface,
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: ColorTokens.borderSubtle),
+              ),
+              child: DropdownButton<String>(
+                value: _kFontFamilies.contains(clip.fontFamily)
+                    ? clip.fontFamily
+                    : _kFontFamilies.first,
+                isDense: true,
+                isExpanded: true,
+                dropdownColor: ColorTokens.backgroundElevated,
+                style: _fontPreviewStyle(clip.fontFamily),
+                items: _kFontFamilies
+                    .map(
+                      (f) => DropdownMenuItem(
+                        value: f,
+                        child: Text(f,
+                            style: _fontPreviewStyle(f),
+                            overflow: TextOverflow.ellipsis),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (v) {
+                  if (v != null) controller.updateFontFamily(clip.id, v);
+                },
+              ),
+            ),
+          ),
+        ),
+        // Font size
+        _SliderRow(
+          label: 'Font Size',
+          value: clip.titleFontSize.clamp(8.0, 200.0),
+          min: 8,
+          max: 200,
+          displayText: clip.titleFontSize.toStringAsFixed(0),
+          onChangeStart: (_) => _clipAtDragStart = _latestClip(),
+          onChanged: (v) {
+            final c = _latestClip();
+            if (c != null) {
+              ref
+                  .read(timelineStateProvider)
+                  .updateClip(c.copyWith(titleFontSize: v));
+            }
+          },
+          onChangeEnd: (v) {
+            if (_clipAtDragStart != null) {
+              controller.updateTitleFontSize(clip.id, v);
+              _clipAtDragStart = null;
+            }
+          },
+        ),
+        // Alignment
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
+            children: [
+              const SizedBox(
+                  width: 80,
+                  child: Text('Align', style: AppTypography.labelMedium)),
+              _AlignButton(
+                icon: Icons.format_align_left,
+                isActive: clip.titleAlignment == 'left',
+                onTap: () =>
+                    controller.updateTitleAlignment(clip.id, 'left'),
+              ),
+              const SizedBox(width: 4),
+              _AlignButton(
+                icon: Icons.format_align_center,
+                isActive: clip.titleAlignment == 'center',
+                onTap: () =>
+                    controller.updateTitleAlignment(clip.id, 'center'),
+              ),
+              const SizedBox(width: 4),
+              _AlignButton(
+                icon: Icons.format_align_right,
+                isActive: clip.titleAlignment == 'right',
+                onTap: () =>
+                    controller.updateTitleAlignment(clip.id, 'right'),
+              ),
+            ],
+          ),
+        ),
+        // Text color
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Text Color', style: AppTypography.labelMedium),
+              const SizedBox(height: 6),
+              _ColorSwatchRow(
+                selectedColor: clip.titleColorValue,
+                colors: _presetColors,
+                onSelected: (c) => controller.updateTitleColor(clip.id, c),
+              ),
+            ],
+          ),
+        ),
+        // Animation type
+        _labeledRow(
+          'Anim',
+          DropdownButtonHideUnderline(
+            child: Container(
+              height: 28,
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              decoration: BoxDecoration(
+                color: ColorTokens.backgroundSurface,
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: ColorTokens.borderSubtle),
+              ),
+              child: DropdownButton<TextAnimationType>(
+                value: clip.textAnimationType,
+                isDense: true,
+                isExpanded: true,
+                dropdownColor: ColorTokens.backgroundElevated,
+                style: AppTypography.bodySmall
+                    .copyWith(color: ColorTokens.textPrimary),
+                items: TextAnimationType.values
+                    .map(
+                      (a) => DropdownMenuItem(
+                        value: a,
+                        child: Text(a.displayName,
+                            style: AppTypography.bodySmall
+                                .copyWith(color: ColorTokens.textPrimary)),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (v) {
+                  if (v != null) controller.updateTextAnimation(clip.id, v);
+                },
+              ),
+            ),
+          ),
+        ),
+        // Animation duration (only when an animation is active)
+        if (clip.textAnimationType != TextAnimationType.none)
+          _SliderRow(
+            label: 'Duration',
+            value: clip.textAnimationDurationMs.toDouble().clamp(100.0, 5000.0),
+            min: 100,
+            max: 5000,
+            displayText:
+                '${(clip.textAnimationDurationMs / 1000.0).toStringAsFixed(1)}s',
+            onChangeStart: (_) => _clipAtDragStart = _latestClip(),
+            onChanged: (v) {
+              final c = _latestClip();
+              if (c != null) {
+                ref.read(timelineStateProvider).updateClip(
+                      c.copyWith(textAnimationDurationMs: v.round()),
+                    );
+              }
+            },
+            onChangeEnd: (v) {
+              if (_clipAtDragStart != null) {
+                controller.updateAnimationDuration(clip.id, v.round());
+                _clipAtDragStart = null;
+              }
+            },
+          ),
+      ],
+    );
+  }
+
+  Widget _labeledRow(String label, Widget child) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          SizedBox(
+              width: 80,
+              child: Text(label, style: AppTypography.labelMedium)),
+          Expanded(child: child),
+        ],
+      ),
+    );
+  }
+
+  InputDecoration _inputDecoration() {
+    return InputDecoration(
+      isDense: true,
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+      filled: true,
+      fillColor: ColorTokens.backgroundSurface,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(4),
+        borderSide: const BorderSide(color: ColorTokens.borderSubtle),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(4),
+        borderSide: const BorderSide(color: ColorTokens.borderSubtle),
+      ),
+    );
+  }
+}
+
+// ── Title Clip Section ────────────────────────────────────────────────────────
+
+class _TitleSection extends StatelessWidget {
+  const _TitleSection({required this.clip});
+
+  final ClipModel clip;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _SectionHeader(title: 'Title'),
+        _TextStyleControls(clip: clip),
+      ],
+    );
+  }
+}
+
+// ── Color Card Section ────────────────────────────────────────────────────────
+
+class _ColorCardSection extends ConsumerWidget {
+  const _ColorCardSection({required this.clip});
+
+  final ClipModel clip;
+
+  static const _bgColors = [
+    0xFF000000, // black
+    0xFFFFFFFF, // white
+    0xFF1A1A1B, // dark grey
+    0xFF505057, // mid grey
+    0xFFFF5252, // red
+    0xFFFFB340, // orange
+    0xFFFFEB3B, // yellow
+    0xFF34C47A, // green
+    0xFF4D9CFF, // blue
+    0xFF9B6DFF, // purple
+    0xFFFF6B9D, // pink
+    0xFF40D9F3, // cyan
+  ];
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final liveClip = ref
+            .watch(timelineStateProvider)
+            .clips
+            .cast<ClipModel?>()
+            .firstWhere((c) => c?.id == clip.id, orElse: () => null) ??
+        clip;
+
+    final controller = ref.read(timelineControllerProvider);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _SectionHeader(title: 'Color Card'),
+        const Text('Background Color', style: AppTypography.labelMedium),
+        const SizedBox(height: 6),
+        _ColorSwatchRow(
+          selectedColor: liveClip.cardColorValue,
+          colors: _bgColors,
+          onSelected: (c) => controller.updateCardColor(liveClip.id, c),
+        ),
+        const SizedBox(height: 10),
+        const _SectionHeader(title: 'Text Overlay'),
+        _TextStyleControls(clip: liveClip),
+      ],
+    );
+  }
+}
+
+// ── Shared small widgets ──────────────────────────────────────────────────────
+
+class _AlignButton extends StatelessWidget {
+  const _AlignButton({
+    required this.icon,
+    required this.isActive,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final bool isActive;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 28,
+        height: 28,
+        decoration: BoxDecoration(
+          color: isActive
+              ? ColorTokens.accentPrimary.withValues(alpha: 0.2)
+              : ColorTokens.backgroundSurface,
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(
+            color: isActive
+                ? ColorTokens.accentPrimary
+                : ColorTokens.borderSubtle,
+          ),
+        ),
+        child: Icon(
+          icon,
+          size: 14,
+          color: isActive
+              ? ColorTokens.accentPrimary
+              : ColorTokens.textSecondary,
+        ),
+      ),
+    );
+  }
+}
+
+class _ColorSwatchRow extends StatelessWidget {
+  const _ColorSwatchRow({
+    required this.selectedColor,
+    required this.colors,
+    required this.onSelected,
+  });
+
+  final int selectedColor;
+  final List<int> colors;
+  final ValueChanged<int> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: colors
+          .map(
+            (c) => GestureDetector(
+              onTap: () => onSelected(c),
+              child: Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: Color(c),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: selectedColor == c
+                        ? ColorTokens.accentPrimary
+                        : ColorTokens.borderStrong,
+                    width: selectedColor == c ? 2 : 1,
+                  ),
+                ),
+              ),
+            ),
+          )
+          .toList(),
+    );
+  }
+}
+
+// ── Image Clip Section ────────────────────────────────────────────────────────
+
+class _ImageClipSection extends StatelessWidget {
+  const _ImageClipSection({required this.clip});
+
+  final ClipModel clip;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _SectionHeader(title: 'Image'),
+        const _SectionHeader(title: 'Text Overlay'),
+        _TextStyleControls(clip: clip),
+      ],
+    );
   }
 }
 
