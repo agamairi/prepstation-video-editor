@@ -290,15 +290,15 @@ void main() {
     });
 
     test('image clip can carry titleText for overlay', () {
-      final clip = ClipModel(
+      const clip = ClipModel(
         id: 'img_text',
         trackId: 'track_v1',
         mediaId: 'img_asset',
         type: ClipType.image,
         startOnTimeline: Duration.zero,
-        endOnTimeline: const Duration(seconds: 5),
+        endOnTimeline: Duration(seconds: 5),
         mediaInPoint: Duration.zero,
-        mediaOutPoint: const Duration(seconds: 5),
+        mediaOutPoint: Duration(seconds: 5),
         titleText: 'Caption',
       );
       expect(clip.titleText, 'Caption');
