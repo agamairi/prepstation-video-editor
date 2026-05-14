@@ -43,8 +43,7 @@ abstract final class AppTheme {
       elevation: 0,
       margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.all(Radius.circular(6)),
-        side: BorderSide(color: ColorTokens.borderSubtle),
+        borderRadius: BorderRadius.all(Radius.circular(12)),
       ),
     ),
     dividerTheme: const DividerThemeData(
@@ -59,31 +58,32 @@ abstract final class AppTheme {
     tooltipTheme: const TooltipThemeData(
       decoration: BoxDecoration(
         color: ColorTokens.backgroundElevated,
-        borderRadius: BorderRadius.all(Radius.circular(4)),
+        borderRadius: BorderRadius.all(Radius.circular(6)),
         border: Border.fromBorderSide(
           BorderSide(color: ColorTokens.borderDefault),
         ),
       ),
       textStyle: AppTypography.bodySmall,
-      waitDuration: Duration(milliseconds: 600),
+      waitDuration: Duration(milliseconds: 500),
     ),
     sliderTheme: const SliderThemeData(
       activeTrackColor: ColorTokens.accentPrimary,
       inactiveTrackColor: ColorTokens.sliderTrack,
       thumbColor: ColorTokens.sliderThumb,
-      overlayColor: Color(0x334D9CFF),
-      trackHeight: 2,
+      overlayColor: Color(0x200A84FF),
+      trackHeight: 3,
+      thumbShape: RoundSliderThumbShape(enabledThumbRadius: 6),
     ),
     scrollbarTheme: ScrollbarThemeData(
       thumbColor: WidgetStateProperty.all(ColorTokens.borderStrong),
-      radius: const Radius.circular(2),
-      thickness: WidgetStateProperty.all(4),
+      radius: const Radius.circular(3),
+      thickness: WidgetStateProperty.all(3),
     ),
     popupMenuTheme: const PopupMenuThemeData(
       color: ColorTokens.backgroundElevated,
-      elevation: 8,
+      elevation: 12,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.all(Radius.circular(6)),
+        borderRadius: BorderRadius.all(Radius.circular(10)),
         side: BorderSide(color: ColorTokens.borderDefault),
       ),
       textStyle: AppTypography.bodyMedium,
@@ -92,31 +92,29 @@ abstract final class AppTheme {
       filled: true,
       fillColor: ColorTokens.backgroundSurface,
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.all(Radius.circular(4)),
+        borderRadius: BorderRadius.all(Radius.circular(8)),
         borderSide: BorderSide(color: ColorTokens.borderDefault),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.all(Radius.circular(4)),
+        borderRadius: BorderRadius.all(Radius.circular(8)),
         borderSide: BorderSide(color: ColorTokens.borderDefault),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.all(Radius.circular(4)),
+        borderRadius: BorderRadius.all(Radius.circular(8)),
         borderSide: BorderSide(color: ColorTokens.accentPrimary, width: 1.5),
       ),
-      contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      labelStyle: AppTypography.bodySmall,
-      hintStyle: AppTypography.bodySmall,
+      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      labelStyle: AppTypography.caption,
+      hintStyle: AppTypography.caption,
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: ColorTokens.accentPrimary,
-        foregroundColor: ColorTokens.textInverse,
+        foregroundColor: Colors.white,
         textStyle: AppTypography.labelLarge,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(4)),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        minimumSize: const Size(60, 32),
+        shape: const StadiumBorder(),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        minimumSize: const Size(64, 36),
         elevation: 0,
       ),
     ),
@@ -125,11 +123,36 @@ abstract final class AppTheme {
         foregroundColor: ColorTokens.accentPrimary,
         textStyle: AppTypography.labelLarge,
         shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(4)),
+          borderRadius: BorderRadius.all(Radius.circular(8)),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        minimumSize: const Size(40, 28),
+        minimumSize: const Size(40, 32),
       ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: ColorTokens.textPrimary,
+        side: const BorderSide(color: ColorTokens.borderDefault),
+        textStyle: AppTypography.labelLarge,
+        shape: const StadiumBorder(),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        minimumSize: const Size(64, 36),
+      ),
+    ),
+    dialogTheme: const DialogThemeData(
+      backgroundColor: ColorTokens.backgroundPanel,
+      elevation: 24,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(16)),
+      ),
+    ),
+    snackBarTheme: const SnackBarThemeData(
+      backgroundColor: ColorTokens.backgroundElevated,
+      contentTextStyle: AppTypography.bodyMedium,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(10)),
+      ),
+      behavior: SnackBarBehavior.floating,
     ),
   );
 }

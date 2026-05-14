@@ -2,83 +2,95 @@ import 'package:flutter/material.dart';
 
 abstract final class ColorTokens {
   // ── Background hierarchy ──────────────────────────────────────────────────
-  static const Color backgroundDeep = Color(0xFF0E0E0F);
-  static const Color backgroundBase = Color(0xFF1A1A1B);
-  static const Color backgroundPanel = Color(0xFF222224);
-  static const Color backgroundSurface = Color(0xFF2A2A2D);
-  static const Color backgroundElevated = Color(0xFF333337);
-  static const Color backgroundHover = Color(0xFF3A3A3F);
+  static const Color backgroundDeep = Color(0xFF0A0A0C);
+  static const Color backgroundBase = Color(0xFF141416);
+  static const Color backgroundPanel = Color(0xFF1C1C1F);
+  static const Color backgroundSurface = Color(0xFF242428);
+  static const Color backgroundElevated = Color(0xFF2C2C30);
+  static const Color backgroundHover = Color(0xFF343438);
 
   // ── Panel / border lines ──────────────────────────────────────────────────
-  static const Color borderSubtle = Color(0xFF2E2E32);
-  static const Color borderDefault = Color(0xFF3C3C42);
-  static const Color borderStrong = Color(0xFF505057);
+  static const Color borderSubtle = Color(0x0FFFFFFF);
+  static const Color borderDefault = Color(0x1AFFFFFF);
+  static const Color borderStrong = Color(0x30FFFFFF);
 
   // ── Text ──────────────────────────────────────────────────────────────────
-  static const Color textPrimary = Color(0xFFEAEAEE);
-  static const Color textSecondary = Color(0xFFA0A0AA);
-  static const Color textDisabled = Color(0xFF606068);
-  static const Color textInverse = Color(0xFF0E0E0F);
+  static const Color textPrimary = Color(0xFFF5F5F7);
+  static const Color textSecondary = Color(0xFF8A8A8E);
+  static const Color textDisabled = Color(0xFF48484A);
+  static const Color textInverse = Color(0xFF0A0A0C);
 
   // ── Accent ────────────────────────────────────────────────────────────────
-  static const Color accentPrimary = Color(0xFF4D9CFF);
-  static const Color accentPrimaryHover = Color(0xFF6EB1FF);
-  static const Color accentPrimaryPressed = Color(0xFF2E7BE0);
-  static const Color accentSecondary = Color(0xFF9B6DFF);
+  static const Color accentPrimary = Color(0xFF0A84FF);
+  static const Color accentPrimaryHover = Color(0xFF389AFF);
+  static const Color accentPrimaryPressed = Color(0xFF0070E0);
+  static const Color accentSecondary = Color(0xFFBF5AF2);
 
   // ── Semantic ──────────────────────────────────────────────────────────────
-  static const Color success = Color(0xFF34C47A);
-  static const Color warning = Color(0xFFFFB340);
-  static const Color error = Color(0xFFFF5252);
-  static const Color info = Color(0xFF4D9CFF);
+  static const Color success = Color(0xFF30D158);
+  static const Color warning = Color(0xFFFF9F0A);
+  static const Color error = Color(0xFFFF453A);
+  static const Color info = Color(0xFF0A84FF);
 
   // ── Timeline specific ─────────────────────────────────────────────────────
-  static const Color playhead = Color(0xFFFF5252);
-  static const Color clipVideo = Color(0xFF1E4D8C);
-  static const Color clipVideoHover = Color(0xFF265FA8);
-  static const Color clipVideoSelected = Color(0xFF4D9CFF);
-  static const Color clipAudio = Color(0xFF1A5C3A);
-  static const Color clipAudioHover = Color(0xFF1E6E45);
-  static const Color clipAudioSelected = Color(0xFF34C47A);
-  static const Color clipTitle = Color(0xFF5C3A7A);
-  static const Color clipThumbnailOverlay = Color(0x88000000);
-  static const Color waveformColor = Color(0xFF34C47A);
-  static const Color waveformBackground = Color(0xFF0E2A1A);
-  static const Color renderCacheBar = Color(0xFF34C47A);
-  static const Color markerDefault = Color(0xFFFFB340);
-  static const Color trackDivider = Color(0xFF2E2E32);
-  static const Color timeRuler = Color(0xFF1A1A1B);
-  static const Color timeRulerTick = Color(0xFF505057);
-  static const Color timeRulerText = Color(0xFFA0A0AA);
-  static const Color snapIndicator = Color(0xFFFFB340);
-  static const Color inOutRange = Color(0x334D9CFF);
+  static const Color playhead = Color(0xFFFF453A);
+  static const Color clipVideo = Color(0xFF1A3D70);
+  static const Color clipVideoHover = Color(0xFF214E8A);
+  static const Color clipVideoSelected = Color(0xFF0A84FF);
+  static const Color clipAudio = Color(0xFF0C3621);
+  static const Color clipAudioHover = Color(0xFF0F4428);
+  static const Color clipAudioSelected = Color(0xFF30D158);
+  static const Color clipTitle = Color(0xFF3D1E5E);
+  static const Color clipThumbnailOverlay = Color(0x66000000);
+  static const Color waveformColor = Color(0xFF30D158);
+  static const Color waveformBackground = Color(0xFF061B10);
+  static const Color renderCacheBar = Color(0xFF30D158);
+  static const Color markerDefault = Color(0xFFFF9F0A);
+  static const Color trackDivider = Color(0x0FFFFFFF);
+  static const Color timeRuler = Color(0xFF141416);
+  static const Color timeRulerTick = Color(0xFF48484A);
+  static const Color timeRulerText = Color(0xFF8A8A8E);
+  static const Color snapIndicator = Color(0xFFFF9F0A);
+  static const Color inOutRange = Color(0x200A84FF);
 
   // ── Clip label colors ─────────────────────────────────────────────────────
   static const List<Color> clipLabels = [
-    Color(0xFF4D9CFF),
-    Color(0xFF34C47A),
-    Color(0xFFFFB340),
-    Color(0xFFFF5252),
-    Color(0xFF9B6DFF),
-    Color(0xFFFF6B9D),
-    Color(0xFF40D9F3),
-    Color(0xFFBBBBBB),
+    Color(0xFF0A84FF),
+    Color(0xFF30D158),
+    Color(0xFFFF9F0A),
+    Color(0xFFFF453A),
+    Color(0xFFBF5AF2),
+    Color(0xFFFF375F),
+    Color(0xFF5AC8FA),
+    Color(0xFF8A8A8E),
   ];
 
   // ── Inspector / Effects panel ─────────────────────────────────────────────
-  static const Color inspectorBackground = Color(0xFF1E1E21);
-  static const Color inspectorSection = Color(0xFF252528);
-  static const Color sliderTrack = Color(0xFF3C3C42);
-  static const Color sliderThumb = Color(0xFF4D9CFF);
-  static const Color keyframeDot = Color(0xFFFFB340);
-  static const Color keyframeDiamond = Color(0xFFFFB340);
-  static const Color transitionStripe = Color(0xFF9B6DFF);
+  static const Color inspectorBackground = Color(0xFF141416);
+  static const Color inspectorSection = Color(0xFF1C1C1F);
+  static const Color sliderTrack = Color(0xFF2C2C30);
+  static const Color sliderThumb = Color(0xFF0A84FF);
+  static const Color keyframeDot = Color(0xFFFF9F0A);
+  static const Color keyframeDiamond = Color(0xFFFF9F0A);
+  static const Color transitionStripe = Color(0xFFBF5AF2);
 
   // ── Scopes ────────────────────────────────────────────────────────────────
-  static const Color scopeBackground = Color(0xFF0A0A0C);
-  static const Color scopeGridLine = Color(0x33FFFFFF);
-  static const Color scopeRed = Color(0xFFFF4444);
-  static const Color scopeGreen = Color(0xFF44FF44);
-  static const Color scopeBlue = Color(0xFF4488FF);
-  static const Color scopeLuma = Color(0xFFFFFFFF);
+  static const Color scopeBackground = Color(0xFF080808);
+  static const Color scopeGridLine = Color(0x1AFFFFFF);
+  static const Color scopeRed = Color(0xFFFF453A);
+  static const Color scopeGreen = Color(0xFF30D158);
+  static const Color scopeBlue = Color(0xFF0A84FF);
+  static const Color scopeLuma = Color(0xFFF5F5F7);
+
+  // ── Project card gradients ────────────────────────────────────────────────
+  static const List<List<Color>> projectGradients = [
+    [Color(0xFF0A84FF), Color(0xFF5E5CE6)],
+    [Color(0xFF30D158), Color(0xFF0A84FF)],
+    [Color(0xFFFF9F0A), Color(0xFFFF375F)],
+    [Color(0xFFBF5AF2), Color(0xFF0A84FF)],
+    [Color(0xFF5AC8FA), Color(0xFF30D158)],
+    [Color(0xFFFF375F), Color(0xFFBF5AF2)],
+    [Color(0xFF30D158), Color(0xFF5AC8FA)],
+    [Color(0xFF0A84FF), Color(0xFF30D158)],
+  ];
 }
