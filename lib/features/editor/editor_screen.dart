@@ -673,7 +673,7 @@ class _MobileLayoutState extends ConsumerState<_MobileLayout>
 
 // ── Mobile portrait layout (VSCO-style) ───────────────────────────────────────
 
-enum _PortraitTool { media, adjust, tools }
+enum _PortraitTool { adjust, tools }
 
 class _MobilePortraitLayout extends ConsumerStatefulWidget {
   const _MobilePortraitLayout({required this.project});
@@ -719,6 +719,41 @@ class _MobilePortraitLayoutState extends ConsumerState<_MobilePortraitLayout>
       setState(() => _activeTool = tool);
       _panelAnim.forward();
     }
+  }
+
+  void _showMediaPanel() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.4,
+        maxChildSize: 0.92,
+        builder: (ctx, sc) => Container(
+          decoration: const BoxDecoration(
+            color: ColorTokens.backgroundPanel,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              Container(
+                margin: const EdgeInsets.symmetric(vertical: 10),
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: ColorTokens.borderStrong,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Expanded(
+                child: MediaPanel(projectId: widget.project.id),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _showFullInspector() {
@@ -783,6 +818,7 @@ class _MobilePortraitLayoutState extends ConsumerState<_MobilePortraitLayout>
           activeTool: _activeTool,
           project: widget.project,
           onToggle: _toggleTool,
+          onMediaTap: _showMediaPanel,
           onMoreTap: _showFullInspector,
         ),
       ],
@@ -791,8 +827,8 @@ class _MobilePortraitLayoutState extends ConsumerState<_MobilePortraitLayout>
 
   Widget _buildToolPanel() {
     return switch (_activeTool) {
-      _PortraitTool.media => _PortraitMediaPanel(projectId: widget.project.id),
-      _PortraitTool.adjust => _PortraitAdjustPanel(projectId: widget.project.id),
+      _PortraitTool.adjust =>
+        _PortraitAdjustPanel(projectId: widget.project.id),
       _PortraitTool.tools => _PortraitToolsPanel(project: widget.project),
       null => const SizedBox.shrink(),
     };
@@ -806,12 +842,14 @@ class _PortraitToolBar extends ConsumerWidget {
     required this.activeTool,
     required this.project,
     required this.onToggle,
+    required this.onMediaTap,
     required this.onMoreTap,
   });
 
   final _PortraitTool? activeTool;
   final ProjectModel project;
   final ValueChanged<_PortraitTool> onToggle;
+  final VoidCallback onMediaTap;
   final VoidCallback onMoreTap;
 
   @override
@@ -827,8 +865,7 @@ class _PortraitToolBar extends ConsumerWidget {
           _ToolBarBtn(
             icon: Icons.perm_media_outlined,
             label: 'Media',
-            isActive: activeTool == _PortraitTool.media,
-            onTap: () => onToggle(_PortraitTool.media),
+            onTap: onMediaTap,
           ),
           _ToolBarBtn(
             icon: Icons.tune,
@@ -907,22 +944,6 @@ class _ToolBarBtn extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-// ── Portrait media panel ──────────────────────────────────────────────────────
-
-class _PortraitMediaPanel extends StatelessWidget {
-  const _PortraitMediaPanel({required this.projectId});
-
-  final String projectId;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: ColorTokens.backgroundPanel,
-      child: MediaPanel(projectId: projectId),
     );
   }
 }
