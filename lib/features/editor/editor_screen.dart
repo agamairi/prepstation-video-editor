@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fluxedit/app/theme/color_tokens.dart';
 import 'package:fluxedit/app/theme/typography.dart';
+import 'package:fluxedit/core/constants/app_constants.dart';
 import 'package:fluxedit/core/project/project_model.dart';
 import 'package:fluxedit/core/project/project_repository.dart';
 import 'package:fluxedit/core/timeline/timeline_controller.dart';
@@ -29,12 +32,16 @@ class EditorScreen extends ConsumerStatefulWidget {
   ConsumerState<EditorScreen> createState() => _EditorScreenState();
 }
 
-class _EditorScreenState extends ConsumerState<EditorScreen> {
+class _EditorScreenState extends ConsumerState<EditorScreen>
+    with WidgetsBindingObserver {
   final _focusNode = FocusNode();
+  Timer? _autoSaveTimer;
+  bool _savedIndicator = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final controller = ref.read(timelineControllerProvider);
       controller.loadProject(widget.projectId).then((_) {
@@ -42,10 +49,40 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
       });
       _focusNode.requestFocus();
     });
+
+    // Periodic auto-save: update project dateModified every 30 s.
+    _autoSaveTimer = Timer.periodic(AppConstants.autoSaveInterval, (_) {
+      _saveProjectMeta();
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached ||
+        state == AppLifecycleState.inactive) {
+      _saveProjectMeta();
+    }
+  }
+
+  Future<void> _saveProjectMeta() async {
+    final project =
+        ref.read(_projectProvider(widget.projectId)).value;
+    if (project == null || !mounted) return;
+    await ref.read(projectRepositoryProvider).saveProject(
+          project.copyWith(dateModified: DateTime.now()),
+        );
+    if (!mounted) return;
+    setState(() => _savedIndicator = true);
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) setState(() => _savedIndicator = false);
+    });
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _autoSaveTimer?.cancel();
     _focusNode.dispose();
     super.dispose();
   }
@@ -165,7 +202,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
           ? Focus(
               focusNode: _focusNode,
               onKeyEvent: _handleKey,
-              child: _EditorLayout(project: project),
+              child: _EditorLayout(project: project, savedIndicator: _savedIndicator),
             )
           : const Scaffold(
               body: Center(child: Text('Project not found')),
@@ -181,9 +218,10 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
 }
 
 class _EditorLayout extends ConsumerWidget {
-  const _EditorLayout({required this.project});
+  const _EditorLayout({required this.project, required this.savedIndicator});
 
   final ProjectModel project;
+  final bool savedIndicator;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -191,7 +229,7 @@ class _EditorLayout extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: ColorTokens.backgroundDeep,
-      appBar: _EditorAppBar(project: project),
+      appBar: _EditorAppBar(project: project, savedIndicator: savedIndicator),
       body: isDesktop
           ? _DesktopLayout(project: project)
           : _MobileLayout(project: project),
@@ -200,9 +238,10 @@ class _EditorLayout extends ConsumerWidget {
 }
 
 class _EditorAppBar extends ConsumerWidget implements PreferredSizeWidget {
-  const _EditorAppBar({required this.project});
+  const _EditorAppBar({required this.project, required this.savedIndicator});
 
   final ProjectModel project;
+  final bool savedIndicator;
 
   @override
   Size get preferredSize => const Size.fromHeight(44);
@@ -222,6 +261,15 @@ class _EditorAppBar extends ConsumerWidget implements PreferredSizeWidget {
             playhead: timelineState.playhead,
             frameRate: project.composition.frameRate,
           ),
+          if (savedIndicator) ...[
+            const SizedBox(width: 10),
+            const Icon(Icons.check_circle, size: 14, color: Color(0xFF4CAF50)),
+            const SizedBox(width: 4),
+            const Text(
+              'Saved',
+              style: TextStyle(fontSize: 11, color: Color(0xFF4CAF50)),
+            ),
+          ],
         ],
       ),
       actions: [

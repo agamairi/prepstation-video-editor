@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fluxedit/core/audio/waveform_generator.dart';
 import 'package:fluxedit/core/constants/app_constants.dart';
+import 'package:fluxedit/core/constants/media_constants.dart';
 import 'package:fluxedit/core/effects/effect_model.dart';
 import 'package:fluxedit/core/effects/effect_registry.dart';
 import 'package:fluxedit/core/effects/effect_type.dart';
@@ -129,14 +130,28 @@ class TimelineController {
     Duration? startTime,
   }) async {
     final actualStart = startTime ?? _nextAvailableTime(trackId);
-    final clipDuration = asset.duration;
-    if (clipDuration == Duration.zero) return null;
+
+    // Still images report 0 duration from FFprobe — use a sensible default.
+    var clipDuration = asset.duration;
+    if (clipDuration == Duration.zero) {
+      clipDuration = const Duration(seconds: 5);
+    }
+
+    final isImage = _isImagePath(asset.filePath);
+    final ClipType type;
+    if (isImage) {
+      type = ClipType.image;
+    } else if (asset.hasVideo) {
+      type = ClipType.video;
+    } else {
+      type = ClipType.audio;
+    }
 
     final clip = ClipModel(
       id: 'clip_${_uuid.v4()}',
       trackId: trackId,
       mediaId: asset.id,
-      type: asset.hasVideo ? ClipType.video : ClipType.audio,
+      type: type,
       startOnTimeline: actualStart,
       endOnTimeline: actualStart + clipDuration,
       mediaInPoint: Duration.zero,
@@ -457,6 +472,189 @@ class TimelineController {
         staticValue,
       );
 
+  /// Creates a title-text clip on [trackId]. A synthetic media asset is
+  /// created to satisfy the FK constraint (width=0 → hasVideo=false).
+  Future<ClipModel> addTitleClip({
+    required String projectId,
+    required String trackId,
+    String text = 'Title',
+    Duration duration = const Duration(seconds: 5),
+    Duration? startTime,
+  }) async {
+    final assetId = 'asset_${_uuid.v4()}';
+    final now = DateTime.now();
+    final asset = MediaAsset(
+      id: assetId,
+      projectId: projectId,
+      filePath: '__synthetic__',
+      name: 'Title',
+      type: 'synthetic_title',
+      duration: duration,
+      width: 0,
+      height: 0,
+      frameRate: 0,
+      sampleRate: 0,
+      channels: 0,
+      videoCodec: '',
+      audioCodec: '',
+      bitRate: 0,
+      fileSize: 0,
+      colorSpace: '',
+      dateAdded: now,
+    );
+    await repository.saveMediaAsset(asset);
+
+    final actualStart = startTime ?? _nextAvailableTime(trackId);
+    final clip = ClipModel(
+      id: 'clip_${_uuid.v4()}',
+      trackId: trackId,
+      mediaId: assetId,
+      type: ClipType.title,
+      startOnTimeline: actualStart,
+      endOnTimeline: actualStart + duration,
+      mediaInPoint: Duration.zero,
+      mediaOutPoint: duration,
+      name: text,
+      titleText: text,
+    );
+    await execute(AddClipCommand(clip));
+    return clip;
+  }
+
+  /// Creates a solid-color card clip on [trackId].
+  Future<ClipModel> addColorCardClip({
+    required String projectId,
+    required String trackId,
+    int color = AppConstants.defaultCardColor,
+    Duration duration = const Duration(seconds: 5),
+    Duration? startTime,
+  }) async {
+    final assetId = 'asset_${_uuid.v4()}';
+    final now = DateTime.now();
+    final asset = MediaAsset(
+      id: assetId,
+      projectId: projectId,
+      filePath: '__synthetic__',
+      name: 'Color Card',
+      type: 'synthetic_colorcard',
+      duration: duration,
+      width: 0,
+      height: 0,
+      frameRate: 0,
+      sampleRate: 0,
+      channels: 0,
+      videoCodec: '',
+      audioCodec: '',
+      bitRate: 0,
+      fileSize: 0,
+      colorSpace: '',
+      dateAdded: now,
+    );
+    await repository.saveMediaAsset(asset);
+
+    final actualStart = startTime ?? _nextAvailableTime(trackId);
+    final clip = ClipModel(
+      id: 'clip_${_uuid.v4()}',
+      trackId: trackId,
+      mediaId: assetId,
+      type: ClipType.colorCard,
+      startOnTimeline: actualStart,
+      endOnTimeline: actualStart + duration,
+      mediaInPoint: Duration.zero,
+      mediaOutPoint: duration,
+      name: 'Color Card',
+      cardColorValue: color,
+    );
+    await execute(AddClipCommand(clip));
+    return clip;
+  }
+
+  // ── Title / color-card mutations (all undoable) ───────────────────────────
+
+  Future<void> updateTitleText(String clipId, String text) async {
+    final clip = _findClip(clipId);
+    if (clip == null) return;
+    await execute(UpdateClipCommand(
+      before: clip,
+      after: clip.copyWith(titleText: text, name: text),
+      description: 'Edit Title Text',
+    ));
+  }
+
+  Future<void> updateTitleFontSize(String clipId, double size) async {
+    final clip = _findClip(clipId);
+    if (clip == null) return;
+    await execute(UpdateClipCommand(
+      before: clip,
+      after: clip.copyWith(titleFontSize: size.clamp(8.0, 200.0)),
+      description: 'Title Font Size',
+    ));
+  }
+
+  Future<void> updateTitleColor(String clipId, int colorValue) async {
+    final clip = _findClip(clipId);
+    if (clip == null) return;
+    await execute(UpdateClipCommand(
+      before: clip,
+      after: clip.copyWith(titleColorValue: colorValue),
+      description: 'Title Color',
+    ));
+  }
+
+  Future<void> updateTitleAlignment(String clipId, String alignment) async {
+    final clip = _findClip(clipId);
+    if (clip == null) return;
+    await execute(UpdateClipCommand(
+      before: clip,
+      after: clip.copyWith(titleAlignment: alignment),
+      description: 'Title Alignment',
+    ));
+  }
+
+  Future<void> updateCardColor(String clipId, int colorValue) async {
+    final clip = _findClip(clipId);
+    if (clip == null) return;
+    await execute(UpdateClipCommand(
+      before: clip,
+      after: clip.copyWith(cardColorValue: colorValue),
+      description: 'Card Color',
+    ));
+  }
+
+  Future<void> updateFontFamily(String clipId, String fontFamily) async {
+    final clip = _findClip(clipId);
+    if (clip == null) return;
+    await execute(UpdateClipCommand(
+      before: clip,
+      after: clip.copyWith(fontFamily: fontFamily),
+      description: 'Font Family',
+    ));
+  }
+
+  Future<void> updateTextAnimation(
+    String clipId,
+    TextAnimationType animation,
+  ) async {
+    final clip = _findClip(clipId);
+    if (clip == null) return;
+    await execute(UpdateClipCommand(
+      before: clip,
+      after: clip.copyWith(textAnimationType: animation),
+      description: 'Text Animation',
+    ));
+  }
+
+  Future<void> updateAnimationDuration(String clipId, int durationMs) async {
+    final clip = _findClip(clipId);
+    if (clip == null) return;
+    await execute(UpdateClipCommand(
+      before: clip,
+      after: clip.copyWith(
+          textAnimationDurationMs: durationMs.clamp(100, 5000)),
+      description: 'Animation Duration',
+    ));
+  }
+
   Future<void> duplicateClip(String clipId) async {
     final clip = _findClip(clipId);
     if (clip == null) return;
@@ -504,6 +702,11 @@ class TimelineController {
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────
+
+  static bool _isImagePath(String filePath) {
+    final ext = filePath.split('.').last.toLowerCase();
+    return MediaConstants.imageExtensions.contains(ext);
+  }
 
   Duration _nextAvailableTime(String trackId) {
     final clips = state.clipsForTrack(trackId);
