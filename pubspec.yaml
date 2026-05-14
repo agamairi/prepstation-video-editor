@@ -28,10 +28,6 @@ dependencies:
   drift_flutter: ^0.2.4
   sqlite3_flutter_libs: ^0.5.4+1
 
-  # Preferences / metadata cache
-  hive_ce: ^2.10.1
-  hive_ce_flutter: ^2.2.0
-
   # File / media access
   path_provider: ^2.1.5
   file_picker: ^8.3.7
@@ -56,9 +52,6 @@ dependencies:
   # UI extras
   cupertino_icons: ^1.0.8
   google_fonts: ^8.1.0
-
-dependency_overrides:
-  path_provider_android: 2.2.12
 
 dev_dependencies:
   flutter_test:
