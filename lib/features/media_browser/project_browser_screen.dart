@@ -321,97 +321,94 @@ class _ProjectCardState extends State<_ProjectCard> {
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
       cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: () => context.push('/editor/${project.id}'),
-        onSecondaryTapDown: (details) => _showContextMenu(
-          context,
-          details.globalPosition,
-        ),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          curve: Curves.easeOut,
-          transform: Matrix4.identity()
-            ..scale(_hovered ? 1.02 : 1.0),
-          transformAlignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: ColorTokens.backgroundPanel,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: _hovered
-                  ? ColorTokens.borderDefault
-                  : ColorTokens.borderSubtle,
-            ),
-            boxShadow: _hovered
-                ? [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.3),
-                      blurRadius: 20,
-                      offset: const Offset(0, 8),
-                    ),
-                  ]
-                : [],
+      child: AnimatedScale(
+        scale: _hovered ? 1.02 : 1.0,
+        duration: const Duration(milliseconds: 150),
+        curve: Curves.easeOut,
+        child: GestureDetector(
+          onTap: () => context.push('/editor/${project.id}'),
+          onSecondaryTapDown: (details) => _showContextMenu(
+            context,
+            details.globalPosition,
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Gradient thumbnail area
-              Expanded(
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: gradient,
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(13),
-                    ),
-                  ),
-                  child: Center(
-                    child: Icon(
-                      Icons.play_circle_outline,
-                      color: Colors.white.withValues(alpha: 0.5),
-                      size: 36,
-                    ),
-                  ),
-                ),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            curve: Curves.easeOut,
+            decoration: BoxDecoration(
+              color: ColorTokens.backgroundPanel,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: _hovered
+                    ? ColorTokens.borderDefault
+                    : ColorTokens.borderSubtle,
               ),
-              // Info area
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 12,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      project.name,
-                      style: AppTypography.headlineSmall,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+              boxShadow: _hovered
+                  ? [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.3),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
+                      ),
+                    ]
+                  : [],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: gradient,
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(13),
+                      ),
                     ),
-                    const SizedBox(height: 3),
-                    Row(
-                      children: [
-                        Text(
-                          '${project.composition.width}×'
-                          '${project.composition.height}',
-                          style: AppTypography.labelSmall,
-                        ),
-                        const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 5),
-                          child: Text(
-                            '·',
+                    child: Center(
+                      child: Icon(
+                        Icons.play_circle_outline,
+                        color: Colors.white.withValues(alpha: 0.5),
+                        size: 36,
+                      ),
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        project.name,
+                        style: AppTypography.headlineSmall,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 3),
+                      Row(
+                        children: [
+                          Text(
+                            '${project.composition.width}×'
+                            '${project.composition.height}',
                             style: AppTypography.labelSmall,
                           ),
-                        ),
-                        Text(
-                          _relativeDate(project.dateModified),
-                          style: AppTypography.labelSmall,
-                        ),
-                      ],
-                    ),
-                  ],
+                          const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 5),
+                            child: Text('·', style: AppTypography.labelSmall),
+                          ),
+                          Text(
+                            _relativeDate(project.dateModified),
+                            style: AppTypography.labelSmall,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
