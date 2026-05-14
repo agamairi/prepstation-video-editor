@@ -72,6 +72,7 @@ class _PortraitTimelineStripState
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(timelineStateProvider);
+    final hasClips = state.clips.isNotEmpty;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -83,21 +84,43 @@ class _PortraitTimelineStripState
         return Container(
           height: AppConstants.portraitStripHeight,
           color: ColorTokens.backgroundBase,
-          child: GestureDetector(
-            onTapDown: (d) => _handleTapDown(d, state, pxPerSec),
-            child: SingleChildScrollView(
-              controller: _scroll,
-              scrollDirection: Axis.horizontal,
-              physics: const BouncingScrollPhysics(),
-              child: SizedBox(
-                width: canvasW,
-                height: AppConstants.portraitStripHeight,
-                child: CustomPaint(
-                  painter: _StripPainter(state: state, pxPerSec: pxPerSec),
+          child: hasClips
+              ? GestureDetector(
+                  onTapDown: (d) => _handleTapDown(d, state, pxPerSec),
+                  child: SingleChildScrollView(
+                    controller: _scroll,
+                    scrollDirection: Axis.horizontal,
+                    physics: const BouncingScrollPhysics(),
+                    child: SizedBox(
+                      width: canvasW,
+                      height: AppConstants.portraitStripHeight,
+                      child: CustomPaint(
+                        painter:
+                            _StripPainter(state: state, pxPerSec: pxPerSec),
+                      ),
+                    ),
+                  ),
+                )
+              : const Center(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.movie_creation_outlined,
+                        size: 16,
+                        color: ColorTokens.textDisabled,
+                      ),
+                      SizedBox(width: 8),
+                      Text(
+                        'Tap Media to import and add clips',
+                        style: TextStyle(
+                          color: ColorTokens.textDisabled,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ),
-          ),
         );
       },
     );

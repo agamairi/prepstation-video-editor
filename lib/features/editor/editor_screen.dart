@@ -809,7 +809,7 @@ class _MobilePortraitLayoutState extends ConsumerState<_MobilePortraitLayout>
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => DraggableScrollableSheet(
+      builder: (sheetContext) => DraggableScrollableSheet(
         initialChildSize: 0.6,
         minChildSize: 0.4,
         maxChildSize: 0.92,
@@ -830,7 +830,14 @@ class _MobilePortraitLayoutState extends ConsumerState<_MobilePortraitLayout>
                 ),
               ),
               Expanded(
-                child: MediaPanel(projectId: widget.project.id),
+                child: MediaPanel(
+                  projectId: widget.project.id,
+                  onClipAdded: () {
+                    if (Navigator.of(sheetContext).canPop()) {
+                      Navigator.of(sheetContext).pop();
+                    }
+                  },
+                ),
               ),
             ],
           ),

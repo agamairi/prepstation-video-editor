@@ -209,6 +209,86 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
     return result;
   }
 
+  Widget _applyClipTransforms(Widget child, ClipModel clip) {
+    Widget result = child;
+
+    // Crop: clip the visible area by the fractional insets
+    final hasCrop = clip.cropLeft > 0 ||
+        clip.cropRight > 0 ||
+        clip.cropTop > 0 ||
+        clip.cropBottom > 0;
+    if (hasCrop) {
+      final visibleW = 1.0 - clip.cropLeft - clip.cropRight;
+      final visibleH = 1.0 - clip.cropTop - clip.cropBottom;
+      if (visibleW > 0 && visibleH > 0) {
+        result = ClipRect(
+          child: Align(
+            alignment: Alignment(
+              -1.0 + 2.0 * (clip.cropLeft / (1.0 - visibleW)).clamp(0.0, 1.0),
+              -1.0 + 2.0 * (clip.cropTop / (1.0 - visibleH)).clamp(0.0, 1.0),
+            ),
+            widthFactor: visibleW,
+            heightFactor: visibleH,
+            child: result,
+          ),
+        );
+      }
+    }
+
+    // Flip
+    if (clip.flipHorizontal || clip.flipVertical) {
+      result = Transform(
+        alignment: Alignment.center,
+        transform: Matrix4.diagonal3Values(
+          clip.flipHorizontal ? -1.0 : 1.0,
+          clip.flipVertical ? -1.0 : 1.0,
+          1.0,
+        ),
+        child: result,
+      );
+    }
+
+    // Scale
+    if (clip.scaleX != 1.0 || clip.scaleY != 1.0) {
+      result = Transform(
+        alignment: Alignment(
+          -1.0 + 2.0 * clip.anchorX,
+          -1.0 + 2.0 * clip.anchorY,
+        ),
+        transform: Matrix4.diagonal3Values(clip.scaleX, clip.scaleY, 1.0),
+        child: result,
+      );
+    }
+
+    // Rotation (in degrees)
+    if (clip.rotation != 0.0) {
+      final radians = clip.rotation * math.pi / 180.0;
+      result = Transform.rotate(
+        angle: radians,
+        alignment: Alignment(
+          -1.0 + 2.0 * clip.anchorX,
+          -1.0 + 2.0 * clip.anchorY,
+        ),
+        child: result,
+      );
+    }
+
+    // Position offset (in pixels)
+    if (clip.posX != 0.0 || clip.posY != 0.0) {
+      result = Transform.translate(
+        offset: Offset(clip.posX, clip.posY),
+        child: result,
+      );
+    }
+
+    // Opacity
+    if (clip.opacity < 1.0) {
+      result = Opacity(opacity: clip.opacity.clamp(0.0, 1.0), child: result);
+    }
+
+    return result;
+  }
+
   List<double> _buildColorMatrix(Map<String, double> params) {
     final brightness = (params['brightness'] ?? 0.0).clamp(-1.0, 1.0);
     final contrast = (params['contrast'] ?? 1.0).clamp(0.0, 3.0);
@@ -360,6 +440,10 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
     }
 
     contentWidget = _applyEffectFilters(contentWidget, effects);
+
+    if (activeClip != null) {
+      contentWidget = _applyClipTransforms(contentWidget, activeClip);
+    }
 
     return Container(
       color: Colors.black,

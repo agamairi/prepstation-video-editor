@@ -9,6 +9,7 @@ import 'package:fluxedit/core/constants/media_constants.dart';
 import 'package:fluxedit/core/project/project_model.dart';
 import 'package:fluxedit/core/project/project_repository.dart';
 import 'package:fluxedit/core/timeline/timeline_controller.dart';
+import 'package:fluxedit/core/timeline/track_model.dart';
 
 final _mediaAssetsProvider = FutureProvider.family<List<MediaAsset>, String>(
   (ref, projectId) =>
@@ -16,9 +17,10 @@ final _mediaAssetsProvider = FutureProvider.family<List<MediaAsset>, String>(
 );
 
 class MediaPanel extends ConsumerWidget {
-  const MediaPanel({super.key, required this.projectId});
+  const MediaPanel({super.key, required this.projectId, this.onClipAdded});
 
   final String projectId;
+  final VoidCallback? onClipAdded;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -34,7 +36,11 @@ class MediaPanel extends ConsumerWidget {
           child: assetsAsync.when(
             data: (assets) => assets.isEmpty
                 ? _EmptyMediaState(onImport: () => _importMedia(context, ref))
-                : _MediaGrid(assets: assets, projectId: projectId),
+                : _MediaGrid(
+                    assets: assets,
+                    projectId: projectId,
+                    onClipAdded: onClipAdded,
+                  ),
             loading: () =>
                 const Center(child: CircularProgressIndicator()),
             error: (e, _) => Center(
@@ -164,10 +170,15 @@ class _EmptyMediaState extends StatelessWidget {
 }
 
 class _MediaGrid extends ConsumerWidget {
-  const _MediaGrid({required this.assets, required this.projectId});
+  const _MediaGrid({
+    required this.assets,
+    required this.projectId,
+    this.onClipAdded,
+  });
 
   final List<MediaAsset> assets;
   final String projectId;
+  final VoidCallback? onClipAdded;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -183,16 +194,22 @@ class _MediaGrid extends ConsumerWidget {
       itemBuilder: (context, i) => _MediaTile(
         asset: assets[i],
         projectId: projectId,
+        onClipAdded: onClipAdded,
       ),
     );
   }
 }
 
 class _MediaTile extends ConsumerWidget {
-  const _MediaTile({required this.asset, required this.projectId});
+  const _MediaTile({
+    required this.asset,
+    required this.projectId,
+    this.onClipAdded,
+  });
 
   final MediaAsset asset;
   final String projectId;
+  final VoidCallback? onClipAdded;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -283,13 +300,26 @@ class _MediaTile extends ConsumerWidget {
   Future<void> _addToTimeline(WidgetRef ref, BuildContext context) async {
     final controller = ref.read(timelineControllerProvider);
     final state = ref.read(timelineStateProvider);
+
+    String trackId;
     final videoTracks = state.videoTracks;
-    if (videoTracks.isEmpty) return;
+    if (videoTracks.isNotEmpty) {
+      trackId = videoTracks.first.id;
+    } else {
+      final track = await controller.addTrack(
+        projectId: projectId,
+        type: TrackType.video,
+        name: 'V1',
+      );
+      trackId = track.id;
+    }
 
     await controller.addClipFromAsset(
-      trackId: videoTracks.first.id,
+      trackId: trackId,
       asset: asset,
     );
+
+    onClipAdded?.call();
 
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
