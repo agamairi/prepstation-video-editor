@@ -89,7 +89,7 @@ class _PanelHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 36,
+      height: 38,
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: const BoxDecoration(
         color: ColorTokens.backgroundPanel,
@@ -99,14 +99,33 @@ class _PanelHeader extends StatelessWidget {
       ),
       child: Row(
         children: [
+          const Icon(
+            Icons.perm_media_outlined,
+            size: 13,
+            color: ColorTokens.textDisabled,
+          ),
+          const SizedBox(width: 6),
           Text(title, style: AppTypography.labelLarge),
           const Spacer(),
-          IconButton(
-            icon: const Icon(Icons.add, size: 16),
-            tooltip: 'Import Media',
-            onPressed: onImport,
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+          Tooltip(
+            message: 'Import Media',
+            child: GestureDetector(
+              onTap: onImport,
+              child: Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: ColorTokens.backgroundSurface,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: ColorTokens.borderDefault),
+                ),
+                child: const Icon(
+                  Icons.add,
+                  size: 14,
+                  color: ColorTokens.textSecondary,
+                ),
+              ),
+            ),
           ),
         ],
       ),

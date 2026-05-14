@@ -49,7 +49,7 @@ class _PanelHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 36,
+      height: 38,
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: const BoxDecoration(
         color: ColorTokens.backgroundPanel,
@@ -57,9 +57,12 @@ class _PanelHeader extends StatelessWidget {
           bottom: BorderSide(color: ColorTokens.borderSubtle),
         ),
       ),
-      child: const Align(
-        alignment: Alignment.centerLeft,
-        child: Text('Inspector', style: AppTypography.labelLarge),
+      child: const Row(
+        children: [
+          Icon(Icons.tune, size: 13, color: ColorTokens.textDisabled),
+          SizedBox(width: 6),
+          Text('Inspector', style: AppTypography.labelLarge),
+        ],
       ),
     );
   }
@@ -71,9 +74,13 @@ class _NoSelectionPlaceholder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Center(
-      child: Text(
-        'Select a clip to inspect',
-        style: AppTypography.bodySmall,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.touch_app_outlined, size: 28, color: ColorTokens.textDisabled),
+          SizedBox(height: 10),
+          Text('Select a clip to edit', style: AppTypography.bodySmall),
+        ],
       ),
     );
   }

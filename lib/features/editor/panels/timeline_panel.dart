@@ -65,10 +65,11 @@ class _TimelineToolbar extends ConsumerWidget {
     final history = ref.watch(historyManagerProvider);
 
     return Container(
-      height: 36,
+      height: 38,
       padding: const EdgeInsets.symmetric(horizontal: 8),
       decoration: const BoxDecoration(
         color: ColorTokens.backgroundPanel,
+        border: Border(bottom: BorderSide(color: ColorTokens.borderSubtle)),
       ),
       child: Row(
         children: [
@@ -271,15 +272,15 @@ class _ToolButton extends StatelessWidget {
       message: tooltip,
       child: InkWell(
         onTap: onPressed,
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(6),
         child: Container(
           width: 28,
           height: 28,
           decoration: BoxDecoration(
             color: isActive
-                ? ColorTokens.accentPrimary.withValues(alpha: 0.2)
+                ? ColorTokens.accentPrimary.withValues(alpha: 0.15)
                 : Colors.transparent,
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(6),
             border: isActive
                 ? Border.all(color: ColorTokens.accentPrimary, width: 1)
                 : null,
