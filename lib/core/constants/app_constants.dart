@@ -94,6 +94,21 @@ abstract final class AppConstants {
   // Preview buffer target
   static const Duration previewBufferTarget = Duration(seconds: 5);
 
+  // Portrait mode UI
+  static const double portraitStripHeight = 80.0;
+  static const double portraitStripRulerHeight = 14.0;
+  static const double portraitStripTrackHeight = 16.0;
+  static const double portraitStripTrackGap = 2.0;
+  static const double portraitStripDefaultPxPerSec = 80.0;
+  static const double portraitStripMinPxPerSec = 20.0;
+  static const double portraitStripMaxPxPerSec = 400.0;
+  static const double portraitToolBarHeight = 56.0;
+  static const double portraitAdjustPanelHeight = 180.0;
+
+  // Layout breakpoints
+  static const double desktopBreakpoint = 900.0;
+  static const double portraitBreakpointWidth = 600.0;
+
   // Platform detection helpers
   static bool get isMacOS => defaultTargetPlatform == TargetPlatform.macOS;
   static bool get isIOS => defaultTargetPlatform == TargetPlatform.iOS;
