@@ -30,7 +30,7 @@ final timelineStateProvider = ChangeNotifierProvider.autoDispose<TimelineState>(
 
 final timelineControllerProvider =
     Provider.autoDispose<TimelineController>((ref) {
-  return TimelineController(
+  final controller = TimelineController(
     state: ref.watch(timelineStateProvider.notifier),
     repository: ref.watch(projectRepositoryProvider),
     ffmpegEngine: ref.watch(ffmpegEngineProvider),
@@ -39,6 +39,8 @@ final timelineControllerProvider =
     history: ref.watch(historyManagerProvider.notifier),
     keyframeRepo: ref.watch(keyframeRepositoryProvider),
   );
+  ref.onDispose(controller.dispose);
+  return controller;
 });
 
 class TimelineController {
@@ -62,17 +64,25 @@ class TimelineController {
 
   static const _uuid = Uuid();
 
+  bool _active = true;
+
+  void dispose() => _active = false;
+
   Future<void> loadProject(String projectId) async {
     final tracks = await repository.getTracks(projectId);
+    if (!_active) return;
     final clips = await repository.getClipsForProject(projectId);
+    if (!_active) return;
     state.setTracks(tracks);
     state.setClips(clips);
     for (final clip in clips) {
       final effects = await repository.getEffectsForClip(clip.id);
+      if (!_active) return;
       if (effects.isNotEmpty) {
         state.setEffectsForClip(clip.id, effects);
       }
       final keyframes = await keyframeRepo.getKeyframesForClip(clip.id);
+      if (!_active) return;
       if (keyframes.isNotEmpty) {
         final byParam = <String, List<KeyframeModel>>{};
         for (final kf in keyframes) {

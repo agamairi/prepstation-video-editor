@@ -226,7 +226,11 @@ class _EditorLayout extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: ColorTokens.backgroundDeep,
-      appBar: _EditorAppBar(project: project, savedIndicator: savedIndicator),
+      appBar: _EditorAppBar(
+        project: project,
+        savedIndicator: savedIndicator,
+        isPortrait: isPortrait,
+      ),
       body: isDesktop
           ? _DesktopLayout(project: project)
           : isPortrait
@@ -239,10 +243,15 @@ class _EditorLayout extends ConsumerWidget {
 // ── App bar ───────────────────────────────────────────────────────────────────
 
 class _EditorAppBar extends ConsumerWidget implements PreferredSizeWidget {
-  const _EditorAppBar({required this.project, required this.savedIndicator});
+  const _EditorAppBar({
+    required this.project,
+    required this.savedIndicator,
+    this.isPortrait = false,
+  });
 
   final ProjectModel project;
   final bool savedIndicator;
+  final bool isPortrait;
 
   @override
   Size get preferredSize => const Size.fromHeight(48);
@@ -251,14 +260,36 @@ class _EditorAppBar extends ConsumerWidget implements PreferredSizeWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final timelineState = ref.watch(timelineStateProvider);
 
+    const decoration = BoxDecoration(
+      color: ColorTokens.backgroundPanel,
+      border: Border(bottom: BorderSide(color: ColorTokens.borderSubtle)),
+    );
+
+    // Portrait: strip AppBar down to name + export only; transport lives in body
+    if (isPortrait) {
+      return Container(
+        height: 48,
+        decoration: decoration,
+        child: Row(
+          children: [
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                project.name,
+                style: AppTypography.headlineSmall,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            _ExportButton(project: project),
+            const SizedBox(width: 12),
+          ],
+        ),
+      );
+    }
+
     return Container(
       height: 48,
-      decoration: const BoxDecoration(
-        color: ColorTokens.backgroundPanel,
-        border: Border(
-          bottom: BorderSide(color: ColorTokens.borderSubtle),
-        ),
-      ),
+      decoration: decoration,
       child: Row(
         children: [
           // Left zone — project name + save state
@@ -800,6 +831,8 @@ class _MobilePortraitLayoutState extends ConsumerState<_MobilePortraitLayout>
           flex: 5,
           child: PreviewPanel(project: widget.project),
         ),
+        // Transport bar — play/pause, skip, timecode
+        _PortraitTransportBar(project: widget.project),
         // Timeline strip — compact horizontal clip view
         const Divider(height: 1),
         const PortraitTimelineStrip(),
@@ -832,6 +865,52 @@ class _MobilePortraitLayoutState extends ConsumerState<_MobilePortraitLayout>
       _PortraitTool.tools => _PortraitToolsPanel(project: widget.project),
       null => const SizedBox.shrink(),
     };
+  }
+}
+
+// ── Portrait transport bar ────────────────────────────────────────────────────
+
+class _PortraitTransportBar extends ConsumerWidget {
+  const _PortraitTransportBar({required this.project});
+
+  final ProjectModel project;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(timelineStateProvider);
+
+    return Container(
+      height: 44,
+      color: ColorTokens.backgroundPanel,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          _TransportBtn(
+            icon: Icons.skip_previous_rounded,
+            tooltip: 'Go to Start',
+            onPressed: () => state.setPlayhead(Duration.zero),
+          ),
+          _TransportBtn(
+            icon: state.isPlaying
+                ? Icons.pause_rounded
+                : Icons.play_arrow_rounded,
+            tooltip: state.isPlaying ? 'Pause' : 'Play',
+            size: 26,
+            onPressed: () => state.setPlaying(!state.isPlaying),
+          ),
+          _TransportBtn(
+            icon: Icons.skip_next_rounded,
+            tooltip: 'Go to End',
+            onPressed: () => state.setPlayhead(state.duration),
+          ),
+          const Spacer(),
+          _TimecodeDisplay(
+            playhead: state.playhead,
+            frameRate: project.composition.frameRate,
+          ),
+        ],
+      ),
+    );
   }
 }
 
