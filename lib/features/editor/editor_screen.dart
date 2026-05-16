@@ -1661,9 +1661,9 @@ class _PortraitAdjustPanelState extends ConsumerState<_PortraitAdjustPanel> {
             ),
           if (cat.params.length <= 1) const SizedBox(height: 28),
           const SizedBox(height: 6),
-          // Category icons
+          // Category icons with labels
           SizedBox(
-            height: 48,
+            height: 60,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -1691,12 +1691,14 @@ class _PortraitAdjustPanelState extends ConsumerState<_PortraitAdjustPanel> {
                           child: Icon(c.icon, size: 20,
                             color: active ? ColorTokens.textPrimary : ColorTokens.textSecondary),
                         ),
-                        const SizedBox(height: 2),
-                        AnimatedContainer(
-                          duration: const Duration(milliseconds: 180),
-                          width: 5, height: 5,
-                          decoration: BoxDecoration(shape: BoxShape.circle,
-                            color: active ? const Color(0xFFFFD60A) : Colors.transparent),
+                        const SizedBox(height: 3),
+                        Text(c.label,
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w500,
+                            color: active ? const Color(0xFFFFD60A) : ColorTokens.textSecondary,
+                            letterSpacing: 0.1,
+                          ),
                         ),
                       ],
                     ),
@@ -1781,7 +1783,7 @@ class _AdjustDialState extends State<_AdjustDial>
         widget.onChangeStart();
       },
       onHorizontalDragUpdate: (d) {
-        final delta = d.primaryDelta ?? 0;
+        final delta = -(d.primaryDelta ?? 0);
         final newVal =
             (widget.value + delta / _pxPerUnit)
                 .clamp(widget.spec.min, widget.spec.max);
@@ -1789,7 +1791,7 @@ class _AdjustDialState extends State<_AdjustDial>
         widget.onChanged(newVal);
       },
       onHorizontalDragEnd: (d) {
-        final velocity = d.primaryVelocity ?? 0;
+        final velocity = -(d.primaryVelocity ?? 0);
         if (velocity.abs() > 200) {
           _momentum.value = widget.value;
           _momentum.animateWith(
