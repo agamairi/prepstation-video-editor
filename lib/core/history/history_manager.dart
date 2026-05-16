@@ -5,8 +5,7 @@ import 'package:fluxedit/core/history/edit_command.dart';
 import 'package:fluxedit/core/project/project_repository.dart';
 import 'package:fluxedit/core/timeline/timeline_state.dart';
 
-final historyManagerProvider =
-    ChangeNotifierProvider.autoDispose<HistoryManager>(
+final historyManagerProvider = ChangeNotifierProvider<HistoryManager>(
   (ref) => HistoryManager(),
 );
 

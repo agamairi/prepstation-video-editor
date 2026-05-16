@@ -50,8 +50,10 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       final controller = ref.read(timelineControllerProvider);
       controller.loadProject(widget.projectId).then((_) {
+        if (!mounted) return;
         controller.ensureDefaultTracks(widget.projectId);
       });
       _focusNode.requestFocus();
@@ -1460,6 +1462,7 @@ class _PortraitAdjustPanelState extends ConsumerState<_PortraitAdjustPanel> {
   };
 
   Future<void> _commitClipField(String clipId, String field, double v) async {
+    if (!mounted) return;
     final ctrl = ref.read(timelineControllerProvider);
     switch (field) {
       case 'opacity': await ctrl.updateClipOpacity(clipId, v);
@@ -1508,6 +1511,7 @@ class _PortraitAdjustPanelState extends ConsumerState<_PortraitAdjustPanel> {
   }
 
   Future<void> _onDialEnd(ClipModel clip, double v, _SubParam p) async {
+    if (!mounted) return;
     final state = ref.read(timelineStateProvider);
     final ctrl = ref.read(timelineControllerProvider);
     if (!p.isEffect) {
@@ -1521,6 +1525,7 @@ class _PortraitAdjustPanelState extends ConsumerState<_PortraitAdjustPanel> {
         if (isTempId) {
           state.removeEffect(effect);
           final created = await ctrl.addEffect(clip.id, p.effectType!);
+          if (!mounted) return;
           if (created != null) {
             final newParams = Map<String, double>.from(created.parameters);
             newParams[p.effectParam!] = v;
@@ -1536,7 +1541,7 @@ class _PortraitAdjustPanelState extends ConsumerState<_PortraitAdjustPanel> {
     }
     _clipAtDragStart = null;
     _effectAtDragStart = null;
-    setState(() => _liveValue = null);
+    if (mounted) setState(() => _liveValue = null);
   }
 
   void _resetToDefault(ClipModel clip, _SubParam p) {

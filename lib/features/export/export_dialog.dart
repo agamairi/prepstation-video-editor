@@ -53,7 +53,7 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
 
   Future<void> _initOutputPath() async {
     final dir = await getApplicationDocumentsDirectory();
-    final exportDir = Directory('${dir.path}/fluxedit/exports');
+    final exportDir = Directory('${dir.path}/prepstation/exports');
     await exportDir.create(recursive: true);
     setState(() {
       _outputPath =
@@ -67,14 +67,17 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
     return Dialog(
       backgroundColor: ColorTokens.backgroundPanel,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      child: SizedBox(
-        width: 560,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: 560,
+          maxHeight: MediaQuery.of(context).size.height * 0.85,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             _buildHeader(),
             const Divider(height: 1),
-            _buildBody(),
+            Flexible(child: _buildBody()),
             const Divider(height: 1),
             _buildFooter(),
           ],

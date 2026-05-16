@@ -25,12 +25,11 @@ import 'package:fluxedit/core/timeline/track_model.dart';
 import 'package:fluxedit/core/transitions/transition_type.dart';
 import 'package:uuid/uuid.dart';
 
-final timelineStateProvider = ChangeNotifierProvider.autoDispose<TimelineState>(
+final timelineStateProvider = ChangeNotifierProvider<TimelineState>(
   (ref) => TimelineState(),
 );
 
-final timelineControllerProvider =
-    Provider.autoDispose<TimelineController>((ref) {
+final timelineControllerProvider = Provider<TimelineController>((ref) {
   final controller = TimelineController(
     state: ref.watch(timelineStateProvider.notifier),
     repository: ref.watch(projectRepositoryProvider),
