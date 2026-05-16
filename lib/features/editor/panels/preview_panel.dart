@@ -192,13 +192,62 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
             ],
           );
         case EffectType.grain:
-        case EffectType.lut:
-        case EffectType.chromaKey:
+          final strength =
+              (effect.parameters['strength'] ?? 20.0).clamp(0.0, 100.0);
+          if (strength > 0) {
+            result = _GrainOverlay(strength: strength, child: result);
+          }
         case EffectType.sharpen:
-        case EffectType.denoise:
-        case EffectType.stabilize:
+          final amount =
+              (effect.parameters['amount'] ?? 1.0).clamp(0.0, 5.0);
+          if (amount > 0) {
+            final sigma = 0.5 + amount * 0.3;
+            result = Stack(
+              children: [
+                result,
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: ImageFiltered(
+                      imageFilter: ui.ImageFilter.compose(
+                        outer: ui.ImageFilter.dilate(radiusX: sigma * 0.15, radiusY: sigma * 0.15),
+                        inner: ui.ImageFilter.blur(sigmaX: sigma * 0.2, sigmaY: sigma * 0.2),
+                      ),
+                      child: Opacity(
+                        opacity: (amount / 5.0).clamp(0.0, 0.5),
+                        child: result,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          }
         case EffectType.colorWheels:
+          final matrix = _buildColorWheelsMatrix(effect.parameters);
+          result = ColorFiltered(
+            colorFilter: ColorFilter.matrix(matrix),
+            child: result,
+          );
         case EffectType.curves:
+          final matrix = _buildCurvesMatrix(effect.parameters);
+          result = ColorFiltered(
+            colorFilter: ColorFilter.matrix(matrix),
+            child: result,
+          );
+        case EffectType.denoise:
+          final strength =
+              (effect.parameters['strength'] ?? 4.0).clamp(1.0, 20.0);
+          final sigma = (strength - 1) * 0.15;
+          if (sigma > 0.1) {
+            result = ImageFiltered(
+              imageFilter:
+                  ui.ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
+              child: result,
+            );
+          }
+        case EffectType.chromaKey:
+        case EffectType.lut:
+        case EffectType.stabilize:
         case EffectType.audioEq:
         case EffectType.audioCompressor:
         case EffectType.audioNoiseReduction:
@@ -308,6 +357,53 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
       contrast * (sr + saturation), contrast * sg, contrast * sb, 0, offset,
       contrast * sr, contrast * (sg + saturation), contrast * sb, 0, offset,
       contrast * sr, contrast * sg, contrast * (sb + saturation), 0, offset,
+      0, 0, 0, 1, 0,
+    ];
+  }
+
+  List<double> _buildColorWheelsMatrix(Map<String, double> params) {
+    final lr = params['liftR'] ?? 1.0;
+    final lg = params['liftG'] ?? 1.0;
+    final lb = params['liftB'] ?? 1.0;
+    final gr = params['gammaR'] ?? 1.0;
+    final gg = params['gammaG'] ?? 1.0;
+    final gb = params['gammaB'] ?? 1.0;
+    final gnr = params['gainR'] ?? 1.0;
+    final gng = params['gainG'] ?? 1.0;
+    final gnb = params['gainB'] ?? 1.0;
+    final temp = params['temperature'] ?? 0.0;
+    final tint = params['tint'] ?? 0.0;
+
+    final rScale = gnr * gr * lr + temp * 0.1;
+    final gScale = gng * gg * lg + tint * 0.05;
+    final bScale = gnb * gb * lb - temp * 0.1;
+
+    return [
+      rScale, 0, 0, 0, 0,
+      0, gScale, 0, 0, 0,
+      0, 0, bScale, 0, 0,
+      0, 0, 0, 1, 0,
+    ];
+  }
+
+  List<double> _buildCurvesMatrix(Map<String, double> params) {
+    final mg = params['masterGamma'] ?? 1.0;
+    final mb = params['masterBlack'] ?? 0.0;
+    final mw = params['masterWhite'] ?? 1.0;
+    final rg = params['redGamma'] ?? 1.0;
+    final gg = params['greenGamma'] ?? 1.0;
+    final bg = params['blueGamma'] ?? 1.0;
+
+    final range = (mw - mb).clamp(0.01, 1.0);
+    final rScale = (rg * mg * range).clamp(0.01, 4.0);
+    final gScale = (gg * mg * range).clamp(0.01, 4.0);
+    final bScale = (bg * mg * range).clamp(0.01, 4.0);
+    final offset = mb * 255.0;
+
+    return [
+      rScale, 0, 0, 0, offset,
+      0, gScale, 0, 0, offset,
+      0, 0, bScale, 0, offset,
       0, 0, 0, 1, 0,
     ];
   }
@@ -673,4 +769,56 @@ class _ZoomSelectorState extends State<_ZoomSelector> {
       onChanged: (v) => setState(() => _zoom = v ?? 'Fit'),
     );
   }
+}
+
+class _GrainOverlay extends StatelessWidget {
+  const _GrainOverlay({required this.strength, required this.child});
+
+  final double strength;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final opacity = (strength / 100.0).clamp(0.0, 0.6);
+    return Stack(
+      children: [
+        child,
+        Positioned.fill(
+          child: IgnorePointer(
+            child: CustomPaint(
+              painter: _GrainPainter(opacity: opacity),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _GrainPainter extends CustomPainter {
+  _GrainPainter({required this.opacity});
+
+  final double opacity;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rng = math.Random(42);
+    final paint = Paint();
+    const step = 3.0;
+    for (double y = 0; y < size.height; y += step) {
+      for (double x = 0; x < size.width; x += step) {
+        final lum = rng.nextDouble();
+        paint.color = Color.fromRGBO(
+          (lum * 255).round(),
+          (lum * 255).round(),
+          (lum * 255).round(),
+          opacity * (0.3 + rng.nextDouble() * 0.7),
+        );
+        canvas.drawRect(Rect.fromLTWH(x, y, step, step), paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_GrainPainter old) => old.opacity != opacity;
 }

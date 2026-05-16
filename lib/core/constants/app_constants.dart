@@ -117,7 +117,8 @@ abstract final class AppConstants {
   static const double portraitStripMinPxPerSec = 20.0;
   static const double portraitStripMaxPxPerSec = 400.0;
   static const double portraitToolBarHeight = 56.0;
-  static const double portraitAdjustPanelHeight = 180.0;
+  static const double portraitAdjustPanelHeight = 230.0;
+  static const double dialHeight = 52.0;
 
   // Layout breakpoints
   static const double desktopBreakpoint = 900.0;
