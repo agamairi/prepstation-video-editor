@@ -12,6 +12,19 @@ final thumbnailGeneratorProvider = Provider<ThumbnailGenerator>(
 );
 
 class ThumbnailGenerator {
+  /// Deletes all cached thumbnails so they are regenerated on next request.
+  Future<void> purgeCache() async {
+    try {
+      final cacheDir = await getTemporaryDirectory();
+      final thumbDir = Directory('${cacheDir.path}/thumbnails');
+      if (thumbDir.existsSync()) {
+        await thumbDir.delete(recursive: true);
+      }
+    } catch (e) {
+      debugPrint('[ThumbnailGenerator] purgeCache error: $e');
+    }
+  }
+
   /// Generates a JPEG thumbnail at [timestamp] from [sourceFilePath].
   /// Returns the path to the generated thumbnail, or null on failure.
   Future<String?> generateThumbnail({
@@ -28,7 +41,11 @@ class ThumbnailGenerator {
 
       final outputPath = '${thumbDir.path}/$assetId.jpg';
 
-      if (File(outputPath).existsSync()) return outputPath;
+      final existing = File(outputPath);
+      if (existing.existsSync() && existing.lengthSync() > 0) {
+        return outputPath;
+      }
+      if (existing.existsSync()) existing.deleteSync();
 
       final ts = _formatTimestamp(timestamp);
       final command =
