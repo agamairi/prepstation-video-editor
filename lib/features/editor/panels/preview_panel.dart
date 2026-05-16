@@ -414,29 +414,32 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
     if (_currentMediaId == mediaId) return;
     _currentMediaId = mediaId;
 
+    final old = _controller;
+    setState(() {
+      _controller = null;
+      _initialized = false;
+    });
+    await old?.dispose();
+
+    if (!mounted) return;
+
     final asset =
         await ref.read(projectRepositoryProvider).getMediaAsset(mediaId);
     if (asset == null || !mounted) return;
 
-    // Synthetic assets (title, colorCard) carry no video file.
-    if (!asset.hasVideo) {
-      await _controller?.dispose();
-      if (mounted) {
-        setState(() {
-          _controller = null;
-          _initialized = false;
-        });
-      }
-      return;
-    }
+    if (!asset.hasVideo) return;
 
-    await _controller?.dispose();
     final controller = VideoPlayerController.file(
       File(asset.proxyPath ?? asset.filePath),
     );
 
     await controller.initialize();
     if (!mounted) {
+      await controller.dispose();
+      return;
+    }
+
+    if (_currentMediaId != mediaId) {
       await controller.dispose();
       return;
     }
@@ -481,9 +484,17 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
       });
     }
 
-    // When moving to a non-video clip/gap, just pause (don't dispose).
-    if (mediaId == null && _controller != null) {
-      _controller!.pause();
+    if (mediaId == null && _currentMediaId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final old = _controller;
+        _currentMediaId = null;
+        setState(() {
+          _controller = null;
+          _initialized = false;
+        });
+        old?.dispose();
+      });
     }
 
     final effects = activeClip != null
@@ -523,7 +534,8 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
       );
     } else if (activeClip?.type == ClipType.video &&
         _initialized &&
-        _controller != null) {
+        _controller != null &&
+        _controller!.value.isInitialized) {
       final ar = _controller!.value.aspectRatio;
       contentWidget = AspectRatio(
         aspectRatio: ar > 0 ? ar : 16.0 / 9.0,

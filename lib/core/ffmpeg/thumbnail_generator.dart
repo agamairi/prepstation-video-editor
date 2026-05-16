@@ -33,8 +33,9 @@ class ThumbnailGenerator {
       final ts = _formatTimestamp(timestamp);
       final command =
           '-y -ss $ts -i "$sourceFilePath" '
-          '-vframes 1 -vf "scale=$width:$height:force_original_aspect_ratio='
-          'decrease,pad=$width:$height:(ow-iw)/2:(oh-ih)/2" '
+          '-vframes 1 -vf "setsar=1,scale=$width:$height:'
+          'force_original_aspect_ratio=decrease,'
+          'pad=$width:$height:(ow-iw)/2:(oh-ih)/2" '
           '-q:v 3 "$outputPath"';
 
       final session = await FFmpegKit.execute(command);
