@@ -74,23 +74,23 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
-    final dialogHeight = (screenHeight * 0.80).clamp(300.0, 700.0);
     return Dialog(
       backgroundColor: ColorTokens.backgroundPanel,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       child: SizedBox(
         width: 560,
-        height: dialogHeight,
-        child: Column(
-          children: [
-            _buildHeader(),
-            const Divider(height: 1),
-            Expanded(child: _buildBody()),
-            const Divider(height: 1),
-            _buildFooter(),
-          ],
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildHeader(),
+              const Divider(height: 1),
+              _buildBody(),
+              const Divider(height: 1),
+              _buildFooter(),
+            ],
+          ),
         ),
       ),
     );
@@ -187,10 +187,10 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
 
     return Padding(
       padding: const EdgeInsets.all(20),
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
             Row(
               children: [
                 const Text('Preset', style: AppTypography.headlineSmall),
@@ -266,7 +266,6 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
             const SizedBox(height: 20),
             if (_useCustom) _buildCustomSummary() else _buildPresetSummary(),
           ],
-        ),
       ),
     );
   }
@@ -586,14 +585,16 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
         return;
       }
 
-      // Resolve file paths
+      // Resolve file paths and check audio availability
       final filePaths = <String>[];
+      var hasAudio = false;
       for (final clip in clips) {
         final asset = await repository.getMediaAsset(clip.mediaId);
         if (asset == null) {
           throw Exception('Asset not found for clip ${clip.id}');
         }
         filePaths.add(asset.filePath);
+        if (asset.hasAudio) hasAudio = true;
       }
 
       setState(() => _progressText = 'Encoding...');
@@ -603,23 +604,53 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
         for (final clip in clips)
           clip.id: timeline.effectsForClip(clip.id),
       };
+
       String filtergraph;
       if (clips.length > 1) {
-        final graph = graphBuilder.buildTransitionGraph(
-            clips, effectsByClipId: effectsByClipId);
-        filtergraph = '-filter_complex "$graph" -map "[outv]" -map "[outa]" ';
-      } else {
-        final graph = graphBuilder.buildConcatGraph(
-            clips, effectsByClipId: effectsByClipId);
-        if (graph.isNotEmpty) {
+        if (hasAudio) {
+          final graph = graphBuilder.buildTransitionGraph(
+              clips, effectsByClipId: effectsByClipId);
           filtergraph = '-filter_complex "$graph" -map "[outv]" -map "[outa]" ';
+        } else {
+          final graph = graphBuilder.buildVideoOnlyGraph(
+              clips, effectsByClipId: effectsByClipId);
+          filtergraph = '-filter_complex "$graph" -map "[outv]" ';
+        }
+      } else {
+        final clip = clips.first;
+        final clipEffects = effectsByClipId[clip.id] ?? [];
+        final hasEffects = clipEffects.any((e) => e.isEnabled);
+        final hasTransform = clip.scaleX != 1.0 ||
+            clip.scaleY != 1.0 ||
+            clip.rotation != 0.0 ||
+            clip.cropLeft > 0 ||
+            clip.cropRight > 0 ||
+            clip.cropTop > 0 ||
+            clip.cropBottom > 0 ||
+            clip.flipHorizontal ||
+            clip.flipVertical ||
+            clip.isReversed ||
+            (clip.volume != 1.0 && hasAudio);
+        if (hasEffects || hasTransform) {
+          if (hasAudio) {
+            final graph = graphBuilder.buildConcatGraph(
+                clips, effectsByClipId: effectsByClipId);
+            filtergraph =
+                '-filter_complex "$graph" -map "[outv]" -map "[outa]" ';
+          } else {
+            final graph = graphBuilder.buildVideoOnlyGraph(
+                clips, effectsByClipId: effectsByClipId);
+            filtergraph = '-filter_complex "$graph" -map "[outv]" ';
+          }
         } else {
           filtergraph = '';
         }
       }
 
       final videoCodecArgs = CodecRegistry.buildVideoCodecArgs(preset);
-      final audioCodecArgs = CodecRegistry.buildAudioCodecArgs(preset);
+      final audioCodecArgs = hasAudio
+          ? CodecRegistry.buildAudioCodecArgs(preset)
+          : '-an';
 
       final command =
           '-y $inputArgs '
@@ -628,6 +659,8 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
           '$audioCodecArgs '
           '-r ${preset.frameRate} '
           '"$_outputPath"';
+
+      debugPrint('FFmpeg export command: $command');
 
       await engine.execute(
         command,
@@ -648,6 +681,7 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
         setState(() => _status = _ExportStatus.done);
       }
     } catch (e) {
+      debugPrint('Export error: $e');
       if (mounted) {
         setState(() {
           _status = _ExportStatus.failed;

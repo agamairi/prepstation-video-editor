@@ -162,6 +162,73 @@ class FiltergraphBuilder {
     return sb.toString();
   }
 
+  /// Builds a video-only filtergraph (no audio streams in inputs).
+  String buildVideoOnlyGraph(
+    List<ClipModel> clips, {
+    Map<String, List<EffectInstance>>? effectsByClipId,
+  }) {
+    if (clips.isEmpty) return '';
+
+    final effects = effectsByClipId ?? {};
+    final sb = StringBuffer();
+    var hasAnyChain = false;
+
+    for (var i = 0; i < clips.length; i++) {
+      final clip = clips[i];
+      final clipEffects = effects[clip.id] ?? [];
+      final videoEffects =
+          clipEffects.where((e) => e.isEnabled && e.type.isVideoEffect).toList();
+
+      final effectChain = EffectRegistry.buildClipEffectChain(
+        '$i:v', 'v$i', videoEffects,
+      );
+      final transformChain = _buildClipTransformChain(clip);
+
+      if (effectChain.isNotEmpty || transformChain.isNotEmpty) {
+        hasAnyChain = true;
+        if (effectChain.isNotEmpty && transformChain.isNotEmpty) {
+          sb.write('$effectChain;[v$i]$transformChain[vt$i];');
+        } else if (effectChain.isNotEmpty) {
+          sb.write('$effectChain;');
+        } else {
+          sb.write('[$i:v]$transformChain[vt$i];');
+        }
+      }
+    }
+
+    if (!hasAnyChain) {
+      final vsb = StringBuffer();
+      for (var i = 0; i < clips.length; i++) {
+        vsb.write('[$i:v]');
+      }
+      vsb.write('concat=n=${clips.length}:v=1:a=0[outv]');
+      return vsb.toString();
+    }
+
+    for (var i = 0; i < clips.length; i++) {
+      final clip = clips[i];
+      final clipEffects = effects[clip.id] ?? [];
+      final videoEffects =
+          clipEffects.where((e) => e.isEnabled && e.type.isVideoEffect).toList();
+      final effectChain = EffectRegistry.buildClipEffectChain(
+        '$i:v', 'v$i', videoEffects,
+      );
+      final transformChain = _buildClipTransformChain(clip);
+
+      if (effectChain.isNotEmpty && transformChain.isNotEmpty) {
+        sb.write('[vt$i]');
+      } else if (effectChain.isNotEmpty) {
+        sb.write('[v$i]');
+      } else if (transformChain.isNotEmpty) {
+        sb.write('[vt$i]');
+      } else {
+        sb.write('[$i:v]');
+      }
+    }
+    sb.write('concat=n=${clips.length}:v=1:a=0[outv]');
+    return sb.toString();
+  }
+
   /// Builds an input argument string for all clips.
   String buildInputArgs(List<ClipModel> clips, List<String> filePaths) {
     assert(clips.length == filePaths.length, 'clips and filePaths must match');

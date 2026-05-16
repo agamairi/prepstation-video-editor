@@ -3,10 +3,10 @@ import 'dart:convert';
 import 'dart:isolate';
 
 import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
-import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit_config.dart';
 import 'package:ffmpeg_kit_flutter_new/ffprobe_kit.dart';
 import 'package:ffmpeg_kit_flutter_new/return_code.dart';
 import 'package:ffmpeg_kit_flutter_new/statistics.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fluxedit/core/ffmpeg/probe_result.dart';
 
@@ -15,9 +15,7 @@ final ffmpegEngineProvider = Provider<FfmpegEngine>((ref) => FfmpegEngine());
 /// Singleton FFmpeg orchestrator. All heavy operations are dispatched so
 /// they do not block the UI thread, then awaited by callers.
 class FfmpegEngine {
-  FfmpegEngine() {
-    FFmpegKitConfig.disableLogs();
-  }
+  FfmpegEngine();
 
   /// Probe a media file and return structured metadata.
   Future<ProbeResult> probe(String filePath) async {
@@ -49,6 +47,7 @@ class FfmpegEngine {
           completer.complete();
         } else {
           final logs = await session.getAllLogsAsString();
+          debugPrint('FFmpeg logs:\n$logs');
           completer.completeError(FfmpegException(
             'FFmpeg failed (code ${returnCode?.getValue()}): $logs',
           ));
