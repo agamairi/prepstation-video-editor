@@ -74,20 +74,20 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final dialogHeight = (screenHeight * 0.80).clamp(300.0, 700.0);
     return Dialog(
       backgroundColor: ColorTokens.backgroundPanel,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxWidth: 560,
-          maxHeight: MediaQuery.of(context).size.height * 0.85,
-        ),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      child: SizedBox(
+        width: 560,
+        height: dialogHeight,
         child: Column(
-          mainAxisSize: MainAxisSize.min,
           children: [
             _buildHeader(),
             const Divider(height: 1),
-            Flexible(child: _buildBody()),
+            Expanded(child: _buildBody()),
             const Divider(height: 1),
             _buildFooter(),
           ],
@@ -116,62 +116,71 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
 
   Widget _buildBody() {
     if (_status == _ExportStatus.exporting) {
-      return Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            LinearProgressIndicator(
-              value: _progress > 0 ? _progress : null,
-              backgroundColor: ColorTokens.backgroundSurface,
-              valueColor: const AlwaysStoppedAnimation(
-                ColorTokens.accentPrimary,
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              LinearProgressIndicator(
+                value: _progress > 0 ? _progress : null,
+                backgroundColor: ColorTokens.backgroundSurface,
+                valueColor: const AlwaysStoppedAnimation(
+                  ColorTokens.accentPrimary,
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            Text(_progressText, style: AppTypography.bodyMedium),
-          ],
+              const SizedBox(height: 16),
+              Text(_progressText, style: AppTypography.bodyMedium),
+            ],
+          ),
         ),
       );
     }
 
     if (_status == _ExportStatus.done) {
-      return Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            const Icon(
-              Icons.check_circle,
-              color: ColorTokens.success,
-              size: 48,
-            ),
-            const SizedBox(height: 16),
-            const Text('Export Complete!', style: AppTypography.headlineMedium),
-            const SizedBox(height: 8),
-            Text(
-              _outputPath,
-              style: AppTypography.bodySmall,
-              textAlign: TextAlign.center,
-            ),
-          ],
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.check_circle,
+                color: ColorTokens.success,
+                size: 48,
+              ),
+              const SizedBox(height: 16),
+              const Text('Export Complete!', style: AppTypography.headlineMedium),
+              const SizedBox(height: 8),
+              Text(
+                _outputPath,
+                style: AppTypography.bodySmall,
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
         ),
       );
     }
 
     if (_status == _ExportStatus.failed) {
-      return Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            const Icon(
-              Icons.error_outline,
-              color: ColorTokens.error,
-              size: 48,
-            ),
-            const SizedBox(height: 16),
-            const Text('Export Failed', style: AppTypography.headlineMedium),
-            const SizedBox(height: 8),
-            Text(_errorMessage, style: AppTypography.bodySmall),
-          ],
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.error_outline,
+                color: ColorTokens.error,
+                size: 48,
+              ),
+              const SizedBox(height: 16),
+              const Text('Export Failed', style: AppTypography.headlineMedium),
+              const SizedBox(height: 8),
+              Text(_errorMessage, style: AppTypography.bodySmall),
+            ],
+          ),
         ),
       );
     }
