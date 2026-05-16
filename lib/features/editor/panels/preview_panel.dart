@@ -23,12 +23,12 @@ class _TransitionInfo {
     required this.type,
     required this.progress,
     required this.outgoingClip,
-    required this.incomingClip,
+    this.incomingClip,
   });
   final TransitionType type;
   final double progress;
   final ClipModel outgoingClip;
-  final ClipModel incomingClip;
+  final ClipModel? incomingClip;
 }
 
 final _transitionInfoProvider = Provider.autoDispose<_TransitionInfo?>((ref) {
@@ -37,7 +37,7 @@ final _transitionInfoProvider = Provider.autoDispose<_TransitionInfo?>((ref) {
 
   for (final track in state.videoTracks.reversed) {
     final trackClips = state.clipsForTrack(track.id);
-    for (var i = 0; i < trackClips.length - 1; i++) {
+    for (var i = 0; i < trackClips.length; i++) {
       final clip = trackClips[i];
       if (clip.transitionOutId == null ||
           clip.transitionOutDuration == Duration.zero) {
@@ -56,11 +56,13 @@ final _transitionInfoProvider = Provider.autoDispose<_TransitionInfo?>((ref) {
             (playhead - transStart).inMicroseconds.toDouble();
         final total =
             clip.transitionOutDuration.inMicroseconds.toDouble();
+        final nextClip =
+            i + 1 < trackClips.length ? trackClips[i + 1] : null;
         return _TransitionInfo(
           type: transType,
           progress: (elapsed / total).clamp(0.0, 1.0),
           outgoingClip: clip,
-          incomingClip: trackClips[i + 1],
+          incomingClip: nextClip,
         );
       }
     }
@@ -140,8 +142,15 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
   void _startPlayback(TimelineState state) {
     _playbackTimer?.cancel();
 
-    // If a clip is selected and the playhead is outside it, jump to its start.
     Duration seekTo = state.playhead;
+
+    // If playhead is at or past the end, restart from the beginning.
+    if (state.duration > Duration.zero && seekTo >= state.duration) {
+      seekTo = Duration.zero;
+      state.setPlayhead(seekTo);
+    }
+
+    // If a clip is selected and the playhead is outside it, jump to its start.
     if (state.selectedClipIds.isNotEmpty) {
       final selectedId = state.selectedClipIds.first;
       try {
@@ -157,17 +166,28 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
     _playheadAtPlayStart = seekTo;
     _wallClockAtPlayStart = DateTime.now();
 
-    // Seek video to the correct position within the active clip.
-    if (_controller != null && _initialized) {
-      ClipModel? videoClip;
-      for (final track in state.videoTracks.reversed) {
-        final c = state.clipAt(track.id, seekTo);
-        if (c != null && c.type == ClipType.video) {
-          videoClip = c;
-          break;
-        }
+    // Find the video clip at the seek position and start playback.
+    ClipModel? videoClip;
+    for (final track in state.videoTracks.reversed) {
+      final c = state.clipAt(track.id, seekTo);
+      if (c != null && c.type == ClipType.video) {
+        videoClip = c;
+        break;
       }
-      if (videoClip != null) {
+    }
+
+    if (videoClip != null) {
+      if (_currentMediaId != videoClip.mediaId ||
+          _controller == null ||
+          !_initialized) {
+        _loadVideo(videoClip.mediaId).then((_) {
+          if (!mounted || !_initialized || _controller == null) return;
+          final offsetInClip = seekTo - videoClip!.startOnTimeline;
+          final videoPos = videoClip.mediaInPoint + offsetInClip;
+          _controller!.seekTo(videoPos);
+          _controller!.play();
+        });
+      } else {
         final offsetInClip = seekTo - videoClip.startOnTimeline;
         final videoPos = videoClip.mediaInPoint + offsetInClip;
         _controller!.seekTo(videoPos);
@@ -186,6 +206,8 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
       if (s.duration > Duration.zero && newPlayhead >= s.duration) {
         s.setPlayhead(Duration.zero);
         s.setPlaying(false);
+        _controller?.seekTo(Duration.zero);
+        _controller?.pause();
         return;
       }
       s.setPlayhead(newPlayhead);
@@ -581,23 +603,15 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
       });
     }
 
-    if (mediaId == null && _currentMediaId != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        final old = _controller;
-        _currentMediaId = null;
-        setState(() {
-          _controller = null;
-          _initialized = false;
-        });
-        old?.dispose();
-      });
+    if (mediaId == null && _controller != null) {
+      _controller!.pause();
     }
 
     // Load or clear the incoming clip's video for transition preview.
     if (transitionInfo != null &&
-        transitionInfo.incomingClip.type == ClipType.video) {
-      final inMediaId = transitionInfo.incomingClip.mediaId;
+        transitionInfo.incomingClip != null &&
+        transitionInfo.incomingClip!.type == ClipType.video) {
+      final inMediaId = transitionInfo.incomingClip!.mediaId;
       if (_transitionMediaId != inMediaId) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) _loadTransitionVideo(inMediaId);
@@ -606,13 +620,15 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
       if (_transitionInitialized &&
           _transitionController != null &&
           _transitionController!.value.isInitialized) {
-        final inClip = transitionInfo.incomingClip;
+        final inClip = transitionInfo.incomingClip!;
         final offsetInClip =
             timelineState.playhead - inClip.startOnTimeline;
         final videoPos = inClip.mediaInPoint + offsetInClip;
         _transitionController!.seekTo(videoPos);
       }
-    } else if (transitionInfo == null && _transitionController != null) {
+    } else if ((transitionInfo == null ||
+            transitionInfo.incomingClip == null) &&
+        _transitionController != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _clearTransitionVideo();
       });
@@ -651,10 +667,10 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
         imagePath: imagePathAsync.value,
         animT: animT,
       );
-    } else if (activeClip?.type == ClipType.video &&
-        _initialized &&
+    } else if (_initialized &&
         _controller != null &&
-        _controller!.value.isInitialized) {
+        _controller!.value.isInitialized &&
+        (activeClip?.type == ClipType.video || activeClip == null)) {
       final ar = _controller!.value.aspectRatio;
       contentWidget = AspectRatio(
         aspectRatio: ar > 0 ? ar : 16.0 / 9.0,
