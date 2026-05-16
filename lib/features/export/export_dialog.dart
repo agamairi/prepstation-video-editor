@@ -605,15 +605,20 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
           clip.id: timeline.effectsForClip(clip.id),
       };
 
+      final tw = preset.width;
+      final th = preset.height;
+
       String filtergraph;
       if (clips.length > 1) {
         if (hasAudio) {
           final graph = graphBuilder.buildTransitionGraph(
-              clips, effectsByClipId: effectsByClipId);
+              clips, effectsByClipId: effectsByClipId,
+              targetWidth: tw, targetHeight: th);
           filtergraph = '-filter_complex "$graph" -map "[outv]" -map "[outa]" ';
         } else {
           final graph = graphBuilder.buildVideoOnlyGraph(
-              clips, effectsByClipId: effectsByClipId);
+              clips, effectsByClipId: effectsByClipId,
+              targetWidth: tw, targetHeight: th);
           filtergraph = '-filter_complex "$graph" -map "[outv]" ';
         }
       } else {
@@ -634,16 +639,18 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
         if (hasEffects || hasTransform) {
           if (hasAudio) {
             final graph = graphBuilder.buildConcatGraph(
-                clips, effectsByClipId: effectsByClipId);
+                clips, effectsByClipId: effectsByClipId,
+                targetWidth: tw, targetHeight: th);
             filtergraph =
                 '-filter_complex "$graph" -map "[outv]" -map "[outa]" ';
           } else {
             final graph = graphBuilder.buildVideoOnlyGraph(
-                clips, effectsByClipId: effectsByClipId);
+                clips, effectsByClipId: effectsByClipId,
+                targetWidth: tw, targetHeight: th);
             filtergraph = '-filter_complex "$graph" -map "[outv]" ';
           }
         } else {
-          filtergraph = '';
+          filtergraph = '-vf "${FiltergraphBuilder.scaleFilter(tw, th)}" ';
         }
       }
 
