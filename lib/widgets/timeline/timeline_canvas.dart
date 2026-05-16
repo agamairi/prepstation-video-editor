@@ -13,7 +13,7 @@ import 'package:fluxedit/core/timeline/track_model.dart';
 import 'package:fluxedit/core/transitions/transition_type.dart';
 
 typedef ClipCallback = void Function(String clipId);
-typedef ClipDragCallback = void Function(String clipId, double delta);
+typedef ClipDragCallback = void Function(String clipId, double delta, {double? globalY});
 typedef ClipTrimCallback = void Function(String clipId, double dx);
 typedef ClipBladeCallback = void Function(String clipId, Duration time);
 typedef ClipContextCallback = void Function(String clipId, Offset globalPosition);
@@ -206,9 +206,9 @@ class _TimelineCanvasState extends State<TimelineCanvas> {
             _dragStartX = dx;
             widget.onClipDragStart(clip.id);
           },
-          onDrag: (dx) {
+          onDrag: (dx, {double? globalY}) {
             if (_draggingClipId == clip.id) {
-              widget.onClipDrag(clip.id, dx - _dragStartX);
+              widget.onClipDrag(clip.id, dx - _dragStartX, globalY: globalY);
               _dragStartX = dx;
             }
           },
@@ -243,7 +243,7 @@ class _ClipGestureArea extends StatefulWidget {
   final double trimHandleWidth;
   final VoidCallback onTap;
   final ValueChanged<double> onDragStart;
-  final ValueChanged<double> onDrag;
+  final void Function(double dx, {double? globalY}) onDrag;
   final VoidCallback onDragEnd;
   final ValueChanged<double> onTrimStartDrag;
   final ValueChanged<double> onTrimEndDrag;
@@ -278,7 +278,8 @@ class _ClipGestureAreaState extends State<_ClipGestureArea> {
             // Mouse / quick-touch drag (immediate, no hold required)
             onHorizontalDragStart: (d) =>
                 widget.onDragStart(d.globalPosition.dx),
-            onHorizontalDragUpdate: (d) => widget.onDrag(d.globalPosition.dx),
+            onHorizontalDragUpdate: (d) =>
+                widget.onDrag(d.globalPosition.dx, globalY: d.globalPosition.dy),
             onHorizontalDragEnd: (_) => widget.onDragEnd(),
             // Long-press: hold to start drag on touch, or show menu if no drag
             onLongPressStart: (d) {
@@ -290,7 +291,7 @@ class _ClipGestureAreaState extends State<_ClipGestureArea> {
                 _isLongPressDragging = true;
                 widget.onDragStart(_longPressOriginX);
               }
-              widget.onDrag(d.globalPosition.dx);
+              widget.onDrag(d.globalPosition.dx, globalY: d.globalPosition.dy);
               _longPressOriginX = d.globalPosition.dx;
             },
             onLongPressEnd: (d) {
@@ -535,8 +536,8 @@ class _TimelinePainter extends CustomPainter {
       );
     }
 
-    // Waveform for audio clips
-    if (track.isAudio) {
+    // Waveform for audio clips and video clips on audio tracks
+    if (clip.type == ClipType.audio || track.isAudio) {
       final waveform = waveforms[clip.mediaId];
       if (waveform != null) {
         _paintWaveform(canvas, clip, rect, waveform);

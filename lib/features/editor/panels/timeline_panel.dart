@@ -1,10 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fluxedit/app/theme/color_tokens.dart';
 import 'package:fluxedit/app/theme/typography.dart';
+import 'package:fluxedit/core/audio/waveform_generator.dart';
 import 'package:fluxedit/core/constants/app_constants.dart';
 import 'package:fluxedit/core/history/history_manager.dart';
 import 'package:fluxedit/core/project/project_model.dart';
+import 'package:fluxedit/core/project/project_repository.dart';
 import 'package:fluxedit/core/timeline/clip_model.dart';
 import 'package:fluxedit/core/timeline/clip_thumbnail_cache.dart';
 import 'package:fluxedit/core/timeline/timeline_controller.dart';
@@ -335,6 +339,8 @@ class _TrackHeader extends ConsumerWidget {
     return GestureDetector(
       onTap: () =>
           ref.read(timelineStateProvider).selectTrack(track.id),
+      onSecondaryTapDown: (d) =>
+          _showTrackContextMenu(context, ref, d.globalPosition),
       child: Container(
         height: track.height,
         padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -357,8 +363,94 @@ class _TrackHeader extends ConsumerWidget {
             ),
             _MuteButton(track: track),
             _LockButton(track: track),
+            _DeleteTrackButton(track: track),
           ],
         ),
+      ),
+    );
+  }
+
+  Future<void> _showTrackContextMenu(
+    BuildContext context,
+    WidgetRef ref,
+    Offset position,
+  ) async {
+    final result = await showMenu<_TrackAction>(
+      context: context,
+      position: RelativeRect.fromLTRB(
+        position.dx, position.dy, position.dx + 1, position.dy + 1,
+      ),
+      items: [
+        PopupMenuItem(
+          value: _TrackAction.toggleMute,
+          child: Row(
+            children: [
+              Icon(track.isMuted ? Icons.volume_up : Icons.volume_off, size: 16),
+              const SizedBox(width: 8),
+              Text(track.isMuted ? 'Unmute' : 'Mute'),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          value: _TrackAction.toggleLock,
+          child: Row(
+            children: [
+              Icon(track.isLocked ? Icons.lock_open : Icons.lock, size: 16),
+              const SizedBox(width: 8),
+              Text(track.isLocked ? 'Unlock' : 'Lock'),
+            ],
+          ),
+        ),
+        const PopupMenuDivider(),
+        const PopupMenuItem(
+          value: _TrackAction.delete,
+          child: Row(
+            children: [
+              Icon(Icons.delete_outline, size: 16, color: Colors.redAccent),
+              SizedBox(width: 8),
+              Text('Delete Track', style: TextStyle(color: Colors.redAccent)),
+            ],
+          ),
+        ),
+      ],
+    );
+
+    if (result == null) return;
+    switch (result) {
+      case _TrackAction.toggleMute:
+        final updated = track.copyWith(isMuted: !track.isMuted);
+        ref.read(timelineStateProvider).updateTrack(updated);
+      case _TrackAction.toggleLock:
+        final updated = track.copyWith(isLocked: !track.isLocked);
+        ref.read(timelineStateProvider).updateTrack(updated);
+      case _TrackAction.delete:
+        unawaited(ref.read(timelineControllerProvider).removeTrack(track.id));
+    }
+  }
+}
+
+enum _TrackAction { toggleMute, toggleLock, delete }
+
+class _DeleteTrackButton extends ConsumerWidget {
+  const _DeleteTrackButton({required this.track});
+
+  final TrackModel track;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return SizedBox(
+      width: 24,
+      height: 24,
+      child: IconButton(
+        padding: EdgeInsets.zero,
+        icon: const Icon(
+          Icons.close,
+          size: 12,
+          color: ColorTokens.textSecondary,
+        ),
+        tooltip: 'Delete Track',
+        onPressed: () =>
+            unawaited(ref.read(timelineControllerProvider).removeTrack(track.id)),
       ),
     );
   }
@@ -434,11 +526,31 @@ class _TimelineScrollAreaState extends ConsumerState<_TimelineScrollArea> {
   /// Clip IDs for which thumbnail loading has already been requested.
   final Set<String> _thumbnailsRequested = {};
 
+  /// Media asset IDs for which waveform loading has already been requested.
+  final Set<String> _waveformsRequested = {};
+
+  String? _trackIdAtDragY(double globalY, BuildContext context) {
+    final state = ref.read(timelineStateProvider);
+    final box = context.findRenderObject() as RenderBox?;
+    if (box == null) return null;
+    final localY = box.globalToLocal(Offset(0, globalY)).dy;
+    const rulerH = AppConstants.timelineRulerHeight;
+    double yOffset = rulerH;
+    for (final track in state.tracks) {
+      if (localY >= yOffset && localY < yOffset + track.height) {
+        return track.id;
+      }
+      yOffset += track.height;
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(timelineStateProvider);
     final tool = ref.watch(timelineToolProvider);
     final thumbCache = ref.watch(clipThumbnailCacheProvider);
+    final waveformCache = ref.watch(waveformCacheProvider);
 
     // Trigger thumbnail loading for video/image clips not yet requested.
     // Uses a microtask so notifyListeners() in the cache never fires during
@@ -457,6 +569,36 @@ class _TimelineScrollAreaState extends ConsumerState<_TimelineScrollArea> {
         for (final clip in needsThumb) {
           _thumbnailsRequested.add(clip.id);
           thumbCache.ensureLoaded(clip: clip);
+        }
+      });
+    }
+
+    // Trigger waveform loading for audio/video clips with audio.
+    final needsWave = state.clips
+        .where(
+          (c) =>
+              (c.type == ClipType.audio || c.type == ClipType.video) &&
+              !_waveformsRequested.contains(c.mediaId) &&
+              !waveformCache.containsKey(c.mediaId),
+        )
+        .toList();
+
+    if (needsWave.isNotEmpty) {
+      Future.microtask(() {
+        if (!mounted) return;
+        final generator = ref.read(waveformGeneratorProvider);
+        final repo = ref.read(projectRepositoryProvider);
+        final cache = ref.read(waveformCacheProvider.notifier);
+        for (final clip in needsWave) {
+          _waveformsRequested.add(clip.mediaId);
+          repo.getMediaAsset(clip.mediaId).then((asset) async {
+            if (asset == null || !asset.hasAudio) return;
+            final data = await generator.generateWaveform(
+              sourceFilePath: asset.filePath,
+              assetId: asset.id,
+            );
+            if (data != null) cache.put(asset.id, data);
+          });
         }
       });
     }
@@ -482,7 +624,7 @@ class _TimelineScrollAreaState extends ConsumerState<_TimelineScrollArea> {
             ref.read(timelineControllerProvider).splitClip(clipId, time);
           },
           onClipDragStart: (clipId) {},
-          onClipDrag: (clipId, delta) {
+          onClipDrag: (clipId, delta, {double? globalY}) {
             final clips = state.clips;
             ClipModel? found;
             for (final c in clips) {
@@ -495,9 +637,14 @@ class _TimelineScrollAreaState extends ConsumerState<_TimelineScrollArea> {
             final deltaDuration = Duration(
               microseconds: (delta / state.zoom * 1000000).round(),
             );
+            String? targetTrackId;
+            if (globalY != null) {
+              targetTrackId = _trackIdAtDragY(globalY, context);
+            }
             ref.read(timelineControllerProvider).moveClip(
               clipId,
               found.startOnTimeline + deltaDuration,
+              newTrackId: targetTrackId,
             );
           },
           onClipTrimStart: (clipId, dx) {
@@ -514,6 +661,7 @@ class _TimelineScrollAreaState extends ConsumerState<_TimelineScrollArea> {
           },
           onClipContextMenu: (clipId, position) =>
               _showClipContextMenu(clipId, position),
+          waveforms: waveformCache,
           thumbnails: {
             for (final entry in state.clips)
               if (thumbCache.thumbnailsForClip(entry.id) != null)
