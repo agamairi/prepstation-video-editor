@@ -52,9 +52,19 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
   }
 
   Future<void> _initOutputPath() async {
-    final dir = await getApplicationDocumentsDirectory();
-    final exportDir = Directory('${dir.path}/prepstation/exports');
+    Directory exportDir;
+    if (Platform.isAndroid) {
+      final extDir = await getExternalStorageDirectory();
+      exportDir = Directory(
+        '${extDir?.path ?? (await getApplicationDocumentsDirectory()).path}'
+        '/exports',
+      );
+    } else {
+      final dir = await getApplicationDocumentsDirectory();
+      exportDir = Directory('${dir.path}/prepstation/exports');
+    }
     await exportDir.create(recursive: true);
+    if (!mounted) return;
     setState(() {
       _outputPath =
           '${exportDir.path}/${widget.project.name}_export.'
@@ -584,10 +594,20 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
         for (final clip in clips)
           clip.id: timeline.effectsForClip(clip.id),
       };
-      final filtergraph = clips.length > 1
-          ? '-filter_complex "${graphBuilder.buildTransitionGraph(clips, effectsByClipId: effectsByClipId)}" '
-            '-map "[outv]" -map "[outa]" '
-          : '';
+      String filtergraph;
+      if (clips.length > 1) {
+        final graph = graphBuilder.buildTransitionGraph(
+            clips, effectsByClipId: effectsByClipId);
+        filtergraph = '-filter_complex "$graph" -map "[outv]" -map "[outa]" ';
+      } else {
+        final graph = graphBuilder.buildConcatGraph(
+            clips, effectsByClipId: effectsByClipId);
+        if (graph.isNotEmpty) {
+          filtergraph = '-filter_complex "$graph" -map "[outv]" -map "[outa]" ';
+        } else {
+          filtergraph = '';
+        }
+      }
 
       final videoCodecArgs = CodecRegistry.buildVideoCodecArgs(preset);
       final audioCodecArgs = CodecRegistry.buildAudioCodecArgs(preset);

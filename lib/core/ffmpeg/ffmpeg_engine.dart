@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:isolate';
 
@@ -39,19 +40,24 @@ class FfmpegEngine {
     void Function(Statistics)? onProgress,
     void Function(String)? onLog,
   }) async {
-    final session = await FFmpegKit.executeAsync(
+    final completer = Completer<void>();
+    await FFmpegKit.executeAsync(
       command,
-      null,
+      (session) async {
+        final returnCode = await session.getReturnCode();
+        if (ReturnCode.isSuccess(returnCode)) {
+          completer.complete();
+        } else {
+          final logs = await session.getAllLogsAsString();
+          completer.completeError(FfmpegException(
+            'FFmpeg failed (code ${returnCode?.getValue()}): $logs',
+          ));
+        }
+      },
       onLog != null ? (log) => onLog(log.getMessage()) : null,
       onProgress != null ? (stats) => onProgress(stats) : null,
     );
-    final returnCode = await session.getReturnCode();
-    if (!ReturnCode.isSuccess(returnCode)) {
-      final logs = await session.getAllLogsAsString();
-      throw FfmpegException(
-        'FFmpeg failed (code ${returnCode?.getValue()}): $logs',
-      );
-    }
+    await completer.future;
   }
 
   /// Cancel all active FFmpeg sessions.
