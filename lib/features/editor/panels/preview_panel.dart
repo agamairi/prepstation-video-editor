@@ -524,8 +524,9 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
     } else if (activeClip?.type == ClipType.video &&
         _initialized &&
         _controller != null) {
+      final ar = _controller!.value.aspectRatio;
       contentWidget = AspectRatio(
-        aspectRatio: _controller!.value.aspectRatio,
+        aspectRatio: ar > 0 ? ar : 16.0 / 9.0,
         child: VideoPlayer(_controller!),
       );
     } else {
