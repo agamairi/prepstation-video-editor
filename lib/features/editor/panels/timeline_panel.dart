@@ -524,7 +524,7 @@ class _TimelineScrollArea extends ConsumerStatefulWidget {
 
 class _TimelineScrollAreaState extends ConsumerState<_TimelineScrollArea> {
   /// Clip IDs for which thumbnail loading has already been requested.
-  final Set<String> _thumbnailsRequested = {};
+
 
   /// Media asset IDs for which waveform loading has already been requested.
   final Set<String> _waveformsRequested = {};
@@ -552,22 +552,19 @@ class _TimelineScrollAreaState extends ConsumerState<_TimelineScrollArea> {
     final thumbCache = ref.watch(clipThumbnailCacheProvider);
     final waveformCache = ref.watch(waveformCacheProvider);
 
-    // Trigger thumbnail loading for video/image clips not yet requested.
-    // Uses a microtask so notifyListeners() in the cache never fires during
-    // the current build phase.
-    final needsThumb = state.clips
+    // Trigger thumbnail loading for video/image clips.
+    // The cache internally skips clips that are already cached, loading,
+    // or have exceeded the retry limit.
+    final thumbClips = state.clips
         .where(
-          (c) =>
-              (c.type == ClipType.video || c.type == ClipType.image) &&
-              !_thumbnailsRequested.contains(c.id),
+          (c) => c.type == ClipType.video || c.type == ClipType.image,
         )
         .toList();
 
-    if (needsThumb.isNotEmpty) {
+    if (thumbClips.isNotEmpty) {
       Future.microtask(() {
         if (!mounted) return;
-        for (final clip in needsThumb) {
-          _thumbnailsRequested.add(clip.id);
+        for (final clip in thumbClips) {
           thumbCache.ensureLoaded(clip: clip);
         }
       });

@@ -14,8 +14,59 @@ import 'package:fluxedit/core/project/project_repository.dart';
 import 'package:fluxedit/core/timeline/clip_model.dart';
 import 'package:fluxedit/core/timeline/timeline_controller.dart';
 import 'package:fluxedit/core/timeline/timeline_state.dart';
+import 'package:fluxedit/core/transitions/transition_type.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:video_player/video_player.dart';
+
+class _TransitionInfo {
+  const _TransitionInfo({
+    required this.type,
+    required this.progress,
+    required this.outgoingClip,
+    required this.incomingClip,
+  });
+  final TransitionType type;
+  final double progress;
+  final ClipModel outgoingClip;
+  final ClipModel incomingClip;
+}
+
+final _transitionInfoProvider = Provider.autoDispose<_TransitionInfo?>((ref) {
+  final state = ref.watch(timelineStateProvider);
+  final playhead = state.playhead;
+
+  for (final track in state.videoTracks.reversed) {
+    final trackClips = state.clipsForTrack(track.id);
+    for (var i = 0; i < trackClips.length - 1; i++) {
+      final clip = trackClips[i];
+      if (clip.transitionOutId == null ||
+          clip.transitionOutDuration == Duration.zero) {
+        continue;
+      }
+
+      final transType = TransitionType.fromId(clip.transitionOutId!);
+      if (transType == null) continue;
+
+      final transStart =
+          clip.endOnTimeline - clip.transitionOutDuration;
+      final transEnd = clip.endOnTimeline;
+
+      if (playhead >= transStart && playhead < transEnd) {
+        final elapsed =
+            (playhead - transStart).inMicroseconds.toDouble();
+        final total =
+            clip.transitionOutDuration.inMicroseconds.toDouble();
+        return _TransitionInfo(
+          type: transType,
+          progress: (elapsed / total).clamp(0.0, 1.0),
+          outgoingClip: clip,
+          incomingClip: trackClips[i + 1],
+        );
+      }
+    }
+  }
+  return null;
+});
 
 /// The clip currently under the playhead (top video track wins).
 final _activeClipProvider = Provider.autoDispose<ClipModel?>((ref) {
@@ -68,6 +119,10 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
   String? _currentMediaId;
   bool _initialized = false;
 
+  VideoPlayerController? _transitionController;
+  String? _transitionMediaId;
+  bool _transitionInitialized = false;
+
   Timer? _playbackTimer;
   DateTime? _wallClockAtPlayStart;
   Duration _playheadAtPlayStart = Duration.zero;
@@ -76,6 +131,7 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
   void dispose() {
     _playbackTimer?.cancel();
     _controller?.dispose();
+    _transitionController?.dispose();
     super.dispose();
   }
 
@@ -450,6 +506,46 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
     });
   }
 
+  Future<void> _loadTransitionVideo(String mediaId) async {
+    if (_transitionMediaId == mediaId) return;
+    _transitionMediaId = mediaId;
+
+    final old = _transitionController;
+    _transitionController = null;
+    _transitionInitialized = false;
+    await old?.dispose();
+
+    if (!mounted) return;
+
+    final asset =
+        await ref.read(projectRepositoryProvider).getMediaAsset(mediaId);
+    if (asset == null || !mounted || !asset.hasVideo) return;
+
+    final controller = VideoPlayerController.file(
+      File(asset.proxyPath ?? asset.filePath),
+    );
+
+    await controller.initialize();
+    if (!mounted || _transitionMediaId != mediaId) {
+      await controller.dispose();
+      return;
+    }
+
+    setState(() {
+      _transitionController = controller;
+      _transitionInitialized = true;
+    });
+  }
+
+  void _clearTransitionVideo() {
+    if (_transitionController == null) return;
+    final old = _transitionController;
+    _transitionMediaId = null;
+    _transitionController = null;
+    _transitionInitialized = false;
+    old?.dispose();
+  }
+
   // ── Animation helpers ───────────────────────────────────────────────────────
 
   /// 0→1 progress of the clip's text-in animation at the current playhead.
@@ -477,6 +573,7 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
     final activeClip = ref.watch(_activeClipProvider);
     final timelineState = ref.watch(timelineStateProvider);
     final imagePathAsync = ref.watch(_activeImagePathProvider);
+    final transitionInfo = ref.watch(_transitionInfoProvider);
 
     if (mediaId != null && mediaId != _currentMediaId) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -497,16 +594,38 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
       });
     }
 
+    // Load or clear the incoming clip's video for transition preview.
+    if (transitionInfo != null &&
+        transitionInfo.incomingClip.type == ClipType.video) {
+      final inMediaId = transitionInfo.incomingClip.mediaId;
+      if (_transitionMediaId != inMediaId) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _loadTransitionVideo(inMediaId);
+        });
+      }
+      if (_transitionInitialized &&
+          _transitionController != null &&
+          _transitionController!.value.isInitialized) {
+        final inClip = transitionInfo.incomingClip;
+        final offsetInClip =
+            timelineState.playhead - inClip.startOnTimeline;
+        final videoPos = inClip.mediaInPoint + offsetInClip;
+        _transitionController!.seekTo(videoPos);
+      }
+    } else if (transitionInfo == null && _transitionController != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _clearTransitionVideo();
+      });
+    }
+
     final effects = activeClip != null
         ? timelineState.effectsForClip(activeClip.id)
         : <EffectInstance>[];
 
-    // Compute animation progress for synthetic clips.
     final animT = activeClip != null
         ? _animT(activeClip, timelineState.playhead)
         : 1.0;
 
-    // Choose the content widget based on the active clip type.
     Widget contentWidget;
     if (activeClip?.type == ClipType.title) {
       contentWidget = _TextOverlayPreview(
@@ -552,6 +671,29 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
 
     if (activeClip != null) {
       contentWidget = _applyClipTransforms(contentWidget, activeClip);
+    }
+
+    // Apply transition effect when in a transition zone.
+    if (transitionInfo != null) {
+      Widget incomingWidget;
+      if (_transitionInitialized &&
+          _transitionController != null &&
+          _transitionController!.value.isInitialized) {
+        final ar = _transitionController!.value.aspectRatio;
+        incomingWidget = AspectRatio(
+          aspectRatio: ar > 0 ? ar : 16.0 / 9.0,
+          child: VideoPlayer(_transitionController!),
+        );
+      } else {
+        incomingWidget = const ColoredBox(color: Colors.black);
+      }
+
+      contentWidget = _TransitionComposite(
+        type: transitionInfo.type,
+        progress: transitionInfo.progress,
+        outgoing: contentWidget,
+        incoming: incomingWidget,
+      );
     }
 
     return Container(
@@ -834,4 +976,119 @@ class _GrainPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_GrainPainter old) => old.opacity != opacity;
+}
+
+// ── Transition composite ─────────────────────────────────────────────────────
+
+class _TransitionComposite extends StatelessWidget {
+  const _TransitionComposite({
+    required this.type,
+    required this.progress,
+    required this.outgoing,
+    required this.incoming,
+  });
+
+  final TransitionType type;
+  final double progress;
+  final Widget outgoing;
+  final Widget incoming;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRect(
+      child: switch (type) {
+        TransitionType.crossDissolve => _crossDissolve(),
+        TransitionType.fadeBlack => _fadeViaColor(Colors.black),
+        TransitionType.fadeWhite => _fadeViaColor(Colors.white),
+        TransitionType.wipeLeft => _wipe(const Alignment(1, 0), Axis.horizontal),
+        TransitionType.wipeRight => _wipe(const Alignment(-1, 0), Axis.horizontal),
+        TransitionType.wipeUp => _wipe(const Alignment(0, 1), Axis.vertical),
+        TransitionType.wipeDown => _wipe(const Alignment(0, -1), Axis.vertical),
+        TransitionType.slide ||
+        TransitionType.slideRight ||
+        TransitionType.slideUp ||
+        TransitionType.slideDown => _slide(),
+        _ => _crossDissolve(),
+      },
+    );
+  }
+
+  Widget _crossDissolve() {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Opacity(opacity: (1.0 - progress).clamp(0.0, 1.0), child: outgoing),
+        Opacity(opacity: progress.clamp(0.0, 1.0), child: incoming),
+      ],
+    );
+  }
+
+  Widget _fadeViaColor(Color color) {
+    final fadeOut = (progress * 2.0).clamp(0.0, 1.0);
+    final fadeIn = ((progress - 0.5) * 2.0).clamp(0.0, 1.0);
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        if (fadeIn > 0) Opacity(opacity: fadeIn, child: incoming),
+        if (fadeOut < 1) Opacity(opacity: 1.0 - fadeOut, child: outgoing),
+        Positioned.fill(
+          child: IgnorePointer(
+            child: ColoredBox(
+              color: color.withValues(
+                alpha: fadeOut < 1.0 ? fadeOut : 1.0 - fadeIn,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _wipe(Alignment direction, Axis axis) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        incoming,
+        ClipRect(
+          child: Align(
+            alignment: direction,
+            widthFactor: axis == Axis.horizontal ? 1.0 - progress : null,
+            heightFactor: axis == Axis.vertical ? 1.0 - progress : null,
+            child: outgoing,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _slide() {
+    final Offset outOffset;
+    final Offset inOffset;
+
+    switch (type) {
+      case TransitionType.slide:
+        outOffset = Offset(-progress, 0);
+        inOffset = Offset(1.0 - progress, 0);
+      case TransitionType.slideRight:
+        outOffset = Offset(progress, 0);
+        inOffset = Offset(-1.0 + progress, 0);
+      case TransitionType.slideUp:
+        outOffset = Offset(0, -progress);
+        inOffset = Offset(0, 1.0 - progress);
+      case TransitionType.slideDown:
+        outOffset = Offset(0, progress);
+        inOffset = Offset(0, -1.0 + progress);
+      default:
+        outOffset = Offset(-progress, 0);
+        inOffset = Offset(1.0 - progress, 0);
+    }
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        FractionalTranslation(translation: inOffset, child: incoming),
+        FractionalTranslation(translation: outOffset, child: outgoing),
+      ],
+    );
+  }
 }
