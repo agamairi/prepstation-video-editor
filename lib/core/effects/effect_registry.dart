@@ -174,8 +174,10 @@ abstract final class EffectRegistry {
         final contrast = p['contrast'] ?? 1.0;
         final saturation = p['saturation'] ?? 1.0;
         final hue = p['hue'] ?? 0.0;
-        return 'eq=brightness=$brightness:contrast=$contrast'
-            ':saturation=$saturation:hue=$hue';
+        final eq = 'eq=brightness=$brightness:contrast=$contrast'
+            ':saturation=$saturation';
+        if (hue != 0.0) return '$eq,hue=h=${(hue * 180 / 3.14159).toStringAsFixed(2)}';
+        return eq;
       case EffectType.blur:
         final sigma = (p['radius'] ?? 4.0).clamp(0.0, 100.0);
         return 'gblur=sigma=$sigma';

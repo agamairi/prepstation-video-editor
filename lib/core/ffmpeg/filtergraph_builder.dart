@@ -79,50 +79,62 @@ class FiltergraphBuilder {
     return filters.join(',');
   }
 
+  /// Scale+pad filter to normalize a stream to target resolution.
+  static String scaleFilter(int w, int h) =>
+      'scale=$w:$h:force_original_aspect_ratio=decrease,pad=$w:$h:(ow-iw)/2:(oh-ih)/2,setsar=1';
+
   /// Constructs a complete FFmpeg filtergraph for a list of clips on a single
   /// video track. When [effectsByClipId] is provided, per-clip effect chains
   /// are injected before the concat filter.
   String buildConcatGraph(
     List<ClipModel> clips, {
     Map<String, List<EffectInstance>>? effectsByClipId,
+    int? targetWidth,
+    int? targetHeight,
   }) {
     if (clips.isEmpty) return '';
 
     final effects = effectsByClipId ?? {};
     final sb = StringBuffer();
-    var hasAnyChain = false;
+    final normalize = targetWidth != null && targetHeight != null;
+    final scale = normalize ? scaleFilter(targetWidth, targetHeight) : '';
 
-    // Per-clip video chains (effects + transform)
+    // Per-clip video + audio chains
     for (var i = 0; i < clips.length; i++) {
       final clip = clips[i];
       final clipEffects = effects[clip.id] ?? [];
       final videoEffects = clipEffects.where((e) => e.type.isVideoEffect).toList();
 
       final effectChain = EffectRegistry.buildClipEffectChain(
-        '$i:v', 'v$i', videoEffects,
+        '$i:v', 'eff$i', videoEffects,
       );
       final transformChain = _buildClipTransformChain(clip);
       final audioChain = _buildClipAudioChain(clip, clipEffects);
 
-      if (effectChain.isNotEmpty || transformChain.isNotEmpty) {
-        hasAnyChain = true;
-        if (effectChain.isNotEmpty && transformChain.isNotEmpty) {
-          // Chain: effect output → transform
-          sb.write('$effectChain;[v$i]$transformChain[vt$i];');
-        } else if (effectChain.isNotEmpty) {
-          sb.write('$effectChain;');
-        } else {
-          sb.write('[$i:v]$transformChain[vt$i];');
-        }
+      // Build video chain: effects → transform → scale normalize
+      final videoFilters = <String>[];
+      String currentLabel = '$i:v';
+
+      if (effectChain.isNotEmpty) {
+        sb.write('$effectChain;');
+        currentLabel = 'eff$i';
+      }
+
+      if (transformChain.isNotEmpty) {
+        videoFilters.add(transformChain);
+      }
+      if (normalize) {
+        videoFilters.add(scale);
+      }
+
+      if (videoFilters.isNotEmpty) {
+        sb.write('[$currentLabel]${videoFilters.join(",")}[norm$i];');
       }
 
       if (audioChain.isNotEmpty) {
-        hasAnyChain = true;
         sb.write('[$i:a]$audioChain[a$i];');
       }
     }
-
-    if (!hasAnyChain) return _simpleConcatGraph(clips);
 
     // Concat inputs
     for (var i = 0; i < clips.length; i++) {
@@ -130,18 +142,17 @@ class FiltergraphBuilder {
       final clipEffects = effects[clip.id] ?? [];
       final videoEffects = clipEffects.where((e) => e.type.isVideoEffect).toList();
       final effectChain = EffectRegistry.buildClipEffectChain(
-        '$i:v', 'v$i', videoEffects,
+        '$i:v', 'eff$i', videoEffects,
       );
       final transformChain = _buildClipTransformChain(clip);
       final audioChain = _buildClipAudioChain(clip, clipEffects);
 
-      // Video label
-      if (effectChain.isNotEmpty && transformChain.isNotEmpty) {
-        sb.write('[vt$i]');
+      // Video label: if we wrote any video filters (transform or normalize), use norm$i
+      final hasVideoFilters = transformChain.isNotEmpty || normalize;
+      if (hasVideoFilters) {
+        sb.write('[norm$i]');
       } else if (effectChain.isNotEmpty) {
-        sb.write('[v$i]');
-      } else if (transformChain.isNotEmpty) {
-        sb.write('[vt$i]');
+        sb.write('[eff$i]');
       } else {
         sb.write('[$i:v]');
       }
@@ -153,12 +164,69 @@ class FiltergraphBuilder {
     return sb.toString();
   }
 
-  String _simpleConcatGraph(List<ClipModel> clips) {
+
+  /// Builds a video-only filtergraph (no audio streams in inputs).
+  String buildVideoOnlyGraph(
+    List<ClipModel> clips, {
+    Map<String, List<EffectInstance>>? effectsByClipId,
+    int? targetWidth,
+    int? targetHeight,
+  }) {
+    if (clips.isEmpty) return '';
+
+    final effects = effectsByClipId ?? {};
     final sb = StringBuffer();
+    final normalize = targetWidth != null && targetHeight != null;
+    final scale = normalize ? scaleFilter(targetWidth, targetHeight) : '';
+
     for (var i = 0; i < clips.length; i++) {
-      sb.write('[$i:v][$i:a]');
+      final clip = clips[i];
+      final clipEffects = effects[clip.id] ?? [];
+      final videoEffects =
+          clipEffects.where((e) => e.isEnabled && e.type.isVideoEffect).toList();
+
+      final effectChain = EffectRegistry.buildClipEffectChain(
+        '$i:v', 'eff$i', videoEffects,
+      );
+      final transformChain = _buildClipTransformChain(clip);
+
+      String currentLabel = '$i:v';
+      final videoFilters = <String>[];
+
+      if (effectChain.isNotEmpty) {
+        sb.write('$effectChain;');
+        currentLabel = 'eff$i';
+      }
+
+      if (transformChain.isNotEmpty) videoFilters.add(transformChain);
+      if (normalize) videoFilters.add(scale);
+
+      if (videoFilters.isNotEmpty) {
+        sb.write('[$currentLabel]${videoFilters.join(",")}[norm$i];');
+      }
     }
-    sb.write('concat=n=${clips.length}:v=1:a=1[outv][outa]');
+
+    // Concat inputs
+    for (var i = 0; i < clips.length; i++) {
+      final clip = clips[i];
+      final clipEffects = effects[clip.id] ?? [];
+      final videoEffects =
+          clipEffects.where((e) => e.isEnabled && e.type.isVideoEffect).toList();
+      final effectChain = EffectRegistry.buildClipEffectChain(
+        '$i:v', 'eff$i', videoEffects,
+      );
+      final transformChain = _buildClipTransformChain(clip);
+
+      final hasVideoFilters = transformChain.isNotEmpty || normalize;
+      if (hasVideoFilters) {
+        sb.write('[norm$i]');
+      } else if (effectChain.isNotEmpty) {
+        sb.write('[eff$i]');
+      } else {
+        sb.write('[$i:v]');
+      }
+    }
+    sb.write('concat=n=${clips.length}:v=1:a=0[outv]');
     return sb.toString();
   }
 
@@ -180,18 +248,25 @@ class FiltergraphBuilder {
   String buildTransitionGraph(
     List<ClipModel> clips, {
     Map<String, List<EffectInstance>>? effectsByClipId,
+    int? targetWidth,
+    int? targetHeight,
   }) {
     if (clips.length < 2) return '';
 
     final hasAnyTransition = clips.any((c) => c.transitionOutId != null);
     if (!hasAnyTransition) {
-      return buildConcatGraph(clips, effectsByClipId: effectsByClipId);
+      return buildConcatGraph(clips,
+          effectsByClipId: effectsByClipId,
+          targetWidth: targetWidth,
+          targetHeight: targetHeight);
     }
 
     final effects = effectsByClipId ?? {};
     final sb = StringBuffer();
+    final normalize = targetWidth != null && targetHeight != null;
+    final scale = normalize ? scaleFilter(targetWidth, targetHeight) : '';
 
-    // ── Step 1: Per-clip effect + transform chains ─────────────────────────
+    // ── Step 1: Per-clip effect + transform + normalize chains ────────────
     final clipVideoLabels = List<String>.generate(clips.length, (i) => '$i:v');
     final clipAudioLabels = List<String>.generate(clips.length, (i) => '$i:a');
 
@@ -207,15 +282,22 @@ class FiltergraphBuilder {
       );
       final transformChain = _buildClipTransformChain(clip);
 
-      if (effectChain.isNotEmpty && transformChain.isNotEmpty) {
-        sb.write('$effectChain;[eff${i}v]$transformChain[vt$i];');
-        clipVideoLabels[i] = 'vt$i';
-      } else if (effectChain.isNotEmpty) {
+      String currentLabel = '$i:v';
+      final videoFilters = <String>[];
+
+      if (effectChain.isNotEmpty) {
         sb.write('$effectChain;');
+        currentLabel = 'eff${i}v';
+      }
+
+      if (transformChain.isNotEmpty) videoFilters.add(transformChain);
+      if (normalize) videoFilters.add(scale);
+
+      if (videoFilters.isNotEmpty) {
+        sb.write('[$currentLabel]${videoFilters.join(",")}[norm$i];');
+        clipVideoLabels[i] = 'norm$i';
+      } else if (effectChain.isNotEmpty) {
         clipVideoLabels[i] = 'eff${i}v';
-      } else if (transformChain.isNotEmpty) {
-        sb.write('[$i:v]$transformChain[vt$i];');
-        clipVideoLabels[i] = 'vt$i';
       }
 
       final audioChain = _buildClipAudioChain(clip, clipEffects);

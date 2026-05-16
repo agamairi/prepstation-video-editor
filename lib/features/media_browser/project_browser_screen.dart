@@ -141,7 +141,7 @@ class _AppHeader extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 10),
-                      const Text('FluxEdit', style: AppTypography.headlineLarge),
+                      const Text('PrepStation', style: AppTypography.headlineLarge),
                     ],
                   ),
                   const SizedBox(height: 4),

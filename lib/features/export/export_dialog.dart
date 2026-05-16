@@ -52,9 +52,19 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
   }
 
   Future<void> _initOutputPath() async {
-    final dir = await getApplicationDocumentsDirectory();
-    final exportDir = Directory('${dir.path}/fluxedit/exports');
+    Directory exportDir;
+    if (Platform.isAndroid) {
+      final extDir = await getExternalStorageDirectory();
+      exportDir = Directory(
+        '${extDir?.path ?? (await getApplicationDocumentsDirectory()).path}'
+        '/exports',
+      );
+    } else {
+      final dir = await getApplicationDocumentsDirectory();
+      exportDir = Directory('${dir.path}/prepstation/exports');
+    }
     await exportDir.create(recursive: true);
+    if (!mounted) return;
     setState(() {
       _outputPath =
           '${exportDir.path}/${widget.project.name}_export.'
@@ -67,17 +77,20 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
     return Dialog(
       backgroundColor: ColorTokens.backgroundPanel,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       child: SizedBox(
         width: 560,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildHeader(),
-            const Divider(height: 1),
-            _buildBody(),
-            const Divider(height: 1),
-            _buildFooter(),
-          ],
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildHeader(),
+              const Divider(height: 1),
+              _buildBody(),
+              const Divider(height: 1),
+              _buildFooter(),
+            ],
+          ),
         ),
       ),
     );
@@ -103,72 +116,81 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
 
   Widget _buildBody() {
     if (_status == _ExportStatus.exporting) {
-      return Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            LinearProgressIndicator(
-              value: _progress > 0 ? _progress : null,
-              backgroundColor: ColorTokens.backgroundSurface,
-              valueColor: const AlwaysStoppedAnimation(
-                ColorTokens.accentPrimary,
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              LinearProgressIndicator(
+                value: _progress > 0 ? _progress : null,
+                backgroundColor: ColorTokens.backgroundSurface,
+                valueColor: const AlwaysStoppedAnimation(
+                  ColorTokens.accentPrimary,
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            Text(_progressText, style: AppTypography.bodyMedium),
-          ],
+              const SizedBox(height: 16),
+              Text(_progressText, style: AppTypography.bodyMedium),
+            ],
+          ),
         ),
       );
     }
 
     if (_status == _ExportStatus.done) {
-      return Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            const Icon(
-              Icons.check_circle,
-              color: ColorTokens.success,
-              size: 48,
-            ),
-            const SizedBox(height: 16),
-            const Text('Export Complete!', style: AppTypography.headlineMedium),
-            const SizedBox(height: 8),
-            Text(
-              _outputPath,
-              style: AppTypography.bodySmall,
-              textAlign: TextAlign.center,
-            ),
-          ],
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.check_circle,
+                color: ColorTokens.success,
+                size: 48,
+              ),
+              const SizedBox(height: 16),
+              const Text('Export Complete!', style: AppTypography.headlineMedium),
+              const SizedBox(height: 8),
+              Text(
+                _outputPath,
+                style: AppTypography.bodySmall,
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
         ),
       );
     }
 
     if (_status == _ExportStatus.failed) {
-      return Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            const Icon(
-              Icons.error_outline,
-              color: ColorTokens.error,
-              size: 48,
-            ),
-            const SizedBox(height: 16),
-            const Text('Export Failed', style: AppTypography.headlineMedium),
-            const SizedBox(height: 8),
-            Text(_errorMessage, style: AppTypography.bodySmall),
-          ],
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.error_outline,
+                color: ColorTokens.error,
+                size: 48,
+              ),
+              const SizedBox(height: 16),
+              const Text('Export Failed', style: AppTypography.headlineMedium),
+              const SizedBox(height: 8),
+              Text(_errorMessage, style: AppTypography.bodySmall),
+            ],
+          ),
         ),
       );
     }
 
     return Padding(
       padding: const EdgeInsets.all(20),
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
             Row(
               children: [
                 const Text('Preset', style: AppTypography.headlineSmall),
@@ -244,7 +266,6 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
             const SizedBox(height: 20),
             if (_useCustom) _buildCustomSummary() else _buildPresetSummary(),
           ],
-        ),
       ),
     );
   }
@@ -564,14 +585,16 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
         return;
       }
 
-      // Resolve file paths
+      // Resolve file paths and check audio availability
       final filePaths = <String>[];
+      var hasAudio = false;
       for (final clip in clips) {
         final asset = await repository.getMediaAsset(clip.mediaId);
         if (asset == null) {
           throw Exception('Asset not found for clip ${clip.id}');
         }
         filePaths.add(asset.filePath);
+        if (asset.hasAudio) hasAudio = true;
       }
 
       setState(() => _progressText = 'Encoding...');
@@ -581,13 +604,60 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
         for (final clip in clips)
           clip.id: timeline.effectsForClip(clip.id),
       };
-      final filtergraph = clips.length > 1
-          ? '-filter_complex "${graphBuilder.buildTransitionGraph(clips, effectsByClipId: effectsByClipId)}" '
-            '-map "[outv]" -map "[outa]" '
-          : '';
+
+      final tw = preset.width;
+      final th = preset.height;
+
+      String filtergraph;
+      if (clips.length > 1) {
+        if (hasAudio) {
+          final graph = graphBuilder.buildTransitionGraph(
+              clips, effectsByClipId: effectsByClipId,
+              targetWidth: tw, targetHeight: th);
+          filtergraph = '-filter_complex "$graph" -map "[outv]" -map "[outa]" ';
+        } else {
+          final graph = graphBuilder.buildVideoOnlyGraph(
+              clips, effectsByClipId: effectsByClipId,
+              targetWidth: tw, targetHeight: th);
+          filtergraph = '-filter_complex "$graph" -map "[outv]" ';
+        }
+      } else {
+        final clip = clips.first;
+        final clipEffects = effectsByClipId[clip.id] ?? [];
+        final hasEffects = clipEffects.any((e) => e.isEnabled);
+        final hasTransform = clip.scaleX != 1.0 ||
+            clip.scaleY != 1.0 ||
+            clip.rotation != 0.0 ||
+            clip.cropLeft > 0 ||
+            clip.cropRight > 0 ||
+            clip.cropTop > 0 ||
+            clip.cropBottom > 0 ||
+            clip.flipHorizontal ||
+            clip.flipVertical ||
+            clip.isReversed ||
+            (clip.volume != 1.0 && hasAudio);
+        if (hasEffects || hasTransform) {
+          if (hasAudio) {
+            final graph = graphBuilder.buildConcatGraph(
+                clips, effectsByClipId: effectsByClipId,
+                targetWidth: tw, targetHeight: th);
+            filtergraph =
+                '-filter_complex "$graph" -map "[outv]" -map "[outa]" ';
+          } else {
+            final graph = graphBuilder.buildVideoOnlyGraph(
+                clips, effectsByClipId: effectsByClipId,
+                targetWidth: tw, targetHeight: th);
+            filtergraph = '-filter_complex "$graph" -map "[outv]" ';
+          }
+        } else {
+          filtergraph = '-vf "${FiltergraphBuilder.scaleFilter(tw, th)}" ';
+        }
+      }
 
       final videoCodecArgs = CodecRegistry.buildVideoCodecArgs(preset);
-      final audioCodecArgs = CodecRegistry.buildAudioCodecArgs(preset);
+      final audioCodecArgs = hasAudio
+          ? CodecRegistry.buildAudioCodecArgs(preset)
+          : '-an';
 
       final command =
           '-y $inputArgs '
@@ -596,6 +666,8 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
           '$audioCodecArgs '
           '-r ${preset.frameRate} '
           '"$_outputPath"';
+
+      debugPrint('FFmpeg export command: $command');
 
       await engine.execute(
         command,
@@ -616,6 +688,7 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
         setState(() => _status = _ExportStatus.done);
       }
     } catch (e) {
+      debugPrint('Export error: $e');
       if (mounted) {
         setState(() {
           _status = _ExportStatus.failed;

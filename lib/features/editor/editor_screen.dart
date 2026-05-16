@@ -50,8 +50,10 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       final controller = ref.read(timelineControllerProvider);
       controller.loadProject(widget.projectId).then((_) {
+        if (!mounted) return;
         controller.ensureDefaultTracks(widget.projectId);
       });
       _focusNode.requestFocus();
@@ -1460,6 +1462,7 @@ class _PortraitAdjustPanelState extends ConsumerState<_PortraitAdjustPanel> {
   };
 
   Future<void> _commitClipField(String clipId, String field, double v) async {
+    if (!mounted) return;
     final ctrl = ref.read(timelineControllerProvider);
     switch (field) {
       case 'opacity': await ctrl.updateClipOpacity(clipId, v);
@@ -1508,6 +1511,7 @@ class _PortraitAdjustPanelState extends ConsumerState<_PortraitAdjustPanel> {
   }
 
   Future<void> _onDialEnd(ClipModel clip, double v, _SubParam p) async {
+    if (!mounted) return;
     final state = ref.read(timelineStateProvider);
     final ctrl = ref.read(timelineControllerProvider);
     if (!p.isEffect) {
@@ -1521,6 +1525,7 @@ class _PortraitAdjustPanelState extends ConsumerState<_PortraitAdjustPanel> {
         if (isTempId) {
           state.removeEffect(effect);
           final created = await ctrl.addEffect(clip.id, p.effectType!);
+          if (!mounted) return;
           if (created != null) {
             final newParams = Map<String, double>.from(created.parameters);
             newParams[p.effectParam!] = v;
@@ -1536,7 +1541,7 @@ class _PortraitAdjustPanelState extends ConsumerState<_PortraitAdjustPanel> {
     }
     _clipAtDragStart = null;
     _effectAtDragStart = null;
-    setState(() => _liveValue = null);
+    if (mounted) setState(() => _liveValue = null);
   }
 
   void _resetToDefault(ClipModel clip, _SubParam p) {
@@ -1661,9 +1666,9 @@ class _PortraitAdjustPanelState extends ConsumerState<_PortraitAdjustPanel> {
             ),
           if (cat.params.length <= 1) const SizedBox(height: 28),
           const SizedBox(height: 6),
-          // Category icons
+          // Category icons with labels
           SizedBox(
-            height: 48,
+            height: 60,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -1691,12 +1696,14 @@ class _PortraitAdjustPanelState extends ConsumerState<_PortraitAdjustPanel> {
                           child: Icon(c.icon, size: 20,
                             color: active ? ColorTokens.textPrimary : ColorTokens.textSecondary),
                         ),
-                        const SizedBox(height: 2),
-                        AnimatedContainer(
-                          duration: const Duration(milliseconds: 180),
-                          width: 5, height: 5,
-                          decoration: BoxDecoration(shape: BoxShape.circle,
-                            color: active ? const Color(0xFFFFD60A) : Colors.transparent),
+                        const SizedBox(height: 3),
+                        Text(c.label,
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w500,
+                            color: active ? const Color(0xFFFFD60A) : ColorTokens.textSecondary,
+                            letterSpacing: 0.1,
+                          ),
                         ),
                       ],
                     ),
@@ -1781,7 +1788,7 @@ class _AdjustDialState extends State<_AdjustDial>
         widget.onChangeStart();
       },
       onHorizontalDragUpdate: (d) {
-        final delta = d.primaryDelta ?? 0;
+        final delta = -(d.primaryDelta ?? 0);
         final newVal =
             (widget.value + delta / _pxPerUnit)
                 .clamp(widget.spec.min, widget.spec.max);
@@ -1789,7 +1796,7 @@ class _AdjustDialState extends State<_AdjustDial>
         widget.onChanged(newVal);
       },
       onHorizontalDragEnd: (d) {
-        final velocity = d.primaryVelocity ?? 0;
+        final velocity = -(d.primaryVelocity ?? 0);
         if (velocity.abs() > 200) {
           _momentum.value = widget.value;
           _momentum.animateWith(

@@ -2,7 +2,7 @@
 import 'package:flutter/foundation.dart';
 
 abstract final class AppConstants {
-  static const String appName = 'FluxEdit';
+  static const String appName = 'PrepStation';
   static const String projectFileExtension = '.fluxedit';
   static const String proxyFileSuffix = '_proxy';
 
@@ -117,7 +117,7 @@ abstract final class AppConstants {
   static const double portraitStripMinPxPerSec = 20.0;
   static const double portraitStripMaxPxPerSec = 400.0;
   static const double portraitToolBarHeight = 56.0;
-  static const double portraitAdjustPanelHeight = 230.0;
+  static const double portraitAdjustPanelHeight = 242.0;
   static const double dialHeight = 52.0;
 
   // Layout breakpoints
