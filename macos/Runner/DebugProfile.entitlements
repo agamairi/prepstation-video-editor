@@ -13,6 +13,11 @@
 	<true/>
 	<key>com.apple.security.files.downloads.read-write</key>
 	<true/>
+	<!-- Allow FFmpeg to read files from anywhere (needed for thumbnail generation) -->
+	<key>com.apple.security.temporary-exception.files.absolute-path.read-only</key>
+	<array>
+		<string>/</string>
+	</array>
 	<!-- Audio/video device access -->
 	<key>com.apple.security.device.audio-input</key>
 	<true/>

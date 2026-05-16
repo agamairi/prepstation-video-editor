@@ -26,14 +26,16 @@ class ClipThumbnailCache extends ChangeNotifier {
 
   final Map<String, List<ui.Image>> _cache = {};
   final Set<String> _loading = {};
-  final Set<String> _failed = {};
+  final Map<String, int> _failCount = {};
+
+  static const int _maxRetries = 3;
 
   List<ui.Image>? thumbnailsForClip(String clipId) => _cache[clipId];
 
   bool isLoading(String clipId) => _loading.contains(clipId);
 
   void clearFailures() {
-    _failed.clear();
+    _failCount.clear();
     notifyListeners();
   }
 
@@ -48,7 +50,7 @@ class ClipThumbnailCache extends ChangeNotifier {
     if (clip.type != ClipType.video && clip.type != ClipType.image) return;
     if (_cache.containsKey(clip.id)) return;
     if (_loading.contains(clip.id)) return;
-    if (_failed.contains(clip.id)) return;
+    if ((_failCount[clip.id] ?? 0) >= _maxRetries) return;
 
     _loading.add(clip.id);
     // Defer notifyListeners() so it never fires during a build phase.
@@ -57,7 +59,7 @@ class ClipThumbnailCache extends ChangeNotifier {
     try {
       final asset = await _repository.getMediaAsset(clip.mediaId);
       if (asset == null) {
-        _failed.add(clip.id);
+        _failCount[clip.id] = (_failCount[clip.id] ?? 0) + 1;
         return;
       }
 
@@ -75,7 +77,7 @@ class ClipThumbnailCache extends ChangeNotifier {
         paths = path != null ? [path] : [];
       } else {
         if (asset.duration == Duration.zero) {
-          _failed.add(clip.id);
+          _failCount[clip.id] = (_failCount[clip.id] ?? 0) + 1;
           return;
         }
         paths = await _generator.generateTimelineThumbnails(
@@ -90,7 +92,7 @@ class ClipThumbnailCache extends ChangeNotifier {
         debugPrint(
           '[ClipThumbnailCache] No thumbnails for clip=${clip.id}',
         );
-        _failed.add(clip.id);
+        _failCount[clip.id] = (_failCount[clip.id] ?? 0) + 1;
         return;
       }
 
@@ -109,11 +111,11 @@ class ClipThumbnailCache extends ChangeNotifier {
       if (images.isNotEmpty) {
         _cache[clip.id] = images;
       } else {
-        _failed.add(clip.id);
+        _failCount[clip.id] = (_failCount[clip.id] ?? 0) + 1;
       }
     } catch (e) {
       debugPrint('[ClipThumbnailCache] Error for clip=${clip.id}: $e');
-      _failed.add(clip.id);
+      _failCount[clip.id] = (_failCount[clip.id] ?? 0) + 1;
     } finally {
       _loading.remove(clip.id);
       notifyListeners();

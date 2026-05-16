@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
 import 'package:ffmpeg_kit_flutter_new/return_code.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fluxedit/core/constants/app_constants.dart';
 import 'package:path_provider/path_provider.dart';
@@ -27,7 +28,6 @@ class ThumbnailGenerator {
 
       final outputPath = '${thumbDir.path}/$assetId.jpg';
 
-      // Skip if already exists
       if (File(outputPath).existsSync()) return outputPath;
 
       final ts = _formatTimestamp(timestamp);
@@ -43,8 +43,11 @@ class ThumbnailGenerator {
       if (ReturnCode.isSuccess(returnCode) && File(outputPath).existsSync()) {
         return outputPath;
       }
+      final logs = await session.getAllLogsAsString();
+      debugPrint('[ThumbnailGenerator] FFmpeg failed for $assetId: $logs');
       return null;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[ThumbnailGenerator] Exception for $assetId: $e');
       return null;
     }
   }

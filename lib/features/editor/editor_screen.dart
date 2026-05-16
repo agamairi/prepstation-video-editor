@@ -24,6 +24,7 @@ import 'package:fluxedit/features/editor/panels/preview_panel.dart';
 import 'package:fluxedit/features/editor/panels/timeline_panel.dart';
 import 'package:fluxedit/features/export/export_dialog.dart';
 import 'package:fluxedit/widgets/help_overlay.dart';
+import 'package:go_router/go_router.dart';
 
 final _projectProvider = FutureProvider.family<ProjectModel?, String>(
   (ref, projectId) =>
@@ -330,7 +331,12 @@ class _EditorAppBar extends ConsumerWidget implements PreferredSizeWidget {
         decoration: decoration,
         child: Row(
           children: [
-            const SizedBox(width: 16),
+            const SizedBox(width: 4),
+            _AppBarIconButton(
+              icon: Icons.arrow_back_rounded,
+              tooltip: 'Back to Projects',
+              onPressed: () => context.go('/'),
+            ),
             Expanded(
               child: Text(
                 project.name,
@@ -350,12 +356,18 @@ class _EditorAppBar extends ConsumerWidget implements PreferredSizeWidget {
       decoration: decoration,
       child: Row(
         children: [
-          // Left zone — project name + save state
+          // Left zone — back button + project name + save state
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.only(left: 16),
+              padding: const EdgeInsets.only(left: 8),
               child: Row(
                 children: [
+                  _AppBarIconButton(
+                    icon: Icons.arrow_back_rounded,
+                    tooltip: 'Back to Projects',
+                    onPressed: () => context.go('/'),
+                  ),
+                  const SizedBox(width: 4),
                   Text(
                     project.name,
                     style: AppTypography.headlineSmall,
