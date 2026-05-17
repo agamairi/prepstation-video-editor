@@ -50,9 +50,7 @@ class ThumbnailGenerator {
       final ts = _formatTimestamp(timestamp);
       final command =
           '-y -ss $ts -i "$sourceFilePath" '
-          '-vframes 1 -vf "setsar=1,scale=$width:$height:'
-          'force_original_aspect_ratio=decrease,'
-          'pad=$width:$height:(ow-iw)/2:(oh-ih)/2" '
+          '-vframes 1 -vf "scale=$width:$height" '
           '-q:v 3 "$outputPath"';
 
       final session = await FFmpegKit.execute(command);
@@ -82,8 +80,10 @@ class ThumbnailGenerator {
     if (mediaDuration == Duration.zero) return [];
 
     final results = <String>[];
+    final maxFraction = 1.0 - (1.0 / (count * 2));
     for (var i = 0; i < count; i++) {
-      final fraction = i / (count - 1).clamp(1, count - 1);
+      final rawFraction = i / (count - 1).clamp(1, count - 1);
+      final fraction = rawFraction.clamp(0.0, maxFraction);
       final ts = Duration(
         microseconds:
             (mediaDuration.inMicroseconds * fraction).round(),
