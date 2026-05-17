@@ -162,8 +162,9 @@ class TimelineController {
       type = ClipType.audio;
     }
 
+    final videoClipId = 'clip_${_uuid.v4()}';
     final clip = ClipModel(
-      id: 'clip_${_uuid.v4()}',
+      id: videoClipId,
       trackId: trackId,
       mediaId: asset.id,
       type: type,
@@ -173,6 +174,28 @@ class TimelineController {
       mediaOutPoint: clipDuration,
     );
     await execute(AddClipCommand(clip));
+
+    // Auto-create a linked audio clip on the first audio track.
+    if (type == ClipType.video && asset.hasAudio) {
+      final audioTrack = state.audioTracks.isNotEmpty
+          ? state.audioTracks.first
+          : null;
+      if (audioTrack != null) {
+        final audioClip = ClipModel(
+          id: 'clip_${_uuid.v4()}',
+          trackId: audioTrack.id,
+          mediaId: asset.id,
+          type: ClipType.audio,
+          startOnTimeline: actualStart,
+          endOnTimeline: actualStart + clipDuration,
+          mediaInPoint: Duration.zero,
+          mediaOutPoint: clipDuration,
+          isVideoLinked: true,
+        );
+        await execute(AddClipCommand(audioClip));
+      }
+    }
+
     return clip;
   }
 
