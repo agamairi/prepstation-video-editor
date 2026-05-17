@@ -5,6 +5,7 @@ import 'package:fluxedit/core/database/database_provider.dart';
 import 'package:fluxedit/core/effects/effect_model.dart';
 import 'package:fluxedit/core/effects/effect_type.dart';
 import 'package:fluxedit/core/project/project_model.dart';
+import 'package:fluxedit/core/segmentation/isolation_mode.dart';
 import 'package:fluxedit/core/timeline/clip_model.dart';
 import 'package:fluxedit/core/timeline/composition_model.dart';
 import 'package:fluxedit/core/timeline/marker_model.dart';
@@ -222,6 +223,11 @@ class ProjectRepository {
         flipHorizontal: Value(clip.flipHorizontal),
         flipVertical: Value(clip.flipVertical),
         volume: Value(clip.volume),
+        isolationEnabled: Value(clip.isolationEnabled),
+        isolationMode: Value(clip.isolationMode.name),
+        isolationColorValue: Value(clip.isolationColorValue),
+        isolationBlurRadius: Value(clip.isolationBlurRadius),
+        isolationMaskPath: Value(clip.isolationMaskPath),
       ),
     );
   }
@@ -425,6 +431,11 @@ class ProjectRepository {
       flipHorizontal: row.flipHorizontal,
       flipVertical: row.flipVertical,
       volume: row.volume,
+      isolationEnabled: row.isolationEnabled,
+      isolationMode: IsolationMode.fromName(row.isolationMode),
+      isolationColorValue: row.isolationColorValue,
+      isolationBlurRadius: row.isolationBlurRadius,
+      isolationMaskPath: row.isolationMaskPath,
     );
   }
 

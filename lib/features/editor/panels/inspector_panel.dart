@@ -9,6 +9,8 @@ import 'package:fluxedit/core/effects/effect_type.dart';
 import 'package:fluxedit/core/keyframes/animated_property.dart';
 import 'package:fluxedit/core/project/project_model.dart';
 import 'package:fluxedit/core/project/project_repository.dart';
+import 'package:fluxedit/core/segmentation/isolation_mode.dart';
+import 'package:fluxedit/core/segmentation/segmentation_service.dart';
 import 'package:fluxedit/core/timeline/clip_model.dart';
 import 'package:fluxedit/core/timeline/timeline_controller.dart';
 import 'package:fluxedit/core/transitions/transition_type.dart';
@@ -319,6 +321,8 @@ class _ClipInspectorState extends ConsumerState<_ClipInspector> {
             if (clip.type == ClipType.video) ...[
               const SizedBox(height: 12),
               _ClipFlagsSection(clip: clip),
+              const SizedBox(height: 12),
+              _SubjectIsolationSection(clip: clip),
             ],
             const SizedBox(height: 12),
             _EffectsSection(clipId: clip.id),
@@ -1603,6 +1607,305 @@ class _FlagChip extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+// ── Subject Isolation Section ────────────────────────────────────────────────
+
+class _SubjectIsolationSection extends ConsumerStatefulWidget {
+  const _SubjectIsolationSection({required this.clip});
+
+  final ClipModel clip;
+
+  @override
+  ConsumerState<_SubjectIsolationSection> createState() =>
+      _SubjectIsolationSectionState();
+}
+
+class _SubjectIsolationSectionState
+    extends ConsumerState<_SubjectIsolationSection> {
+  ClipModel? _atDragStart;
+
+  ClipModel? _latestClip() {
+    try {
+      return ref
+          .read(timelineStateProvider)
+          .clips
+          .firstWhere((c) => c.id == widget.clip.id);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static const _bgColors = [
+    0xFF00FF00,
+    0xFF000000,
+    0xFFFFFFFF,
+    0xFF0A84FF,
+    0xFFFF453A,
+    0xFFBF5AF2,
+    0xFFFF9F0A,
+    0xFF30D158,
+  ];
+
+  Future<void> _processIsolation(ClipModel clip) async {
+    final controller = ref.read(timelineControllerProvider);
+    final repo = ref.read(projectRepositoryProvider);
+    final segService = ref.read(segmentationServiceProvider);
+
+    final available = await segService.isAvailable();
+    if (!available || !mounted) return;
+
+    final asset = await repo.getMediaAsset(clip.mediaId);
+    if (asset == null || !mounted) return;
+
+    controller.setIsolationProcessing(clip.id, true);
+
+    final outputDir = asset.filePath.substring(
+      0,
+      asset.filePath.lastIndexOf('/'),
+    );
+    final outputPath = '$outputDir/${clip.id}_mask.mp4';
+
+    final maskPath = await segService.generateMaskVideo(
+      videoPath: asset.filePath,
+      outputPath: outputPath,
+      inPoint: clip.mediaInPoint,
+      outPoint: clip.mediaOutPoint,
+    );
+
+    if (!mounted) return;
+    await controller.setIsolationMaskPath(clip.id, maskPath);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final clip = ref
+            .watch(timelineStateProvider)
+            .clips
+            .cast<ClipModel?>()
+            .firstWhere((c) => c?.id == widget.clip.id, orElse: () => null) ??
+        widget.clip;
+    final controller = ref.read(timelineControllerProvider);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Expanded(
+              child: _SectionHeader(title: 'Subject Isolation'),
+            ),
+            GestureDetector(
+              onTap: () => controller.toggleIsolation(clip.id),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 150),
+                width: 36,
+                height: 20,
+                decoration: BoxDecoration(
+                  color: clip.isolationEnabled
+                      ? ColorTokens.isolationBadge
+                      : ColorTokens.backgroundElevated,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: clip.isolationEnabled
+                        ? ColorTokens.isolationBadge
+                        : ColorTokens.borderStrong,
+                  ),
+                ),
+                child: AnimatedAlign(
+                  duration: const Duration(milliseconds: 150),
+                  alignment: clip.isolationEnabled
+                      ? Alignment.centerRight
+                      : Alignment.centerLeft,
+                  child: Padding(
+                    padding: const EdgeInsets.all(2),
+                    child: Container(
+                      width: 14,
+                      height: 14,
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        if (!clip.isolationEnabled)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Text(
+              'Remove background from video',
+              style: AppTypography.bodySmall.copyWith(
+                color: ColorTokens.textSecondary,
+              ),
+            ),
+          )
+        else ...[
+          const SizedBox(height: 6),
+          if (clip.isolationProcessing)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Row(
+                children: [
+                  const SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: ColorTokens.isolationBadge,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Processing segmentation…',
+                    style: AppTypography.bodySmall.copyWith(
+                      color: ColorTokens.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else if (clip.isolationMaskPath == null)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () => _processIsolation(clip),
+                  icon: const Icon(Icons.person_search, size: 16),
+                  label: const Text('Generate Mask'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: ColorTokens.isolationBadge,
+                    side: const BorderSide(color: ColorTokens.isolationBadge),
+                  ),
+                ),
+              ),
+            )
+          else
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.check_circle,
+                    size: 14,
+                    color: ColorTokens.success,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Mask ready',
+                    style: AppTypography.bodySmall.copyWith(
+                      color: ColorTokens.success,
+                    ),
+                  ),
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: () => _processIsolation(clip),
+                    child: Text(
+                      'Regenerate',
+                      style: AppTypography.labelSmall.copyWith(
+                        color: ColorTokens.isolationBadge,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          // Background mode
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Row(
+              children: [
+                const SizedBox(
+                  width: 80,
+                  child: Text('Background', style: AppTypography.labelMedium),
+                ),
+                Expanded(
+                  child: DropdownButtonHideUnderline(
+                    child: Container(
+                      height: 28,
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      decoration: BoxDecoration(
+                        color: ColorTokens.backgroundSurface,
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: ColorTokens.borderSubtle),
+                      ),
+                      child: DropdownButton<IsolationMode>(
+                        value: clip.isolationMode,
+                        isDense: true,
+                        isExpanded: true,
+                        dropdownColor: ColorTokens.backgroundElevated,
+                        style: AppTypography.bodySmall
+                            .copyWith(color: ColorTokens.textPrimary),
+                        items: IsolationMode.values
+                            .map(
+                              (m) => DropdownMenuItem(
+                                value: m,
+                                child: Text(
+                                  m.displayName,
+                                  style: AppTypography.bodySmall.copyWith(
+                                    color: ColorTokens.textPrimary,
+                                  ),
+                                ),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (v) {
+                          if (v != null) {
+                            controller.updateIsolationMode(clip.id, v);
+                          }
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Blur radius (only in blur mode)
+          if (clip.isolationMode == IsolationMode.blur)
+            _SliderRow(
+              label: 'Blur',
+              value: clip.isolationBlurRadius,
+              min: AppConstants.minIsolationBlurRadius,
+              max: AppConstants.maxIsolationBlurRadius,
+              displayText:
+                  '${clip.isolationBlurRadius.toStringAsFixed(0)}px',
+              onChangeStart: (_) => _atDragStart = _latestClip(),
+              onChanged: (v) {
+                final c = _latestClip();
+                if (c != null) {
+                  ref.read(timelineStateProvider).updateClip(
+                        c.copyWith(isolationBlurRadius: v),
+                      );
+                }
+              },
+              onChangeEnd: (v) {
+                if (_atDragStart != null) {
+                  controller.updateIsolationBlurRadius(clip.id, v);
+                  _atDragStart = null;
+                }
+              },
+            ),
+          // Color picker (only in solidColor mode)
+          if (clip.isolationMode == IsolationMode.solidColor) ...[
+            const SizedBox(height: 4),
+            const Text('Background Color', style: AppTypography.labelMedium),
+            const SizedBox(height: 6),
+            _ColorSwatchRow(
+              selectedColor: clip.isolationColorValue,
+              colors: _bgColors,
+              onSelected: (c) =>
+                  controller.updateIsolationColor(clip.id, c),
+            ),
+          ],
+        ],
+      ],
     );
   }
 }

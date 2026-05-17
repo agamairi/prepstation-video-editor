@@ -17,6 +17,7 @@ import 'package:fluxedit/core/history/keyframe_commands.dart';
 import 'package:fluxedit/core/keyframes/keyframe_repository.dart';
 import 'package:fluxedit/core/project/project_model.dart';
 import 'package:fluxedit/core/project/project_repository.dart';
+import 'package:fluxedit/core/segmentation/isolation_mode.dart';
 import 'package:fluxedit/core/timeline/clip_model.dart';
 import 'package:fluxedit/core/timeline/keyframe_model.dart';
 import 'package:fluxedit/core/timeline/marker_model.dart';
@@ -787,6 +788,80 @@ class TimelineController {
       after: clip.copyWith(isFrozen: !clip.isFrozen),
       description: 'Freeze Frame',
     ));
+  }
+
+  // ── Subject isolation operations (all undoable) ───────────────────────
+
+  Future<void> toggleIsolation(String clipId) async {
+    final clip = _findClip(clipId);
+    if (clip == null || clip.type != ClipType.video) return;
+    await execute(UpdateClipCommand(
+      before: clip,
+      after: clip.copyWith(isolationEnabled: !clip.isolationEnabled),
+      description: clip.isolationEnabled
+          ? 'Disable Subject Isolation'
+          : 'Enable Subject Isolation',
+    ));
+  }
+
+  Future<void> updateIsolationMode(
+    String clipId,
+    IsolationMode mode,
+  ) async {
+    final clip = _findClip(clipId);
+    if (clip == null) return;
+    await execute(UpdateClipCommand(
+      before: clip,
+      after: clip.copyWith(isolationMode: mode),
+      description: 'Isolation Mode',
+    ));
+  }
+
+  Future<void> updateIsolationColor(String clipId, int colorValue) async {
+    final clip = _findClip(clipId);
+    if (clip == null) return;
+    await execute(UpdateClipCommand(
+      before: clip,
+      after: clip.copyWith(isolationColorValue: colorValue),
+      description: 'Isolation Color',
+    ));
+  }
+
+  Future<void> updateIsolationBlurRadius(
+    String clipId,
+    double radius,
+  ) async {
+    final clip = _findClip(clipId);
+    if (clip == null) return;
+    final clamped = radius.clamp(
+      AppConstants.minIsolationBlurRadius,
+      AppConstants.maxIsolationBlurRadius,
+    );
+    await execute(UpdateClipCommand(
+      before: clip,
+      after: clip.copyWith(isolationBlurRadius: clamped),
+      description: 'Isolation Blur',
+    ));
+  }
+
+  Future<void> setIsolationMaskPath(
+    String clipId,
+    String? maskPath,
+  ) async {
+    final clip = _findClip(clipId);
+    if (clip == null) return;
+    final updated = clip.copyWith(
+      isolationMaskPath: maskPath,
+      isolationProcessing: false,
+    );
+    state.updateClip(updated);
+    await repository.saveClip(updated);
+  }
+
+  void setIsolationProcessing(String clipId, bool processing) {
+    final clip = _findClip(clipId);
+    if (clip == null) return;
+    state.updateClip(clip.copyWith(isolationProcessing: processing));
   }
 
   // ── Volume operations (all undoable) ──────────────────────────────────

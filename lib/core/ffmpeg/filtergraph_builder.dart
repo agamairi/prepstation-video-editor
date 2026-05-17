@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:fluxedit/core/effects/effect_model.dart';
 import 'package:fluxedit/core/effects/effect_registry.dart';
+import 'package:fluxedit/core/segmentation/isolation_mode.dart';
 import 'package:fluxedit/core/timeline/clip_model.dart';
 import 'package:fluxedit/core/transitions/transition_type.dart';
 
@@ -385,6 +386,66 @@ class FiltergraphBuilder {
         sb.write('[${segVideoLabels[i]}][${segAudioLabels[i]}]');
       }
       sb.write('concat=n=${segments.length}:v=1:a=1[outv][outa]');
+    }
+
+    return sb.toString();
+  }
+
+  // ignore_for_file: lines_longer_than_80_chars
+  /// Builds an isolation filtergraph for a single clip.
+  ///
+  /// [videoInputIdx] is the input index of the original video.
+  /// [maskInputIdx] is the input index of the grayscale mask video.
+  /// Returns the filtergraph fragment producing `[isov]` output label.
+  String buildIsolationGraph(
+    ClipModel clip, {
+    required int videoInputIdx,
+    required int maskInputIdx,
+    int? targetWidth,
+    int? targetHeight,
+  }) {
+    final sb = StringBuffer();
+    final normalize = targetWidth != null && targetHeight != null;
+    final scale = normalize ? scaleFilter(targetWidth, targetHeight) : '';
+
+    // Scale mask to match video dimensions
+    sb.write('[$maskInputIdx:v]format=gray');
+    if (normalize) {
+      sb.write(',${scaleFilter(targetWidth, targetHeight)}');
+    }
+    sb.write('[mask];');
+
+    switch (clip.isolationMode) {
+      case IsolationMode.transparent:
+        sb.write('[$videoInputIdx:v]format=rgba[rgbsrc];');
+        sb.write('[rgbsrc][mask]alphamerge[isov]');
+
+      case IsolationMode.blur:
+        final r = clip.isolationBlurRadius.toInt();
+        sb.write('[$videoInputIdx:v]split[orig][bg];');
+        sb.write('[bg]boxblur=$r:$r[blurred];');
+        sb.write('[orig]format=rgba[rgborig];');
+        sb.write('[rgborig][mask]alphamerge[subject];');
+        if (normalize) {
+          sb.write('[blurred]$scale[normbg];');
+          sb.write('[normbg][subject]overlay=format=auto[isov]');
+        } else {
+          sb.write('[blurred][subject]overlay=format=auto[isov]');
+        }
+
+      case IsolationMode.solidColor:
+        final hex = clip.isolationColorValue
+            .toRadixString(16)
+            .padLeft(8, '0')
+            .substring(2);
+        final w = targetWidth ?? 1920;
+        final h = targetHeight ?? 1080;
+        sb.write(
+          'color=c=0x$hex:s=${w}x$h:r=30[colorbg];',
+        );
+        sb.write('[$videoInputIdx:v]format=rgba[rgbsrc2];');
+        sb.write('[rgbsrc2][mask]alphamerge[subject2];');
+        sb.write('[colorbg][subject2]overlay=format=auto:shortest=1[isov]');
     }
 
     return sb.toString();

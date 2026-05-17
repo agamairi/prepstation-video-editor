@@ -3043,6 +3043,68 @@ class $ClipsTable extends Clips with TableInfo<$ClipsTable, Clip> {
     requiredDuringInsert: false,
     defaultValue: const Constant(1.0),
   );
+  static const VerificationMeta _isolationEnabledMeta = const VerificationMeta(
+    'isolationEnabled',
+  );
+  @override
+  late final GeneratedColumn<bool> isolationEnabled = GeneratedColumn<bool>(
+    'isolation_enabled',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("isolation_enabled" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _isolationModeMeta = const VerificationMeta(
+    'isolationMode',
+  );
+  @override
+  late final GeneratedColumn<String> isolationMode = GeneratedColumn<String>(
+    'isolation_mode',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('transparent'),
+  );
+  static const VerificationMeta _isolationColorValueMeta =
+      const VerificationMeta('isolationColorValue');
+  @override
+  late final GeneratedColumn<int> isolationColorValue = GeneratedColumn<int>(
+    'isolation_color_value',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0xFF00FF00),
+  );
+  static const VerificationMeta _isolationBlurRadiusMeta =
+      const VerificationMeta('isolationBlurRadius');
+  @override
+  late final GeneratedColumn<double> isolationBlurRadius =
+      GeneratedColumn<double>(
+        'isolation_blur_radius',
+        aliasedName,
+        false,
+        type: DriftSqlType.double,
+        requiredDuringInsert: false,
+        defaultValue: const Constant(20.0),
+      );
+  static const VerificationMeta _isolationMaskPathMeta = const VerificationMeta(
+    'isolationMaskPath',
+  );
+  @override
+  late final GeneratedColumn<String> isolationMaskPath =
+      GeneratedColumn<String>(
+        'isolation_mask_path',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -3090,6 +3152,11 @@ class $ClipsTable extends Clips with TableInfo<$ClipsTable, Clip> {
     flipHorizontal,
     flipVertical,
     volume,
+    isolationEnabled,
+    isolationMode,
+    isolationColorValue,
+    isolationBlurRadius,
+    isolationMaskPath,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -3443,6 +3510,51 @@ class $ClipsTable extends Clips with TableInfo<$ClipsTable, Clip> {
         volume.isAcceptableOrUnknown(data['volume']!, _volumeMeta),
       );
     }
+    if (data.containsKey('isolation_enabled')) {
+      context.handle(
+        _isolationEnabledMeta,
+        isolationEnabled.isAcceptableOrUnknown(
+          data['isolation_enabled']!,
+          _isolationEnabledMeta,
+        ),
+      );
+    }
+    if (data.containsKey('isolation_mode')) {
+      context.handle(
+        _isolationModeMeta,
+        isolationMode.isAcceptableOrUnknown(
+          data['isolation_mode']!,
+          _isolationModeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('isolation_color_value')) {
+      context.handle(
+        _isolationColorValueMeta,
+        isolationColorValue.isAcceptableOrUnknown(
+          data['isolation_color_value']!,
+          _isolationColorValueMeta,
+        ),
+      );
+    }
+    if (data.containsKey('isolation_blur_radius')) {
+      context.handle(
+        _isolationBlurRadiusMeta,
+        isolationBlurRadius.isAcceptableOrUnknown(
+          data['isolation_blur_radius']!,
+          _isolationBlurRadiusMeta,
+        ),
+      );
+    }
+    if (data.containsKey('isolation_mask_path')) {
+      context.handle(
+        _isolationMaskPathMeta,
+        isolationMaskPath.isAcceptableOrUnknown(
+          data['isolation_mask_path']!,
+          _isolationMaskPathMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -3632,6 +3744,26 @@ class $ClipsTable extends Clips with TableInfo<$ClipsTable, Clip> {
         DriftSqlType.double,
         data['${effectivePrefix}volume'],
       )!,
+      isolationEnabled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}isolation_enabled'],
+      )!,
+      isolationMode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}isolation_mode'],
+      )!,
+      isolationColorValue: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}isolation_color_value'],
+      )!,
+      isolationBlurRadius: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}isolation_blur_radius'],
+      )!,
+      isolationMaskPath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}isolation_mask_path'],
+      ),
     );
   }
 
@@ -3687,6 +3819,11 @@ class Clip extends DataClass implements Insertable<Clip> {
   final bool flipHorizontal;
   final bool flipVertical;
   final double volume;
+  final bool isolationEnabled;
+  final String isolationMode;
+  final int isolationColorValue;
+  final double isolationBlurRadius;
+  final String? isolationMaskPath;
   const Clip({
     required this.id,
     required this.trackId,
@@ -3733,6 +3870,11 @@ class Clip extends DataClass implements Insertable<Clip> {
     required this.flipHorizontal,
     required this.flipVertical,
     required this.volume,
+    required this.isolationEnabled,
+    required this.isolationMode,
+    required this.isolationColorValue,
+    required this.isolationBlurRadius,
+    this.isolationMaskPath,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -3788,6 +3930,13 @@ class Clip extends DataClass implements Insertable<Clip> {
     map['flip_horizontal'] = Variable<bool>(flipHorizontal);
     map['flip_vertical'] = Variable<bool>(flipVertical);
     map['volume'] = Variable<double>(volume);
+    map['isolation_enabled'] = Variable<bool>(isolationEnabled);
+    map['isolation_mode'] = Variable<String>(isolationMode);
+    map['isolation_color_value'] = Variable<int>(isolationColorValue);
+    map['isolation_blur_radius'] = Variable<double>(isolationBlurRadius);
+    if (!nullToAbsent || isolationMaskPath != null) {
+      map['isolation_mask_path'] = Variable<String>(isolationMaskPath);
+    }
     return map;
   }
 
@@ -3844,6 +3993,13 @@ class Clip extends DataClass implements Insertable<Clip> {
       flipHorizontal: Value(flipHorizontal),
       flipVertical: Value(flipVertical),
       volume: Value(volume),
+      isolationEnabled: Value(isolationEnabled),
+      isolationMode: Value(isolationMode),
+      isolationColorValue: Value(isolationColorValue),
+      isolationBlurRadius: Value(isolationBlurRadius),
+      isolationMaskPath: isolationMaskPath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(isolationMaskPath),
     );
   }
 
@@ -3904,6 +4060,17 @@ class Clip extends DataClass implements Insertable<Clip> {
       flipHorizontal: serializer.fromJson<bool>(json['flipHorizontal']),
       flipVertical: serializer.fromJson<bool>(json['flipVertical']),
       volume: serializer.fromJson<double>(json['volume']),
+      isolationEnabled: serializer.fromJson<bool>(json['isolationEnabled']),
+      isolationMode: serializer.fromJson<String>(json['isolationMode']),
+      isolationColorValue: serializer.fromJson<int>(
+        json['isolationColorValue'],
+      ),
+      isolationBlurRadius: serializer.fromJson<double>(
+        json['isolationBlurRadius'],
+      ),
+      isolationMaskPath: serializer.fromJson<String?>(
+        json['isolationMaskPath'],
+      ),
     );
   }
   @override
@@ -3959,6 +4126,11 @@ class Clip extends DataClass implements Insertable<Clip> {
       'flipHorizontal': serializer.toJson<bool>(flipHorizontal),
       'flipVertical': serializer.toJson<bool>(flipVertical),
       'volume': serializer.toJson<double>(volume),
+      'isolationEnabled': serializer.toJson<bool>(isolationEnabled),
+      'isolationMode': serializer.toJson<String>(isolationMode),
+      'isolationColorValue': serializer.toJson<int>(isolationColorValue),
+      'isolationBlurRadius': serializer.toJson<double>(isolationBlurRadius),
+      'isolationMaskPath': serializer.toJson<String?>(isolationMaskPath),
     };
   }
 
@@ -4008,6 +4180,11 @@ class Clip extends DataClass implements Insertable<Clip> {
     bool? flipHorizontal,
     bool? flipVertical,
     double? volume,
+    bool? isolationEnabled,
+    String? isolationMode,
+    int? isolationColorValue,
+    double? isolationBlurRadius,
+    Value<String?> isolationMaskPath = const Value.absent(),
   }) => Clip(
     id: id ?? this.id,
     trackId: trackId ?? this.trackId,
@@ -4061,6 +4238,13 @@ class Clip extends DataClass implements Insertable<Clip> {
     flipHorizontal: flipHorizontal ?? this.flipHorizontal,
     flipVertical: flipVertical ?? this.flipVertical,
     volume: volume ?? this.volume,
+    isolationEnabled: isolationEnabled ?? this.isolationEnabled,
+    isolationMode: isolationMode ?? this.isolationMode,
+    isolationColorValue: isolationColorValue ?? this.isolationColorValue,
+    isolationBlurRadius: isolationBlurRadius ?? this.isolationBlurRadius,
+    isolationMaskPath: isolationMaskPath.present
+        ? isolationMaskPath.value
+        : this.isolationMaskPath,
   );
   Clip copyWithCompanion(ClipsCompanion data) {
     return Clip(
@@ -4153,6 +4337,21 @@ class Clip extends DataClass implements Insertable<Clip> {
           ? data.flipVertical.value
           : this.flipVertical,
       volume: data.volume.present ? data.volume.value : this.volume,
+      isolationEnabled: data.isolationEnabled.present
+          ? data.isolationEnabled.value
+          : this.isolationEnabled,
+      isolationMode: data.isolationMode.present
+          ? data.isolationMode.value
+          : this.isolationMode,
+      isolationColorValue: data.isolationColorValue.present
+          ? data.isolationColorValue.value
+          : this.isolationColorValue,
+      isolationBlurRadius: data.isolationBlurRadius.present
+          ? data.isolationBlurRadius.value
+          : this.isolationBlurRadius,
+      isolationMaskPath: data.isolationMaskPath.present
+          ? data.isolationMaskPath.value
+          : this.isolationMaskPath,
     );
   }
 
@@ -4203,7 +4402,12 @@ class Clip extends DataClass implements Insertable<Clip> {
           ..write('isFrozen: $isFrozen, ')
           ..write('flipHorizontal: $flipHorizontal, ')
           ..write('flipVertical: $flipVertical, ')
-          ..write('volume: $volume')
+          ..write('volume: $volume, ')
+          ..write('isolationEnabled: $isolationEnabled, ')
+          ..write('isolationMode: $isolationMode, ')
+          ..write('isolationColorValue: $isolationColorValue, ')
+          ..write('isolationBlurRadius: $isolationBlurRadius, ')
+          ..write('isolationMaskPath: $isolationMaskPath')
           ..write(')'))
         .toString();
   }
@@ -4255,6 +4459,11 @@ class Clip extends DataClass implements Insertable<Clip> {
     flipHorizontal,
     flipVertical,
     volume,
+    isolationEnabled,
+    isolationMode,
+    isolationColorValue,
+    isolationBlurRadius,
+    isolationMaskPath,
   ]);
   @override
   bool operator ==(Object other) =>
@@ -4304,7 +4513,12 @@ class Clip extends DataClass implements Insertable<Clip> {
           other.isFrozen == this.isFrozen &&
           other.flipHorizontal == this.flipHorizontal &&
           other.flipVertical == this.flipVertical &&
-          other.volume == this.volume);
+          other.volume == this.volume &&
+          other.isolationEnabled == this.isolationEnabled &&
+          other.isolationMode == this.isolationMode &&
+          other.isolationColorValue == this.isolationColorValue &&
+          other.isolationBlurRadius == this.isolationBlurRadius &&
+          other.isolationMaskPath == this.isolationMaskPath);
 }
 
 class ClipsCompanion extends UpdateCompanion<Clip> {
@@ -4353,6 +4567,11 @@ class ClipsCompanion extends UpdateCompanion<Clip> {
   final Value<bool> flipHorizontal;
   final Value<bool> flipVertical;
   final Value<double> volume;
+  final Value<bool> isolationEnabled;
+  final Value<String> isolationMode;
+  final Value<int> isolationColorValue;
+  final Value<double> isolationBlurRadius;
+  final Value<String?> isolationMaskPath;
   final Value<int> rowid;
   const ClipsCompanion({
     this.id = const Value.absent(),
@@ -4400,6 +4619,11 @@ class ClipsCompanion extends UpdateCompanion<Clip> {
     this.flipHorizontal = const Value.absent(),
     this.flipVertical = const Value.absent(),
     this.volume = const Value.absent(),
+    this.isolationEnabled = const Value.absent(),
+    this.isolationMode = const Value.absent(),
+    this.isolationColorValue = const Value.absent(),
+    this.isolationBlurRadius = const Value.absent(),
+    this.isolationMaskPath = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ClipsCompanion.insert({
@@ -4448,6 +4672,11 @@ class ClipsCompanion extends UpdateCompanion<Clip> {
     this.flipHorizontal = const Value.absent(),
     this.flipVertical = const Value.absent(),
     this.volume = const Value.absent(),
+    this.isolationEnabled = const Value.absent(),
+    this.isolationMode = const Value.absent(),
+    this.isolationColorValue = const Value.absent(),
+    this.isolationBlurRadius = const Value.absent(),
+    this.isolationMaskPath = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        trackId = Value(trackId),
@@ -4503,6 +4732,11 @@ class ClipsCompanion extends UpdateCompanion<Clip> {
     Expression<bool>? flipHorizontal,
     Expression<bool>? flipVertical,
     Expression<double>? volume,
+    Expression<bool>? isolationEnabled,
+    Expression<String>? isolationMode,
+    Expression<int>? isolationColorValue,
+    Expression<double>? isolationBlurRadius,
+    Expression<String>? isolationMaskPath,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -4554,6 +4788,13 @@ class ClipsCompanion extends UpdateCompanion<Clip> {
       if (flipHorizontal != null) 'flip_horizontal': flipHorizontal,
       if (flipVertical != null) 'flip_vertical': flipVertical,
       if (volume != null) 'volume': volume,
+      if (isolationEnabled != null) 'isolation_enabled': isolationEnabled,
+      if (isolationMode != null) 'isolation_mode': isolationMode,
+      if (isolationColorValue != null)
+        'isolation_color_value': isolationColorValue,
+      if (isolationBlurRadius != null)
+        'isolation_blur_radius': isolationBlurRadius,
+      if (isolationMaskPath != null) 'isolation_mask_path': isolationMaskPath,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -4604,6 +4845,11 @@ class ClipsCompanion extends UpdateCompanion<Clip> {
     Value<bool>? flipHorizontal,
     Value<bool>? flipVertical,
     Value<double>? volume,
+    Value<bool>? isolationEnabled,
+    Value<String>? isolationMode,
+    Value<int>? isolationColorValue,
+    Value<double>? isolationBlurRadius,
+    Value<String?>? isolationMaskPath,
     Value<int>? rowid,
   }) {
     return ClipsCompanion(
@@ -4655,6 +4901,11 @@ class ClipsCompanion extends UpdateCompanion<Clip> {
       flipHorizontal: flipHorizontal ?? this.flipHorizontal,
       flipVertical: flipVertical ?? this.flipVertical,
       volume: volume ?? this.volume,
+      isolationEnabled: isolationEnabled ?? this.isolationEnabled,
+      isolationMode: isolationMode ?? this.isolationMode,
+      isolationColorValue: isolationColorValue ?? this.isolationColorValue,
+      isolationBlurRadius: isolationBlurRadius ?? this.isolationBlurRadius,
+      isolationMaskPath: isolationMaskPath ?? this.isolationMaskPath,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -4803,6 +5054,23 @@ class ClipsCompanion extends UpdateCompanion<Clip> {
     if (volume.present) {
       map['volume'] = Variable<double>(volume.value);
     }
+    if (isolationEnabled.present) {
+      map['isolation_enabled'] = Variable<bool>(isolationEnabled.value);
+    }
+    if (isolationMode.present) {
+      map['isolation_mode'] = Variable<String>(isolationMode.value);
+    }
+    if (isolationColorValue.present) {
+      map['isolation_color_value'] = Variable<int>(isolationColorValue.value);
+    }
+    if (isolationBlurRadius.present) {
+      map['isolation_blur_radius'] = Variable<double>(
+        isolationBlurRadius.value,
+      );
+    }
+    if (isolationMaskPath.present) {
+      map['isolation_mask_path'] = Variable<String>(isolationMaskPath.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -4857,6 +5125,11 @@ class ClipsCompanion extends UpdateCompanion<Clip> {
           ..write('flipHorizontal: $flipHorizontal, ')
           ..write('flipVertical: $flipVertical, ')
           ..write('volume: $volume, ')
+          ..write('isolationEnabled: $isolationEnabled, ')
+          ..write('isolationMode: $isolationMode, ')
+          ..write('isolationColorValue: $isolationColorValue, ')
+          ..write('isolationBlurRadius: $isolationBlurRadius, ')
+          ..write('isolationMaskPath: $isolationMaskPath, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -8732,6 +9005,11 @@ typedef $$ClipsTableCreateCompanionBuilder =
       Value<bool> flipHorizontal,
       Value<bool> flipVertical,
       Value<double> volume,
+      Value<bool> isolationEnabled,
+      Value<String> isolationMode,
+      Value<int> isolationColorValue,
+      Value<double> isolationBlurRadius,
+      Value<String?> isolationMaskPath,
       Value<int> rowid,
     });
 typedef $$ClipsTableUpdateCompanionBuilder =
@@ -8781,6 +9059,11 @@ typedef $$ClipsTableUpdateCompanionBuilder =
       Value<bool> flipHorizontal,
       Value<bool> flipVertical,
       Value<double> volume,
+      Value<bool> isolationEnabled,
+      Value<String> isolationMode,
+      Value<int> isolationColorValue,
+      Value<double> isolationBlurRadius,
+      Value<String?> isolationMaskPath,
       Value<int> rowid,
     });
 
@@ -9082,6 +9365,31 @@ class $$ClipsTableFilterComposer extends Composer<_$AppDatabase, $ClipsTable> {
 
   ColumnFilters<double> get volume => $composableBuilder(
     column: $table.volume,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isolationEnabled => $composableBuilder(
+    column: $table.isolationEnabled,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get isolationMode => $composableBuilder(
+    column: $table.isolationMode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get isolationColorValue => $composableBuilder(
+    column: $table.isolationColorValue,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get isolationBlurRadius => $composableBuilder(
+    column: $table.isolationBlurRadius,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get isolationMaskPath => $composableBuilder(
+    column: $table.isolationMaskPath,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -9406,6 +9714,31 @@ class $$ClipsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get isolationEnabled => $composableBuilder(
+    column: $table.isolationEnabled,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get isolationMode => $composableBuilder(
+    column: $table.isolationMode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get isolationColorValue => $composableBuilder(
+    column: $table.isolationColorValue,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get isolationBlurRadius => $composableBuilder(
+    column: $table.isolationBlurRadius,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get isolationMaskPath => $composableBuilder(
+    column: $table.isolationMaskPath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$TracksTableOrderingComposer get trackId {
     final $$TracksTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -9635,6 +9968,31 @@ class $$ClipsTableAnnotationComposer
   GeneratedColumn<double> get volume =>
       $composableBuilder(column: $table.volume, builder: (column) => column);
 
+  GeneratedColumn<bool> get isolationEnabled => $composableBuilder(
+    column: $table.isolationEnabled,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get isolationMode => $composableBuilder(
+    column: $table.isolationMode,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get isolationColorValue => $composableBuilder(
+    column: $table.isolationColorValue,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get isolationBlurRadius => $composableBuilder(
+    column: $table.isolationBlurRadius,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get isolationMaskPath => $composableBuilder(
+    column: $table.isolationMaskPath,
+    builder: (column) => column,
+  );
+
   $$TracksTableAnnotationComposer get trackId {
     final $$TracksTableAnnotationComposer composer = $composerBuilder(
       composer: this,
@@ -9810,6 +10168,11 @@ class $$ClipsTableTableManager
                 Value<bool> flipHorizontal = const Value.absent(),
                 Value<bool> flipVertical = const Value.absent(),
                 Value<double> volume = const Value.absent(),
+                Value<bool> isolationEnabled = const Value.absent(),
+                Value<String> isolationMode = const Value.absent(),
+                Value<int> isolationColorValue = const Value.absent(),
+                Value<double> isolationBlurRadius = const Value.absent(),
+                Value<String?> isolationMaskPath = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ClipsCompanion(
                 id: id,
@@ -9857,6 +10220,11 @@ class $$ClipsTableTableManager
                 flipHorizontal: flipHorizontal,
                 flipVertical: flipVertical,
                 volume: volume,
+                isolationEnabled: isolationEnabled,
+                isolationMode: isolationMode,
+                isolationColorValue: isolationColorValue,
+                isolationBlurRadius: isolationBlurRadius,
+                isolationMaskPath: isolationMaskPath,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -9906,6 +10274,11 @@ class $$ClipsTableTableManager
                 Value<bool> flipHorizontal = const Value.absent(),
                 Value<bool> flipVertical = const Value.absent(),
                 Value<double> volume = const Value.absent(),
+                Value<bool> isolationEnabled = const Value.absent(),
+                Value<String> isolationMode = const Value.absent(),
+                Value<int> isolationColorValue = const Value.absent(),
+                Value<double> isolationBlurRadius = const Value.absent(),
+                Value<String?> isolationMaskPath = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ClipsCompanion.insert(
                 id: id,
@@ -9953,6 +10326,11 @@ class $$ClipsTableTableManager
                 flipHorizontal: flipHorizontal,
                 flipVertical: flipVertical,
                 volume: volume,
+                isolationEnabled: isolationEnabled,
+                isolationMode: isolationMode,
+                isolationColorValue: isolationColorValue,
+                isolationBlurRadius: isolationBlurRadius,
+                isolationMaskPath: isolationMaskPath,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

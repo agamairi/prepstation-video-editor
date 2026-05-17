@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fluxedit/app/theme/color_tokens.dart';
 import 'package:fluxedit/core/constants/app_constants.dart';
+import 'package:fluxedit/core/segmentation/isolation_mode.dart';
 
 enum ClipType { video, audio, title, image, adjustment, colorCard }
 
@@ -102,6 +103,13 @@ class ClipModel {
     this.flipVertical = false,
     // Volume (per-clip audio level)
     this.volume = 1.0,
+    // Subject isolation (background removal)
+    this.isolationEnabled = false,
+    this.isolationMode = IsolationMode.transparent,
+    this.isolationColorValue = 0xFF00FF00,
+    this.isolationBlurRadius = AppConstants.defaultIsolationBlurRadius,
+    this.isolationMaskPath,
+    this.isolationProcessing = false,
   });
 
   final String id;
@@ -170,6 +178,14 @@ class ClipModel {
   // Per-clip audio volume
   final double volume;
 
+  // Subject isolation (background removal)
+  final bool isolationEnabled;
+  final IsolationMode isolationMode;
+  final int isolationColorValue;
+  final double isolationBlurRadius;
+  final String? isolationMaskPath;
+  final bool isolationProcessing;
+
   Duration get duration => endOnTimeline - startOnTimeline;
   Duration get mediaDuration => mediaOutPoint - mediaInPoint;
 
@@ -227,6 +243,12 @@ class ClipModel {
     bool? flipHorizontal,
     bool? flipVertical,
     double? volume,
+    bool? isolationEnabled,
+    IsolationMode? isolationMode,
+    int? isolationColorValue,
+    double? isolationBlurRadius,
+    Object? isolationMaskPath = _omit,
+    bool? isolationProcessing,
   }) {
     return ClipModel(
       id: id ?? this.id,
@@ -281,6 +303,14 @@ class ClipModel {
       flipHorizontal: flipHorizontal ?? this.flipHorizontal,
       flipVertical: flipVertical ?? this.flipVertical,
       volume: volume ?? this.volume,
+      isolationEnabled: isolationEnabled ?? this.isolationEnabled,
+      isolationMode: isolationMode ?? this.isolationMode,
+      isolationColorValue: isolationColorValue ?? this.isolationColorValue,
+      isolationBlurRadius: isolationBlurRadius ?? this.isolationBlurRadius,
+      isolationMaskPath: isolationMaskPath == _omit
+          ? this.isolationMaskPath
+          : isolationMaskPath as String?,
+      isolationProcessing: isolationProcessing ?? this.isolationProcessing,
     );
   }
 

@@ -157,6 +157,17 @@ class Clips extends Table {
   // Per-clip volume
   RealColumn get volume => real().withDefault(const Constant(1.0))();
 
+  // Subject isolation (background removal)
+  BoolColumn get isolationEnabled =>
+      boolean().withDefault(const Constant(false))();
+  TextColumn get isolationMode =>
+      text().withDefault(const Constant('transparent'))();
+  IntColumn get isolationColorValue =>
+      integer().withDefault(const Constant(0xFF00FF00))();
+  RealColumn get isolationBlurRadius =>
+      real().withDefault(const Constant(20.0))();
+  TextColumn get isolationMaskPath => text().nullable()();
+
   @override
   Set<Column<Object>> get primaryKey => {id};
 }

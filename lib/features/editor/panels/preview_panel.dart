@@ -11,11 +11,14 @@ import 'package:fluxedit/core/effects/effect_model.dart';
 import 'package:fluxedit/core/effects/effect_type.dart';
 import 'package:fluxedit/core/project/project_model.dart';
 import 'package:fluxedit/core/project/project_repository.dart';
+import 'package:fluxedit/core/segmentation/isolation_mode.dart';
 import 'package:fluxedit/core/timeline/clip_model.dart';
 import 'package:fluxedit/core/timeline/timeline_controller.dart';
 import 'package:fluxedit/core/timeline/timeline_state.dart';
+import 'package:fluxedit/core/timeline/track_model.dart';
 import 'package:fluxedit/core/transitions/transition_type.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:just_audio/just_audio.dart' as ja;
 import 'package:video_player/video_player.dart';
 
 class _TransitionInfo {
@@ -125,6 +128,17 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
   String? _transitionMediaId;
   bool _transitionInitialized = false;
 
+  VideoPlayerController? _maskController;
+  String? _maskPath;
+  bool _maskInitialized = false;
+  ui.Image? _maskFrame;
+  ui.Image? _segmentedFrame;
+
+  final Map<String, ja.AudioPlayer> _audioPlayers = {};
+  final Set<String> _activeAudioClipIds = {};
+  final Set<String> _audioLoading = {};
+  bool _audioSyncing = false;
+
   Timer? _playbackTimer;
   DateTime? _wallClockAtPlayStart;
   Duration _playheadAtPlayStart = Duration.zero;
@@ -134,6 +148,12 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
     _playbackTimer?.cancel();
     _controller?.dispose();
     _transitionController?.dispose();
+    _maskController?.dispose();
+    _maskFrame?.dispose();
+    _segmentedFrame?.dispose();
+    for (final player in _audioPlayers.values) {
+      player.dispose();
+    }
     super.dispose();
   }
 
@@ -195,6 +215,8 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
       }
     }
 
+    _syncAudioPlayback(state, seekTo);
+
     _playbackTimer = Timer.periodic(const Duration(milliseconds: 33), (_) {
       if (!mounted) return;
       final s = ref.read(timelineStateProvider);
@@ -208,9 +230,11 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
         s.setPlaying(false);
         _controller?.seekTo(Duration.zero);
         _controller?.pause();
+        _stopAllAudio();
         return;
       }
       s.setPlayhead(newPlayhead);
+      _syncAudioPlayback(s, newPlayhead);
     });
   }
 
@@ -219,6 +243,81 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
     _playbackTimer = null;
     _wallClockAtPlayStart = null;
     _controller?.pause();
+    _stopAllAudio();
+  }
+
+  // ── Audio playback ─────────────────────────────────────────────────────────
+
+  Future<void> _syncAudioPlayback(TimelineState state, Duration playhead) async {
+    if (_audioSyncing) return;
+    _audioSyncing = true;
+    try {
+      final audioClips = <ClipModel>[];
+      for (final track in state.tracks.where((t) => t.type == TrackType.audio)) {
+        final clip = state.clipAt(track.id, playhead);
+        if (clip != null && !clip.isMuted) {
+          audioClips.add(clip);
+        }
+      }
+
+      final activeIds = audioClips.map((c) => c.id).toSet();
+
+      for (final id in _activeAudioClipIds.toList()) {
+        if (!activeIds.contains(id)) {
+          await _audioPlayers[id]?.pause();
+          _activeAudioClipIds.remove(id);
+        }
+      }
+
+      for (final clip in audioClips) {
+        if (_activeAudioClipIds.contains(clip.id)) continue;
+        if (_audioLoading.contains(clip.id)) continue;
+
+        final player = await _getAudioPlayer(clip);
+        if (player == null) continue;
+        if (!mounted) return;
+
+        final offsetInClip = playhead - clip.startOnTimeline;
+        final mediaPos = clip.mediaInPoint + offsetInClip;
+        await player.setVolume(clip.volume);
+        await player.seek(mediaPos);
+        unawaited(player.play());
+        _activeAudioClipIds.add(clip.id);
+      }
+    } finally {
+      _audioSyncing = false;
+    }
+  }
+
+  Future<ja.AudioPlayer?> _getAudioPlayer(ClipModel clip) async {
+    if (_audioPlayers.containsKey(clip.id)) return _audioPlayers[clip.id];
+    if (_audioLoading.contains(clip.id)) return null;
+
+    _audioLoading.add(clip.id);
+    try {
+      final asset = await ref.read(projectRepositoryProvider).getMediaAsset(clip.mediaId);
+      if (asset == null) return null;
+
+      final player = ja.AudioPlayer();
+      try {
+        await player.setFilePath(asset.filePath);
+        _audioPlayers[clip.id] = player;
+        return player;
+      } catch (e) {
+        debugPrint('[PreviewPanel] Failed to load audio for ${clip.id}: $e');
+        await player.dispose();
+        return null;
+      }
+    } finally {
+      _audioLoading.remove(clip.id);
+    }
+  }
+
+  void _stopAllAudio() {
+    for (final player in _audioPlayers.values) {
+      player.stop();
+    }
+    _activeAudioClipIds.clear();
   }
 
   // ── Effect filters ──────────────────────────────────────────────────────────
@@ -522,6 +621,14 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
       return;
     }
 
+    final state = ref.read(timelineStateProvider);
+    final hasLinkedAudio = state.clips.any(
+      (c) => c.mediaId == mediaId && c.type == ClipType.audio && c.isVideoLinked,
+    );
+    if (hasLinkedAudio) {
+      await controller.setVolume(0.0);
+    }
+
     setState(() {
       _controller = controller;
       _initialized = true;
@@ -566,6 +673,109 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
     _transitionController = null;
     _transitionInitialized = false;
     old?.dispose();
+  }
+
+  // ── Isolation mask video ─────────────────────────────────────────────────────
+
+  Future<void> _loadMaskVideo(String path) async {
+    if (_maskPath == path) return;
+    _maskPath = path;
+
+    final old = _maskController;
+    _maskController = null;
+    _maskInitialized = false;
+    await old?.dispose();
+
+    if (!mounted) return;
+
+    final file = File(path);
+    if (!file.existsSync()) return;
+
+    final controller = VideoPlayerController.file(file);
+    await controller.initialize();
+    if (!mounted || _maskPath != path) {
+      await controller.dispose();
+      return;
+    }
+
+    await controller.setVolume(0.0);
+
+    setState(() {
+      _maskController = controller;
+      _maskInitialized = true;
+    });
+  }
+
+  void _clearMaskVideo() {
+    if (_maskController == null) return;
+    final old = _maskController;
+    _maskPath = null;
+    _maskController = null;
+    _maskInitialized = false;
+    old?.dispose();
+  }
+
+  Widget _applyIsolationPreview(Widget child, ClipModel clip) {
+    if (!clip.isolationEnabled || clip.isolationMaskPath == null) return child;
+
+    if (!_maskInitialized || _maskController == null) return child;
+
+    final maskAr = _maskController!.value.aspectRatio;
+    final maskWidget = AspectRatio(
+      aspectRatio: maskAr > 0 ? maskAr : 16.0 / 9.0,
+      child: VideoPlayer(_maskController!),
+    );
+
+    switch (clip.isolationMode) {
+      case IsolationMode.transparent:
+        return ShaderMask(
+          shaderCallback: (rect) => const LinearGradient(
+            colors: [Colors.white, Colors.white],
+          ).createShader(rect),
+          blendMode: BlendMode.dstIn,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              child,
+              Positioned.fill(
+                child: Opacity(opacity: 0.0, child: maskWidget),
+              ),
+            ],
+          ),
+        );
+
+      case IsolationMode.blur:
+        final sigma = clip.isolationBlurRadius * 0.5;
+        return Stack(
+          alignment: Alignment.center,
+          children: [
+            ImageFiltered(
+              imageFilter: ui.ImageFilter.blur(
+                sigmaX: sigma,
+                sigmaY: sigma,
+              ),
+              child: child,
+            ),
+            _IsolationMaskComposite(
+              subject: child,
+              mask: maskWidget,
+            ),
+          ],
+        );
+
+      case IsolationMode.solidColor:
+        final bgColor = Color(clip.isolationColorValue);
+        return Stack(
+          alignment: Alignment.center,
+          children: [
+            Container(color: bgColor),
+            _IsolationMaskComposite(
+              subject: child,
+              mask: maskWidget,
+            ),
+          ],
+        );
+    }
   }
 
   // ── Animation helpers ───────────────────────────────────────────────────────
@@ -687,6 +897,28 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
 
     if (activeClip != null) {
       contentWidget = _applyClipTransforms(contentWidget, activeClip);
+    }
+
+    // Load/sync/apply isolation mask for active clip.
+    if (activeClip != null &&
+        activeClip.isolationEnabled &&
+        activeClip.isolationMaskPath != null) {
+      if (_maskPath != activeClip.isolationMaskPath) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _loadMaskVideo(activeClip.isolationMaskPath!);
+        });
+      }
+      if (_maskInitialized && _maskController != null) {
+        final offsetInClip =
+            timelineState.playhead - activeClip.startOnTimeline;
+        final maskPos = activeClip.mediaInPoint + offsetInClip;
+        _maskController!.seekTo(maskPos);
+      }
+      contentWidget = _applyIsolationPreview(contentWidget, activeClip);
+    } else if (_maskController != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _clearMaskVideo();
+      });
     }
 
     // Apply transition effect when in a transition zone.
@@ -994,6 +1226,41 @@ class _GrainPainter extends CustomPainter {
   bool shouldRepaint(_GrainPainter old) => old.opacity != opacity;
 }
 
+// ── Isolation mask composite ─────────────────────────────────────────────────
+
+class _IsolationMaskComposite extends StatelessWidget {
+  const _IsolationMaskComposite({
+    required this.subject,
+    required this.mask,
+  });
+
+  final Widget subject;
+  final Widget mask;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        ColorFiltered(
+          colorFilter: const ColorFilter.mode(
+            Colors.white,
+            BlendMode.dst,
+          ),
+          child: mask,
+        ),
+        ShaderMask(
+          shaderCallback: (rect) => const LinearGradient(
+            colors: [Colors.white, Colors.white],
+          ).createShader(rect),
+          blendMode: BlendMode.dstIn,
+          child: subject,
+        ),
+      ],
+    );
+  }
+}
+
 // ── Transition composite ─────────────────────────────────────────────────────
 
 class _TransitionComposite extends StatelessWidget {
@@ -1029,12 +1296,15 @@ class _TransitionComposite extends StatelessWidget {
     );
   }
 
+  Widget _centered(Widget child) {
+    return Positioned.fill(child: Center(child: child));
+  }
+
   Widget _crossDissolve() {
     return Stack(
-      fit: StackFit.expand,
       children: [
-        Opacity(opacity: (1.0 - progress).clamp(0.0, 1.0), child: outgoing),
-        Opacity(opacity: progress.clamp(0.0, 1.0), child: incoming),
+        _centered(Opacity(opacity: (1.0 - progress).clamp(0.0, 1.0), child: outgoing)),
+        _centered(Opacity(opacity: progress.clamp(0.0, 1.0), child: incoming)),
       ],
     );
   }
@@ -1043,10 +1313,9 @@ class _TransitionComposite extends StatelessWidget {
     final fadeOut = (progress * 2.0).clamp(0.0, 1.0);
     final fadeIn = ((progress - 0.5) * 2.0).clamp(0.0, 1.0);
     return Stack(
-      fit: StackFit.expand,
       children: [
-        if (fadeIn > 0) Opacity(opacity: fadeIn, child: incoming),
-        if (fadeOut < 1) Opacity(opacity: 1.0 - fadeOut, child: outgoing),
+        if (fadeIn > 0) _centered(Opacity(opacity: fadeIn, child: incoming)),
+        if (fadeOut < 1) _centered(Opacity(opacity: 1.0 - fadeOut, child: outgoing)),
         Positioned.fill(
           child: IgnorePointer(
             child: ColoredBox(
@@ -1062,15 +1331,16 @@ class _TransitionComposite extends StatelessWidget {
 
   Widget _wipe(Alignment direction, Axis axis) {
     return Stack(
-      fit: StackFit.expand,
       children: [
-        incoming,
-        ClipRect(
-          child: Align(
-            alignment: direction,
-            widthFactor: axis == Axis.horizontal ? 1.0 - progress : null,
-            heightFactor: axis == Axis.vertical ? 1.0 - progress : null,
-            child: outgoing,
+        _centered(incoming),
+        _centered(
+          ClipRect(
+            child: Align(
+              alignment: direction,
+              widthFactor: axis == Axis.horizontal ? 1.0 - progress : null,
+              heightFactor: axis == Axis.vertical ? 1.0 - progress : null,
+              child: outgoing,
+            ),
           ),
         ),
       ],
@@ -1100,10 +1370,9 @@ class _TransitionComposite extends StatelessWidget {
     }
 
     return Stack(
-      fit: StackFit.expand,
       children: [
-        FractionalTranslation(translation: inOffset, child: incoming),
-        FractionalTranslation(translation: outOffset, child: outgoing),
+        _centered(FractionalTranslation(translation: inOffset, child: incoming)),
+        _centered(FractionalTranslation(translation: outOffset, child: outgoing)),
       ],
     );
   }
