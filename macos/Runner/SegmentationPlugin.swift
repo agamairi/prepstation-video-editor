@@ -394,11 +394,20 @@ class SegmentationPlugin: NSObject, FlutterPlugin {
                     y: outputSize.height / maskCI.extent.height
                 ))
 
+                let grayscaleToARGB = scaledMask
+                    .applyingFilter("CIColorMatrix", parameters: [
+                        "inputRVector": CIVector(x: 1, y: 0, z: 0, w: 0),
+                        "inputGVector": CIVector(x: 1, y: 0, z: 0, w: 0),
+                        "inputBVector": CIVector(x: 1, y: 0, z: 0, w: 0),
+                        "inputAVector": CIVector(x: 0, y: 0, z: 0, w: 1),
+                        "inputBiasVector": CIVector(x: 0, y: 0, z: 0, w: 0),
+                    ])
+
                 var pixelBuffer: CVPixelBuffer?
                 CVPixelBufferPoolCreatePixelBuffer(nil, adaptor.pixelBufferPool!, &pixelBuffer)
                 guard let outputBuffer = pixelBuffer else { continue }
 
-                ciContext.render(scaledMask, to: outputBuffer)
+                ciContext.render(grayscaleToARGB, to: outputBuffer)
 
                 let presentationTime = CMTime(value: CMTimeValue(frameIdx), timescale: CMTimeScale(fps))
 
