@@ -114,6 +114,59 @@ void main() {
       expect(updated.isolationBlurRadius, 42.0);
       expect(updated.isolationMaskPath, '/path/mask.mp4');
     });
+
+    test('selection rect defaults to null', () {
+      final clip = _baseClip();
+      expect(clip.isolationSelectionLeft, isNull);
+      expect(clip.isolationSelectionTop, isNull);
+      expect(clip.isolationSelectionRight, isNull);
+      expect(clip.isolationSelectionBottom, isNull);
+    });
+
+    test('copyWith sets selection rect', () {
+      final clip = _baseClip().copyWith(
+        isolationSelectionLeft: 0.1,
+        isolationSelectionTop: 0.2,
+        isolationSelectionRight: 0.8,
+        isolationSelectionBottom: 0.9,
+      );
+      expect(clip.isolationSelectionLeft, 0.1);
+      expect(clip.isolationSelectionTop, 0.2);
+      expect(clip.isolationSelectionRight, 0.8);
+      expect(clip.isolationSelectionBottom, 0.9);
+    });
+
+    test('copyWith clears selection rect to null', () {
+      final clip = _baseClip().copyWith(
+        isolationSelectionLeft: 0.1,
+        isolationSelectionTop: 0.2,
+        isolationSelectionRight: 0.8,
+        isolationSelectionBottom: 0.9,
+      ).copyWith(
+        isolationSelectionLeft: null,
+        isolationSelectionTop: null,
+        isolationSelectionRight: null,
+        isolationSelectionBottom: null,
+      );
+      expect(clip.isolationSelectionLeft, isNull);
+      expect(clip.isolationSelectionTop, isNull);
+      expect(clip.isolationSelectionRight, isNull);
+      expect(clip.isolationSelectionBottom, isNull);
+    });
+
+    test('copyWith preserves selection rect when not specified', () {
+      final clip = _baseClip().copyWith(
+        isolationSelectionLeft: 0.1,
+        isolationSelectionTop: 0.2,
+        isolationSelectionRight: 0.8,
+        isolationSelectionBottom: 0.9,
+      );
+      final updated = clip.copyWith(name: 'renamed');
+      expect(updated.isolationSelectionLeft, 0.1);
+      expect(updated.isolationSelectionTop, 0.2);
+      expect(updated.isolationSelectionRight, 0.8);
+      expect(updated.isolationSelectionBottom, 0.9);
+    });
   });
 
   group('TimelineState — isolation clip updates', () {
@@ -152,6 +205,40 @@ void main() {
       final clip = state.clips.first;
       state.updateClip(clip.copyWith(isolationMaskPath: '/masks/c1.mp4'));
       expect(state.clips.first.isolationMaskPath, '/masks/c1.mp4');
+    });
+
+    test('updateClip sets selection rect', () {
+      final clip = state.clips.first;
+      state.updateClip(clip.copyWith(
+        isolationSelectionLeft: 0.1,
+        isolationSelectionTop: 0.2,
+        isolationSelectionRight: 0.8,
+        isolationSelectionBottom: 0.9,
+      ));
+      expect(state.clips.first.isolationSelectionLeft, 0.1);
+      expect(state.clips.first.isolationSelectionTop, 0.2);
+      expect(state.clips.first.isolationSelectionRight, 0.8);
+      expect(state.clips.first.isolationSelectionBottom, 0.9);
+    });
+
+    test('updateClip clears selection rect and mask path', () {
+      final clip = state.clips.first;
+      state.updateClip(clip.copyWith(
+        isolationSelectionLeft: 0.1,
+        isolationSelectionTop: 0.2,
+        isolationSelectionRight: 0.8,
+        isolationSelectionBottom: 0.9,
+        isolationMaskPath: '/masks/c1.mp4',
+      ));
+      state.updateClip(state.clips.first.copyWith(
+        isolationSelectionLeft: null,
+        isolationSelectionTop: null,
+        isolationSelectionRight: null,
+        isolationSelectionBottom: null,
+        isolationMaskPath: null,
+      ));
+      expect(state.clips.first.isolationSelectionLeft, isNull);
+      expect(state.clips.first.isolationMaskPath, isNull);
     });
   });
 

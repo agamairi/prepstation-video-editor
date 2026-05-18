@@ -74,6 +74,7 @@ abstract final class ColorTokens {
   static const Color keyframeDiamond = Color(0xFFFF9F0A);
   static const Color transitionStripe = Color(0xFFBF5AF2);
   static const Color isolationBadge = Color(0xFF5AC8FA);
+  static const Color isolationRect = Color(0xFF0A84FF);
 
   // ── Scopes ────────────────────────────────────────────────────────────────
   static const Color scopeBackground = Color(0xFF080808);

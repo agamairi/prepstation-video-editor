@@ -228,6 +228,10 @@ class ProjectRepository {
         isolationColorValue: Value(clip.isolationColorValue),
         isolationBlurRadius: Value(clip.isolationBlurRadius),
         isolationMaskPath: Value(clip.isolationMaskPath),
+        isolationSelectionLeft: Value(clip.isolationSelectionLeft),
+        isolationSelectionTop: Value(clip.isolationSelectionTop),
+        isolationSelectionRight: Value(clip.isolationSelectionRight),
+        isolationSelectionBottom: Value(clip.isolationSelectionBottom),
       ),
     );
   }
@@ -436,6 +440,10 @@ class ProjectRepository {
       isolationColorValue: row.isolationColorValue,
       isolationBlurRadius: row.isolationBlurRadius,
       isolationMaskPath: row.isolationMaskPath,
+      isolationSelectionLeft: row.isolationSelectionLeft,
+      isolationSelectionTop: row.isolationSelectionTop,
+      isolationSelectionRight: row.isolationSelectionRight,
+      isolationSelectionBottom: row.isolationSelectionBottom,
     );
   }
 

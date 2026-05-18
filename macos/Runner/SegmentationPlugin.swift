@@ -19,7 +19,7 @@ class SegmentationPlugin: NSObject, FlutterPlugin {
     func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         switch call.method {
         case "isAvailable":
-            if #available(macOS 12.0, *) {
+            if #available(macOS 14.0, *) {
                 result(true)
             } else {
                 result(false)
@@ -33,7 +33,8 @@ class SegmentationPlugin: NSObject, FlutterPlugin {
                 return
             }
             let quality = args["quality"] as? String ?? "balanced"
-            segmentFrame(videoPath: videoPath, timestampUs: timestampUs, quality: quality, result: result)
+            let selectionRect = parseRect(from: args)
+            segmentFrame(videoPath: videoPath, timestampUs: timestampUs, quality: quality, selectionRect: selectionRect, result: result)
 
         case "generateMaskVideo":
             guard let args = call.arguments as? [String: Any],
@@ -45,6 +46,7 @@ class SegmentationPlugin: NSObject, FlutterPlugin {
                 return
             }
             let quality = args["quality"] as? String ?? "balanced"
+            let selectionRect = parseRect(from: args)
             cancelFlag = false
             generateMaskVideo(
                 videoPath: videoPath,
@@ -52,6 +54,7 @@ class SegmentationPlugin: NSObject, FlutterPlugin {
                 inPointUs: inPointUs,
                 outPointUs: outPointUs,
                 quality: quality,
+                selectionRect: selectionRect,
                 result: result
             )
 
@@ -64,17 +67,18 @@ class SegmentationPlugin: NSObject, FlutterPlugin {
         }
     }
 
-    @available(macOS 12.0, *)
-    private func qualityLevel(_ quality: String) -> VNGeneratePersonSegmentationRequest.QualityLevel {
-        switch quality {
-        case "fast": return .fast
-        case "accurate": return .accurate
-        default: return .balanced
+    private func parseRect(from args: [String: Any]) -> CGRect? {
+        guard let left = args["rectLeft"] as? Double,
+              let top = args["rectTop"] as? Double,
+              let right = args["rectRight"] as? Double,
+              let bottom = args["rectBottom"] as? Double else {
+            return nil
         }
+        return CGRect(x: left, y: top, width: right - left, height: bottom - top)
     }
 
-    private func segmentFrame(videoPath: String, timestampUs: Int64, quality: String, result: @escaping FlutterResult) {
-        guard #available(macOS 12.0, *) else {
+    private func segmentFrame(videoPath: String, timestampUs: Int64, quality: String, selectionRect: CGRect?, result: @escaping FlutterResult) {
+        guard #available(macOS 14.0, *) else {
             result(nil)
             return
         }
@@ -90,7 +94,11 @@ class SegmentationPlugin: NSObject, FlutterPlugin {
 
             do {
                 let cgImage = try generator.copyCGImage(at: time, actualTime: nil)
-                guard let maskBuffer = self.performSegmentation(cgImage: cgImage, quality: quality) else {
+                guard let maskBuffer = self.performInstanceSegmentation(
+                    cgImage: cgImage,
+                    selectionRect: selectionRect,
+                    previousMask: nil
+                ) else {
                     DispatchQueue.main.async { result(nil) }
                     return
                 }
@@ -111,16 +119,189 @@ class SegmentationPlugin: NSObject, FlutterPlugin {
         }
     }
 
-    @available(macOS 12.0, *)
-    private func performSegmentation(cgImage: CGImage, quality: String) -> CVPixelBuffer? {
-        let request = VNGeneratePersonSegmentationRequest()
-        request.qualityLevel = qualityLevel(quality)
-        request.outputPixelFormat = kCVPixelFormatType_OneComponent8
-
+    @available(macOS 14.0, *)
+    private func performInstanceSegmentation(
+        cgImage: CGImage,
+        selectionRect: CGRect?,
+        previousMask: CVPixelBuffer?
+    ) -> CVPixelBuffer? {
+        let request = VNGenerateForegroundInstanceMaskRequest()
         let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
         try? handler.perform([request])
 
-        return request.results?.first?.pixelBuffer
+        guard let observation = request.results?.first else { return nil }
+
+        let allInstances = observation.allInstances
+        guard !allInstances.isEmpty else { return nil }
+
+        var selectedIndices: IndexSet
+
+        if let previousMask = previousMask {
+            selectedIndices = matchInstancesByIoU(
+                observation: observation,
+                allInstances: allInstances,
+                previousMask: previousMask,
+                imageWidth: cgImage.width,
+                imageHeight: cgImage.height,
+                handler: handler
+            )
+            if selectedIndices.isEmpty, let rect = selectionRect {
+                selectedIndices = findInstancesInRect(
+                    observation: observation,
+                    allInstances: allInstances,
+                    selectionRect: rect,
+                    imageWidth: cgImage.width,
+                    imageHeight: cgImage.height,
+                    handler: handler
+                )
+            }
+        } else if let rect = selectionRect {
+            selectedIndices = findInstancesInRect(
+                observation: observation,
+                allInstances: allInstances,
+                selectionRect: rect,
+                imageWidth: cgImage.width,
+                imageHeight: cgImage.height,
+                handler: handler
+            )
+        } else {
+            selectedIndices = allInstances
+        }
+
+        guard !selectedIndices.isEmpty else { return nil }
+
+        let maskedImage = try? observation.generateMaskedImage(
+            ofInstances: selectedIndices,
+            from: handler,
+            croppedToInstancesExtent: false
+        )
+        return maskedImage
+    }
+
+    @available(macOS 14.0, *)
+    private func findInstancesInRect(
+        observation: VNInstanceMaskObservation,
+        allInstances: IndexSet,
+        selectionRect: CGRect,
+        imageWidth: Int,
+        imageHeight: Int,
+        handler: VNImageRequestHandler
+    ) -> IndexSet {
+        var result = IndexSet()
+
+        for idx in allInstances {
+            guard let mask = try? observation.generateMaskedImage(
+                ofInstances: IndexSet([idx]),
+                from: handler,
+                croppedToInstancesExtent: false
+            ) else { continue }
+
+            if maskOverlapsRect(mask: mask, rect: selectionRect, imageWidth: imageWidth, imageHeight: imageHeight) {
+                result.insert(idx)
+            }
+        }
+        return result
+    }
+
+    @available(macOS 14.0, *)
+    private func matchInstancesByIoU(
+        observation: VNInstanceMaskObservation,
+        allInstances: IndexSet,
+        previousMask: CVPixelBuffer,
+        imageWidth: Int,
+        imageHeight: Int,
+        handler: VNImageRequestHandler
+    ) -> IndexSet {
+        var result = IndexSet()
+        let threshold: Float = 0.3
+
+        let prevWidth = CVPixelBufferGetWidth(previousMask)
+        let prevHeight = CVPixelBufferGetHeight(previousMask)
+
+        CVPixelBufferLockBaseAddress(previousMask, .readOnly)
+        let prevBase = CVPixelBufferGetBaseAddress(previousMask)!.assumingMemoryBound(to: UInt8.self)
+        let prevStride = CVPixelBufferGetBytesPerRow(previousMask)
+
+        var prevPixelCount = 0
+        for y in 0..<prevHeight {
+            for x in 0..<prevWidth {
+                if prevBase[y * prevStride + x] > 128 { prevPixelCount += 1 }
+            }
+        }
+        CVPixelBufferUnlockBaseAddress(previousMask, .readOnly)
+
+        guard prevPixelCount > 0 else { return result }
+
+        for idx in allInstances {
+            guard let mask = try? observation.generateMaskedImage(
+                ofInstances: IndexSet([idx]),
+                from: handler,
+                croppedToInstancesExtent: false
+            ) else { continue }
+
+            let maskWidth = CVPixelBufferGetWidth(mask)
+            let maskHeight = CVPixelBufferGetHeight(mask)
+
+            guard maskWidth == prevWidth && maskHeight == prevHeight else { continue }
+
+            CVPixelBufferLockBaseAddress(mask, .readOnly)
+            let maskBase = CVPixelBufferGetBaseAddress(mask)!.assumingMemoryBound(to: UInt8.self)
+            let maskStride = CVPixelBufferGetBytesPerRow(mask)
+
+            CVPixelBufferLockBaseAddress(previousMask, .readOnly)
+
+            var intersection = 0
+            var maskPixelCount = 0
+            for y in 0..<maskHeight {
+                for x in 0..<maskWidth {
+                    let mv = maskBase[y * maskStride + x] > 128
+                    let pv = prevBase[y * prevStride + x] > 128
+                    if mv { maskPixelCount += 1 }
+                    if mv && pv { intersection += 1 }
+                }
+            }
+
+            CVPixelBufferUnlockBaseAddress(mask, .readOnly)
+            CVPixelBufferUnlockBaseAddress(previousMask, .readOnly)
+
+            let union = prevPixelCount + maskPixelCount - intersection
+            let iou = union > 0 ? Float(intersection) / Float(union) : 0
+
+            if iou > threshold {
+                result.insert(idx)
+            }
+        }
+        return result
+    }
+
+    private func maskOverlapsRect(mask: CVPixelBuffer, rect: CGRect, imageWidth: Int, imageHeight: Int) -> Bool {
+        let maskWidth = CVPixelBufferGetWidth(mask)
+        let maskHeight = CVPixelBufferGetHeight(mask)
+
+        let startX = Int(rect.origin.x * CGFloat(maskWidth))
+        let startY = Int(rect.origin.y * CGFloat(maskHeight))
+        let endX = Int((rect.origin.x + rect.width) * CGFloat(maskWidth))
+        let endY = Int((rect.origin.y + rect.height) * CGFloat(maskHeight))
+
+        let clampedStartX = max(0, min(startX, maskWidth - 1))
+        let clampedStartY = max(0, min(startY, maskHeight - 1))
+        let clampedEndX = max(0, min(endX, maskWidth))
+        let clampedEndY = max(0, min(endY, maskHeight))
+
+        CVPixelBufferLockBaseAddress(mask, .readOnly)
+        defer { CVPixelBufferUnlockBaseAddress(mask, .readOnly) }
+
+        let base = CVPixelBufferGetBaseAddress(mask)!.assumingMemoryBound(to: UInt8.self)
+        let stride = CVPixelBufferGetBytesPerRow(mask)
+
+        for y in clampedStartY..<clampedEndY {
+            for x in clampedStartX..<clampedEndX {
+                if base[y * stride + x] > 128 {
+                    return true
+                }
+            }
+        }
+        return false
     }
 
     private func generateMaskVideo(
@@ -129,9 +310,10 @@ class SegmentationPlugin: NSObject, FlutterPlugin {
         inPointUs: Int64,
         outPointUs: Int64,
         quality: String,
+        selectionRect: CGRect?,
         result: @escaping FlutterResult
     ) {
-        guard #available(macOS 12.0, *) else {
+        guard #available(macOS 14.0, *) else {
             result(nil)
             return
         }
@@ -188,6 +370,7 @@ class SegmentationPlugin: NSObject, FlutterPlugin {
             let totalFrames = Int(durationSecs * Double(fps))
 
             let ciContext = CIContext()
+            var previousMask: CVPixelBuffer? = nil
 
             for frameIdx in 0..<totalFrames {
                 if self.cancelFlag { break }
@@ -195,9 +378,15 @@ class SegmentationPlugin: NSObject, FlutterPlugin {
                 let frameTime = inTime + CMTime(value: CMTimeValue(frameIdx), timescale: CMTimeScale(fps))
 
                 guard let cgImage = try? generator.copyCGImage(at: frameTime, actualTime: nil),
-                      let maskBuffer = self.performSegmentation(cgImage: cgImage, quality: quality) else {
+                      let maskBuffer = self.performInstanceSegmentation(
+                          cgImage: cgImage,
+                          selectionRect: selectionRect,
+                          previousMask: previousMask
+                      ) else {
                     continue
                 }
+
+                previousMask = maskBuffer
 
                 let maskCI = CIImage(cvPixelBuffer: maskBuffer)
                 let scaledMask = maskCI.transformed(by: CGAffineTransform(

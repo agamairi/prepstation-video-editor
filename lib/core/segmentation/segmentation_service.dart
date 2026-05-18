@@ -25,6 +25,7 @@ class SegmentationService {
     required String videoPath,
     required Duration timestamp,
     SegmentationQuality quality = SegmentationQuality.balanced,
+    Rect? selectionRect,
   }) async {
     try {
       final result = await _channel.invokeMethod<Uint8List>(
@@ -33,6 +34,12 @@ class SegmentationService {
           'videoPath': videoPath,
           'timestampUs': timestamp.inMicroseconds,
           'quality': quality.name,
+          if (selectionRect != null) ...{
+            'rectLeft': selectionRect.left,
+            'rectTop': selectionRect.top,
+            'rectRight': selectionRect.right,
+            'rectBottom': selectionRect.bottom,
+          },
         },
       );
       return result;
@@ -47,6 +54,7 @@ class SegmentationService {
     required Duration inPoint,
     required Duration outPoint,
     SegmentationQuality quality = SegmentationQuality.balanced,
+    Rect? selectionRect,
     void Function(double progress)? onProgress,
   }) async {
     try {
@@ -67,6 +75,12 @@ class SegmentationService {
           'inPointUs': inPoint.inMicroseconds,
           'outPointUs': outPoint.inMicroseconds,
           'quality': quality.name,
+          if (selectionRect != null) ...{
+            'rectLeft': selectionRect.left,
+            'rectTop': selectionRect.top,
+            'rectRight': selectionRect.right,
+            'rectBottom': selectionRect.bottom,
+          },
         },
       );
 

@@ -7,11 +7,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fluxedit/app/theme/color_tokens.dart';
 import 'package:fluxedit/app/theme/typography.dart';
+import 'package:fluxedit/core/constants/app_constants.dart';
 import 'package:fluxedit/core/effects/effect_model.dart';
 import 'package:fluxedit/core/effects/effect_type.dart';
 import 'package:fluxedit/core/project/project_model.dart';
 import 'package:fluxedit/core/project/project_repository.dart';
 import 'package:fluxedit/core/segmentation/isolation_mode.dart';
+import 'package:fluxedit/core/segmentation/segmentation_service.dart';
 import 'package:fluxedit/core/timeline/clip_model.dart';
 import 'package:fluxedit/core/timeline/timeline_controller.dart';
 import 'package:fluxedit/core/timeline/timeline_state.dart';
@@ -133,6 +135,10 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
   bool _maskInitialized = false;
   ui.Image? _maskFrame;
   ui.Image? _segmentedFrame;
+
+  Offset? _selectionRectStart;
+  Offset? _selectionRectEnd;
+  bool _isDrawingSelection = false;
 
   final Map<String, ja.AudioPlayer> _audioPlayers = {};
   final Set<String> _activeAudioClipIds = {};
@@ -715,6 +721,88 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
     old?.dispose();
   }
 
+  // ── Isolation selection rectangle gestures ────────────────────────────────────
+
+  void _onSelectionPanStart(DragStartDetails details, BoxConstraints constraints) {
+    setState(() {
+      _isDrawingSelection = true;
+      _selectionRectStart = Offset(
+        (details.localPosition.dx / constraints.maxWidth).clamp(0.0, 1.0),
+        (details.localPosition.dy / constraints.maxHeight).clamp(0.0, 1.0),
+      );
+      _selectionRectEnd = _selectionRectStart;
+    });
+  }
+
+  void _onSelectionPanUpdate(DragUpdateDetails details, BoxConstraints constraints) {
+    setState(() {
+      _selectionRectEnd = Offset(
+        (details.localPosition.dx / constraints.maxWidth).clamp(0.0, 1.0),
+        (details.localPosition.dy / constraints.maxHeight).clamp(0.0, 1.0),
+      );
+    });
+  }
+
+  Future<void> _onSelectionPanEnd(ClipModel clip) async {
+    if (_selectionRectStart == null || _selectionRectEnd == null) return;
+
+    final left = math.min(_selectionRectStart!.dx, _selectionRectEnd!.dx);
+    final top = math.min(_selectionRectStart!.dy, _selectionRectEnd!.dy);
+    final right = math.max(_selectionRectStart!.dx, _selectionRectEnd!.dx);
+    final bottom = math.max(_selectionRectStart!.dy, _selectionRectEnd!.dy);
+
+    setState(() {
+      _isDrawingSelection = false;
+      _selectionRectStart = null;
+      _selectionRectEnd = null;
+    });
+
+    if ((right - left) < AppConstants.isolationRectMinSize ||
+        (bottom - top) < AppConstants.isolationRectMinSize) {
+      return;
+    }
+
+    final controller = ref.read(timelineControllerProvider);
+    await controller.setIsolationSelectionRect(clip.id, left, top, right, bottom);
+
+    unawaited(_autoGenerateMask(clip.id, Rect.fromLTRB(left, top, right, bottom)));
+  }
+
+  Future<void> _autoGenerateMask(String clipId, Rect selectionRect) async {
+    final controller = ref.read(timelineControllerProvider);
+    final segService = ref.read(segmentationServiceProvider);
+    final repo = ref.read(projectRepositoryProvider);
+
+    final clip = ref.read(timelineStateProvider).clips.firstWhere(
+      (c) => c.id == clipId,
+      orElse: () => throw StateError('Clip not found'),
+    );
+
+    final asset = await repo.getMediaAsset(clip.mediaId);
+    if (asset == null) return;
+
+    controller.setIsolationProcessing(clipId, true);
+
+    final dir = File(asset.filePath).parent.path;
+    final outputPath = '$dir/.mask_${clip.id}.mp4';
+
+    final result = await segService.generateMaskVideo(
+      videoPath: asset.filePath,
+      outputPath: outputPath,
+      inPoint: clip.mediaInPoint,
+      outPoint: clip.mediaOutPoint,
+      selectionRect: selectionRect,
+    );
+
+    if (!mounted) return;
+
+    if (result != null) {
+      await controller.setIsolationMaskPath(clipId, result);
+    } else {
+      controller.setIsolationProcessing(clipId, false);
+    }
+  }
+
   Widget _applyIsolationPreview(Widget child, ClipModel clip) {
     if (!clip.isolationEnabled || clip.isolationMaskPath == null) return child;
 
@@ -944,11 +1032,49 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
       );
     }
 
+    final inSelectionMode = activeClip != null &&
+        activeClip.type == ClipType.video &&
+        activeClip.isolationEnabled &&
+        activeClip.isolationMaskPath == null &&
+        activeClip.isolationSelectionLeft == null;
+
     return Container(
       color: Colors.black,
       child: Column(
         children: [
-          Expanded(child: Center(child: contentWidget)),
+          Expanded(
+            child: Center(
+              child: inSelectionMode || _isDrawingSelection
+                  ? LayoutBuilder(
+                      builder: (context, constraints) {
+                        return GestureDetector(
+                          onPanStart: (d) =>
+                              _onSelectionPanStart(d, constraints),
+                          onPanUpdate: (d) =>
+                              _onSelectionPanUpdate(d, constraints),
+                          onPanEnd: (d) =>
+                              _onSelectionPanEnd(activeClip!),
+                          child: Stack(
+                            children: [
+                              contentWidget,
+                              if (_selectionRectStart != null &&
+                                  _selectionRectEnd != null)
+                                Positioned.fill(
+                                  child: CustomPaint(
+                                    painter: _SelectionRectPainter(
+                                      start: _selectionRectStart!,
+                                      end: _selectionRectEnd!,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        );
+                      },
+                    )
+                  : contentWidget,
+            ),
+          ),
           _PreviewToolbar(project: widget.project),
         ],
       ),
@@ -1376,4 +1502,35 @@ class _TransitionComposite extends StatelessWidget {
       ],
     );
   }
+}
+
+class _SelectionRectPainter extends CustomPainter {
+  _SelectionRectPainter({required this.start, required this.end});
+
+  final Offset start;
+  final Offset end;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Rect.fromPoints(
+      Offset(start.dx * size.width, start.dy * size.height),
+      Offset(end.dx * size.width, end.dy * size.height),
+    );
+
+    final paint = Paint()
+      ..color = ColorTokens.isolationRect
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = AppConstants.isolationRectStrokeWidth;
+
+    canvas.drawRect(rect, paint);
+
+    final fillPaint = Paint()
+      ..color = ColorTokens.isolationRect.withValues(alpha: 0.1)
+      ..style = PaintingStyle.fill;
+    canvas.drawRect(rect, fillPaint);
+  }
+
+  @override
+  bool shouldRepaint(_SelectionRectPainter oldDelegate) =>
+      start != oldDelegate.start || end != oldDelegate.end;
 }

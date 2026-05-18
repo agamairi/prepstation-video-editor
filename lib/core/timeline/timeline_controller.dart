@@ -864,6 +864,43 @@ class TimelineController {
     state.updateClip(clip.copyWith(isolationProcessing: processing));
   }
 
+  Future<void> setIsolationSelectionRect(
+    String clipId,
+    double left,
+    double top,
+    double right,
+    double bottom,
+  ) async {
+    final clip = _findClip(clipId);
+    if (clip == null) return;
+    await execute(UpdateClipCommand(
+      before: clip,
+      after: clip.copyWith(
+        isolationSelectionLeft: left,
+        isolationSelectionTop: top,
+        isolationSelectionRight: right,
+        isolationSelectionBottom: bottom,
+      ),
+      description: 'Set Isolation Selection',
+    ));
+  }
+
+  Future<void> clearIsolationSelectionRect(String clipId) async {
+    final clip = _findClip(clipId);
+    if (clip == null) return;
+    await execute(UpdateClipCommand(
+      before: clip,
+      after: clip.copyWith(
+        isolationSelectionLeft: null,
+        isolationSelectionTop: null,
+        isolationSelectionRight: null,
+        isolationSelectionBottom: null,
+        isolationMaskPath: null,
+      ),
+      description: 'Clear Isolation Selection',
+    ));
+  }
+
   // ── Volume operations (all undoable) ──────────────────────────────────
 
   Future<void> updateClipVolume(String clipId, double volume) async {

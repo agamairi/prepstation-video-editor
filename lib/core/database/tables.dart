@@ -167,6 +167,10 @@ class Clips extends Table {
   RealColumn get isolationBlurRadius =>
       real().withDefault(const Constant(20.0))();
   TextColumn get isolationMaskPath => text().nullable()();
+  RealColumn get isolationSelectionLeft => real().nullable()();
+  RealColumn get isolationSelectionTop => real().nullable()();
+  RealColumn get isolationSelectionRight => real().nullable()();
+  RealColumn get isolationSelectionBottom => real().nullable()();
 
   @override
   Set<Column<Object>> get primaryKey => {id};

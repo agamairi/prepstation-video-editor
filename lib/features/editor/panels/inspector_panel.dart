@@ -1668,11 +1668,21 @@ class _SubjectIsolationSectionState
     );
     final outputPath = '$outputDir/${clip.id}_mask.mp4';
 
+    final Rect? selectionRect = clip.isolationSelectionLeft != null
+        ? Rect.fromLTRB(
+            clip.isolationSelectionLeft!,
+            clip.isolationSelectionTop!,
+            clip.isolationSelectionRight!,
+            clip.isolationSelectionBottom!,
+          )
+        : null;
+
     final maskPath = await segService.generateMaskVideo(
       videoPath: asset.filePath,
       outputPath: outputPath,
       inPoint: clip.mediaInPoint,
       outPoint: clip.mediaOutPoint,
+      selectionRect: selectionRect,
     );
 
     if (!mounted) return;
@@ -1770,7 +1780,31 @@ class _SubjectIsolationSectionState
                 ],
               ),
             )
-          else if (clip.isolationMaskPath == null)
+          else if (clip.isolationMaskPath == null &&
+              clip.isolationSelectionLeft == null)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.touch_app,
+                    size: 14,
+                    color: ColorTokens.isolationBadge,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Draw on the preview to select your subject',
+                      style: AppTypography.bodySmall.copyWith(
+                        color: ColorTokens.textSecondary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else if (clip.isolationMaskPath == null &&
+              clip.isolationSelectionLeft != null)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
               child: SizedBox(
@@ -1805,9 +1839,10 @@ class _SubjectIsolationSectionState
                   ),
                   const Spacer(),
                   GestureDetector(
-                    onTap: () => _processIsolation(clip),
+                    onTap: () =>
+                        controller.clearIsolationSelectionRect(clip.id),
                     child: Text(
-                      'Regenerate',
+                      'Redraw',
                       style: AppTypography.labelSmall.copyWith(
                         color: ColorTokens.isolationBadge,
                       ),

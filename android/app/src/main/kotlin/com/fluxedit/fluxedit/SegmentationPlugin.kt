@@ -38,7 +38,7 @@ class SegmentationPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         when (call.method) {
-            "isAvailable" -> result.success(true)
+            "isAvailable" -> result.success(false)
 
             "segmentFrame" -> {
                 val videoPath = call.argument<String>("videoPath") ?: run {

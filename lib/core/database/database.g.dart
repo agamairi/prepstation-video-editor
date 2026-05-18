@@ -3105,6 +3105,50 @@ class $ClipsTable extends Clips with TableInfo<$ClipsTable, Clip> {
         type: DriftSqlType.string,
         requiredDuringInsert: false,
       );
+  static const VerificationMeta _isolationSelectionLeftMeta =
+      const VerificationMeta('isolationSelectionLeft');
+  @override
+  late final GeneratedColumn<double> isolationSelectionLeft =
+      GeneratedColumn<double>(
+        'isolation_selection_left',
+        aliasedName,
+        true,
+        type: DriftSqlType.double,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _isolationSelectionTopMeta =
+      const VerificationMeta('isolationSelectionTop');
+  @override
+  late final GeneratedColumn<double> isolationSelectionTop =
+      GeneratedColumn<double>(
+        'isolation_selection_top',
+        aliasedName,
+        true,
+        type: DriftSqlType.double,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _isolationSelectionRightMeta =
+      const VerificationMeta('isolationSelectionRight');
+  @override
+  late final GeneratedColumn<double> isolationSelectionRight =
+      GeneratedColumn<double>(
+        'isolation_selection_right',
+        aliasedName,
+        true,
+        type: DriftSqlType.double,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _isolationSelectionBottomMeta =
+      const VerificationMeta('isolationSelectionBottom');
+  @override
+  late final GeneratedColumn<double> isolationSelectionBottom =
+      GeneratedColumn<double>(
+        'isolation_selection_bottom',
+        aliasedName,
+        true,
+        type: DriftSqlType.double,
+        requiredDuringInsert: false,
+      );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -3157,6 +3201,10 @@ class $ClipsTable extends Clips with TableInfo<$ClipsTable, Clip> {
     isolationColorValue,
     isolationBlurRadius,
     isolationMaskPath,
+    isolationSelectionLeft,
+    isolationSelectionTop,
+    isolationSelectionRight,
+    isolationSelectionBottom,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -3555,6 +3603,42 @@ class $ClipsTable extends Clips with TableInfo<$ClipsTable, Clip> {
         ),
       );
     }
+    if (data.containsKey('isolation_selection_left')) {
+      context.handle(
+        _isolationSelectionLeftMeta,
+        isolationSelectionLeft.isAcceptableOrUnknown(
+          data['isolation_selection_left']!,
+          _isolationSelectionLeftMeta,
+        ),
+      );
+    }
+    if (data.containsKey('isolation_selection_top')) {
+      context.handle(
+        _isolationSelectionTopMeta,
+        isolationSelectionTop.isAcceptableOrUnknown(
+          data['isolation_selection_top']!,
+          _isolationSelectionTopMeta,
+        ),
+      );
+    }
+    if (data.containsKey('isolation_selection_right')) {
+      context.handle(
+        _isolationSelectionRightMeta,
+        isolationSelectionRight.isAcceptableOrUnknown(
+          data['isolation_selection_right']!,
+          _isolationSelectionRightMeta,
+        ),
+      );
+    }
+    if (data.containsKey('isolation_selection_bottom')) {
+      context.handle(
+        _isolationSelectionBottomMeta,
+        isolationSelectionBottom.isAcceptableOrUnknown(
+          data['isolation_selection_bottom']!,
+          _isolationSelectionBottomMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -3764,6 +3848,22 @@ class $ClipsTable extends Clips with TableInfo<$ClipsTable, Clip> {
         DriftSqlType.string,
         data['${effectivePrefix}isolation_mask_path'],
       ),
+      isolationSelectionLeft: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}isolation_selection_left'],
+      ),
+      isolationSelectionTop: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}isolation_selection_top'],
+      ),
+      isolationSelectionRight: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}isolation_selection_right'],
+      ),
+      isolationSelectionBottom: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}isolation_selection_bottom'],
+      ),
     );
   }
 
@@ -3824,6 +3924,10 @@ class Clip extends DataClass implements Insertable<Clip> {
   final int isolationColorValue;
   final double isolationBlurRadius;
   final String? isolationMaskPath;
+  final double? isolationSelectionLeft;
+  final double? isolationSelectionTop;
+  final double? isolationSelectionRight;
+  final double? isolationSelectionBottom;
   const Clip({
     required this.id,
     required this.trackId,
@@ -3875,6 +3979,10 @@ class Clip extends DataClass implements Insertable<Clip> {
     required this.isolationColorValue,
     required this.isolationBlurRadius,
     this.isolationMaskPath,
+    this.isolationSelectionLeft,
+    this.isolationSelectionTop,
+    this.isolationSelectionRight,
+    this.isolationSelectionBottom,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -3936,6 +4044,24 @@ class Clip extends DataClass implements Insertable<Clip> {
     map['isolation_blur_radius'] = Variable<double>(isolationBlurRadius);
     if (!nullToAbsent || isolationMaskPath != null) {
       map['isolation_mask_path'] = Variable<String>(isolationMaskPath);
+    }
+    if (!nullToAbsent || isolationSelectionLeft != null) {
+      map['isolation_selection_left'] = Variable<double>(
+        isolationSelectionLeft,
+      );
+    }
+    if (!nullToAbsent || isolationSelectionTop != null) {
+      map['isolation_selection_top'] = Variable<double>(isolationSelectionTop);
+    }
+    if (!nullToAbsent || isolationSelectionRight != null) {
+      map['isolation_selection_right'] = Variable<double>(
+        isolationSelectionRight,
+      );
+    }
+    if (!nullToAbsent || isolationSelectionBottom != null) {
+      map['isolation_selection_bottom'] = Variable<double>(
+        isolationSelectionBottom,
+      );
     }
     return map;
   }
@@ -4000,6 +4126,18 @@ class Clip extends DataClass implements Insertable<Clip> {
       isolationMaskPath: isolationMaskPath == null && nullToAbsent
           ? const Value.absent()
           : Value(isolationMaskPath),
+      isolationSelectionLeft: isolationSelectionLeft == null && nullToAbsent
+          ? const Value.absent()
+          : Value(isolationSelectionLeft),
+      isolationSelectionTop: isolationSelectionTop == null && nullToAbsent
+          ? const Value.absent()
+          : Value(isolationSelectionTop),
+      isolationSelectionRight: isolationSelectionRight == null && nullToAbsent
+          ? const Value.absent()
+          : Value(isolationSelectionRight),
+      isolationSelectionBottom: isolationSelectionBottom == null && nullToAbsent
+          ? const Value.absent()
+          : Value(isolationSelectionBottom),
     );
   }
 
@@ -4071,6 +4209,18 @@ class Clip extends DataClass implements Insertable<Clip> {
       isolationMaskPath: serializer.fromJson<String?>(
         json['isolationMaskPath'],
       ),
+      isolationSelectionLeft: serializer.fromJson<double?>(
+        json['isolationSelectionLeft'],
+      ),
+      isolationSelectionTop: serializer.fromJson<double?>(
+        json['isolationSelectionTop'],
+      ),
+      isolationSelectionRight: serializer.fromJson<double?>(
+        json['isolationSelectionRight'],
+      ),
+      isolationSelectionBottom: serializer.fromJson<double?>(
+        json['isolationSelectionBottom'],
+      ),
     );
   }
   @override
@@ -4131,6 +4281,18 @@ class Clip extends DataClass implements Insertable<Clip> {
       'isolationColorValue': serializer.toJson<int>(isolationColorValue),
       'isolationBlurRadius': serializer.toJson<double>(isolationBlurRadius),
       'isolationMaskPath': serializer.toJson<String?>(isolationMaskPath),
+      'isolationSelectionLeft': serializer.toJson<double?>(
+        isolationSelectionLeft,
+      ),
+      'isolationSelectionTop': serializer.toJson<double?>(
+        isolationSelectionTop,
+      ),
+      'isolationSelectionRight': serializer.toJson<double?>(
+        isolationSelectionRight,
+      ),
+      'isolationSelectionBottom': serializer.toJson<double?>(
+        isolationSelectionBottom,
+      ),
     };
   }
 
@@ -4185,6 +4347,10 @@ class Clip extends DataClass implements Insertable<Clip> {
     int? isolationColorValue,
     double? isolationBlurRadius,
     Value<String?> isolationMaskPath = const Value.absent(),
+    Value<double?> isolationSelectionLeft = const Value.absent(),
+    Value<double?> isolationSelectionTop = const Value.absent(),
+    Value<double?> isolationSelectionRight = const Value.absent(),
+    Value<double?> isolationSelectionBottom = const Value.absent(),
   }) => Clip(
     id: id ?? this.id,
     trackId: trackId ?? this.trackId,
@@ -4245,6 +4411,18 @@ class Clip extends DataClass implements Insertable<Clip> {
     isolationMaskPath: isolationMaskPath.present
         ? isolationMaskPath.value
         : this.isolationMaskPath,
+    isolationSelectionLeft: isolationSelectionLeft.present
+        ? isolationSelectionLeft.value
+        : this.isolationSelectionLeft,
+    isolationSelectionTop: isolationSelectionTop.present
+        ? isolationSelectionTop.value
+        : this.isolationSelectionTop,
+    isolationSelectionRight: isolationSelectionRight.present
+        ? isolationSelectionRight.value
+        : this.isolationSelectionRight,
+    isolationSelectionBottom: isolationSelectionBottom.present
+        ? isolationSelectionBottom.value
+        : this.isolationSelectionBottom,
   );
   Clip copyWithCompanion(ClipsCompanion data) {
     return Clip(
@@ -4352,6 +4530,18 @@ class Clip extends DataClass implements Insertable<Clip> {
       isolationMaskPath: data.isolationMaskPath.present
           ? data.isolationMaskPath.value
           : this.isolationMaskPath,
+      isolationSelectionLeft: data.isolationSelectionLeft.present
+          ? data.isolationSelectionLeft.value
+          : this.isolationSelectionLeft,
+      isolationSelectionTop: data.isolationSelectionTop.present
+          ? data.isolationSelectionTop.value
+          : this.isolationSelectionTop,
+      isolationSelectionRight: data.isolationSelectionRight.present
+          ? data.isolationSelectionRight.value
+          : this.isolationSelectionRight,
+      isolationSelectionBottom: data.isolationSelectionBottom.present
+          ? data.isolationSelectionBottom.value
+          : this.isolationSelectionBottom,
     );
   }
 
@@ -4407,7 +4597,11 @@ class Clip extends DataClass implements Insertable<Clip> {
           ..write('isolationMode: $isolationMode, ')
           ..write('isolationColorValue: $isolationColorValue, ')
           ..write('isolationBlurRadius: $isolationBlurRadius, ')
-          ..write('isolationMaskPath: $isolationMaskPath')
+          ..write('isolationMaskPath: $isolationMaskPath, ')
+          ..write('isolationSelectionLeft: $isolationSelectionLeft, ')
+          ..write('isolationSelectionTop: $isolationSelectionTop, ')
+          ..write('isolationSelectionRight: $isolationSelectionRight, ')
+          ..write('isolationSelectionBottom: $isolationSelectionBottom')
           ..write(')'))
         .toString();
   }
@@ -4464,6 +4658,10 @@ class Clip extends DataClass implements Insertable<Clip> {
     isolationColorValue,
     isolationBlurRadius,
     isolationMaskPath,
+    isolationSelectionLeft,
+    isolationSelectionTop,
+    isolationSelectionRight,
+    isolationSelectionBottom,
   ]);
   @override
   bool operator ==(Object other) =>
@@ -4518,7 +4716,11 @@ class Clip extends DataClass implements Insertable<Clip> {
           other.isolationMode == this.isolationMode &&
           other.isolationColorValue == this.isolationColorValue &&
           other.isolationBlurRadius == this.isolationBlurRadius &&
-          other.isolationMaskPath == this.isolationMaskPath);
+          other.isolationMaskPath == this.isolationMaskPath &&
+          other.isolationSelectionLeft == this.isolationSelectionLeft &&
+          other.isolationSelectionTop == this.isolationSelectionTop &&
+          other.isolationSelectionRight == this.isolationSelectionRight &&
+          other.isolationSelectionBottom == this.isolationSelectionBottom);
 }
 
 class ClipsCompanion extends UpdateCompanion<Clip> {
@@ -4572,6 +4774,10 @@ class ClipsCompanion extends UpdateCompanion<Clip> {
   final Value<int> isolationColorValue;
   final Value<double> isolationBlurRadius;
   final Value<String?> isolationMaskPath;
+  final Value<double?> isolationSelectionLeft;
+  final Value<double?> isolationSelectionTop;
+  final Value<double?> isolationSelectionRight;
+  final Value<double?> isolationSelectionBottom;
   final Value<int> rowid;
   const ClipsCompanion({
     this.id = const Value.absent(),
@@ -4624,6 +4830,10 @@ class ClipsCompanion extends UpdateCompanion<Clip> {
     this.isolationColorValue = const Value.absent(),
     this.isolationBlurRadius = const Value.absent(),
     this.isolationMaskPath = const Value.absent(),
+    this.isolationSelectionLeft = const Value.absent(),
+    this.isolationSelectionTop = const Value.absent(),
+    this.isolationSelectionRight = const Value.absent(),
+    this.isolationSelectionBottom = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ClipsCompanion.insert({
@@ -4677,6 +4887,10 @@ class ClipsCompanion extends UpdateCompanion<Clip> {
     this.isolationColorValue = const Value.absent(),
     this.isolationBlurRadius = const Value.absent(),
     this.isolationMaskPath = const Value.absent(),
+    this.isolationSelectionLeft = const Value.absent(),
+    this.isolationSelectionTop = const Value.absent(),
+    this.isolationSelectionRight = const Value.absent(),
+    this.isolationSelectionBottom = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        trackId = Value(trackId),
@@ -4737,6 +4951,10 @@ class ClipsCompanion extends UpdateCompanion<Clip> {
     Expression<int>? isolationColorValue,
     Expression<double>? isolationBlurRadius,
     Expression<String>? isolationMaskPath,
+    Expression<double>? isolationSelectionLeft,
+    Expression<double>? isolationSelectionTop,
+    Expression<double>? isolationSelectionRight,
+    Expression<double>? isolationSelectionBottom,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -4795,6 +5013,14 @@ class ClipsCompanion extends UpdateCompanion<Clip> {
       if (isolationBlurRadius != null)
         'isolation_blur_radius': isolationBlurRadius,
       if (isolationMaskPath != null) 'isolation_mask_path': isolationMaskPath,
+      if (isolationSelectionLeft != null)
+        'isolation_selection_left': isolationSelectionLeft,
+      if (isolationSelectionTop != null)
+        'isolation_selection_top': isolationSelectionTop,
+      if (isolationSelectionRight != null)
+        'isolation_selection_right': isolationSelectionRight,
+      if (isolationSelectionBottom != null)
+        'isolation_selection_bottom': isolationSelectionBottom,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -4850,6 +5076,10 @@ class ClipsCompanion extends UpdateCompanion<Clip> {
     Value<int>? isolationColorValue,
     Value<double>? isolationBlurRadius,
     Value<String?>? isolationMaskPath,
+    Value<double?>? isolationSelectionLeft,
+    Value<double?>? isolationSelectionTop,
+    Value<double?>? isolationSelectionRight,
+    Value<double?>? isolationSelectionBottom,
     Value<int>? rowid,
   }) {
     return ClipsCompanion(
@@ -4906,6 +5136,14 @@ class ClipsCompanion extends UpdateCompanion<Clip> {
       isolationColorValue: isolationColorValue ?? this.isolationColorValue,
       isolationBlurRadius: isolationBlurRadius ?? this.isolationBlurRadius,
       isolationMaskPath: isolationMaskPath ?? this.isolationMaskPath,
+      isolationSelectionLeft:
+          isolationSelectionLeft ?? this.isolationSelectionLeft,
+      isolationSelectionTop:
+          isolationSelectionTop ?? this.isolationSelectionTop,
+      isolationSelectionRight:
+          isolationSelectionRight ?? this.isolationSelectionRight,
+      isolationSelectionBottom:
+          isolationSelectionBottom ?? this.isolationSelectionBottom,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -5071,6 +5309,26 @@ class ClipsCompanion extends UpdateCompanion<Clip> {
     if (isolationMaskPath.present) {
       map['isolation_mask_path'] = Variable<String>(isolationMaskPath.value);
     }
+    if (isolationSelectionLeft.present) {
+      map['isolation_selection_left'] = Variable<double>(
+        isolationSelectionLeft.value,
+      );
+    }
+    if (isolationSelectionTop.present) {
+      map['isolation_selection_top'] = Variable<double>(
+        isolationSelectionTop.value,
+      );
+    }
+    if (isolationSelectionRight.present) {
+      map['isolation_selection_right'] = Variable<double>(
+        isolationSelectionRight.value,
+      );
+    }
+    if (isolationSelectionBottom.present) {
+      map['isolation_selection_bottom'] = Variable<double>(
+        isolationSelectionBottom.value,
+      );
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -5130,6 +5388,10 @@ class ClipsCompanion extends UpdateCompanion<Clip> {
           ..write('isolationColorValue: $isolationColorValue, ')
           ..write('isolationBlurRadius: $isolationBlurRadius, ')
           ..write('isolationMaskPath: $isolationMaskPath, ')
+          ..write('isolationSelectionLeft: $isolationSelectionLeft, ')
+          ..write('isolationSelectionTop: $isolationSelectionTop, ')
+          ..write('isolationSelectionRight: $isolationSelectionRight, ')
+          ..write('isolationSelectionBottom: $isolationSelectionBottom, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -9010,6 +9272,10 @@ typedef $$ClipsTableCreateCompanionBuilder =
       Value<int> isolationColorValue,
       Value<double> isolationBlurRadius,
       Value<String?> isolationMaskPath,
+      Value<double?> isolationSelectionLeft,
+      Value<double?> isolationSelectionTop,
+      Value<double?> isolationSelectionRight,
+      Value<double?> isolationSelectionBottom,
       Value<int> rowid,
     });
 typedef $$ClipsTableUpdateCompanionBuilder =
@@ -9064,6 +9330,10 @@ typedef $$ClipsTableUpdateCompanionBuilder =
       Value<int> isolationColorValue,
       Value<double> isolationBlurRadius,
       Value<String?> isolationMaskPath,
+      Value<double?> isolationSelectionLeft,
+      Value<double?> isolationSelectionTop,
+      Value<double?> isolationSelectionRight,
+      Value<double?> isolationSelectionBottom,
       Value<int> rowid,
     });
 
@@ -9390,6 +9660,26 @@ class $$ClipsTableFilterComposer extends Composer<_$AppDatabase, $ClipsTable> {
 
   ColumnFilters<String> get isolationMaskPath => $composableBuilder(
     column: $table.isolationMaskPath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get isolationSelectionLeft => $composableBuilder(
+    column: $table.isolationSelectionLeft,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get isolationSelectionTop => $composableBuilder(
+    column: $table.isolationSelectionTop,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get isolationSelectionRight => $composableBuilder(
+    column: $table.isolationSelectionRight,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get isolationSelectionBottom => $composableBuilder(
+    column: $table.isolationSelectionBottom,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -9739,6 +10029,26 @@ class $$ClipsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<double> get isolationSelectionLeft => $composableBuilder(
+    column: $table.isolationSelectionLeft,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get isolationSelectionTop => $composableBuilder(
+    column: $table.isolationSelectionTop,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get isolationSelectionRight => $composableBuilder(
+    column: $table.isolationSelectionRight,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get isolationSelectionBottom => $composableBuilder(
+    column: $table.isolationSelectionBottom,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$TracksTableOrderingComposer get trackId {
     final $$TracksTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -9993,6 +10303,26 @@ class $$ClipsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<double> get isolationSelectionLeft => $composableBuilder(
+    column: $table.isolationSelectionLeft,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get isolationSelectionTop => $composableBuilder(
+    column: $table.isolationSelectionTop,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get isolationSelectionRight => $composableBuilder(
+    column: $table.isolationSelectionRight,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get isolationSelectionBottom => $composableBuilder(
+    column: $table.isolationSelectionBottom,
+    builder: (column) => column,
+  );
+
   $$TracksTableAnnotationComposer get trackId {
     final $$TracksTableAnnotationComposer composer = $composerBuilder(
       composer: this,
@@ -10173,6 +10503,10 @@ class $$ClipsTableTableManager
                 Value<int> isolationColorValue = const Value.absent(),
                 Value<double> isolationBlurRadius = const Value.absent(),
                 Value<String?> isolationMaskPath = const Value.absent(),
+                Value<double?> isolationSelectionLeft = const Value.absent(),
+                Value<double?> isolationSelectionTop = const Value.absent(),
+                Value<double?> isolationSelectionRight = const Value.absent(),
+                Value<double?> isolationSelectionBottom = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ClipsCompanion(
                 id: id,
@@ -10225,6 +10559,10 @@ class $$ClipsTableTableManager
                 isolationColorValue: isolationColorValue,
                 isolationBlurRadius: isolationBlurRadius,
                 isolationMaskPath: isolationMaskPath,
+                isolationSelectionLeft: isolationSelectionLeft,
+                isolationSelectionTop: isolationSelectionTop,
+                isolationSelectionRight: isolationSelectionRight,
+                isolationSelectionBottom: isolationSelectionBottom,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -10279,6 +10617,10 @@ class $$ClipsTableTableManager
                 Value<int> isolationColorValue = const Value.absent(),
                 Value<double> isolationBlurRadius = const Value.absent(),
                 Value<String?> isolationMaskPath = const Value.absent(),
+                Value<double?> isolationSelectionLeft = const Value.absent(),
+                Value<double?> isolationSelectionTop = const Value.absent(),
+                Value<double?> isolationSelectionRight = const Value.absent(),
+                Value<double?> isolationSelectionBottom = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ClipsCompanion.insert(
                 id: id,
@@ -10331,6 +10673,10 @@ class $$ClipsTableTableManager
                 isolationColorValue: isolationColorValue,
                 isolationBlurRadius: isolationBlurRadius,
                 isolationMaskPath: isolationMaskPath,
+                isolationSelectionLeft: isolationSelectionLeft,
+                isolationSelectionTop: isolationSelectionTop,
+                isolationSelectionRight: isolationSelectionRight,
+                isolationSelectionBottom: isolationSelectionBottom,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

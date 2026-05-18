@@ -125,6 +125,8 @@ abstract final class AppConstants {
   static const double minIsolationBlurRadius = 4.0;
   static const double maxIsolationBlurRadius = 60.0;
   static const int defaultIsolationColor = 0xFF00FF00;
+  static const double isolationRectStrokeWidth = 2.0;
+  static const double isolationRectMinSize = 0.02;
 
   // Layout breakpoints
   static const double desktopBreakpoint = 900.0;

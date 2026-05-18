@@ -110,6 +110,10 @@ class ClipModel {
     this.isolationBlurRadius = AppConstants.defaultIsolationBlurRadius,
     this.isolationMaskPath,
     this.isolationProcessing = false,
+    this.isolationSelectionLeft,
+    this.isolationSelectionTop,
+    this.isolationSelectionRight,
+    this.isolationSelectionBottom,
   });
 
   final String id;
@@ -185,6 +189,10 @@ class ClipModel {
   final double isolationBlurRadius;
   final String? isolationMaskPath;
   final bool isolationProcessing;
+  final double? isolationSelectionLeft;
+  final double? isolationSelectionTop;
+  final double? isolationSelectionRight;
+  final double? isolationSelectionBottom;
 
   Duration get duration => endOnTimeline - startOnTimeline;
   Duration get mediaDuration => mediaOutPoint - mediaInPoint;
@@ -249,6 +257,10 @@ class ClipModel {
     double? isolationBlurRadius,
     Object? isolationMaskPath = _omit,
     bool? isolationProcessing,
+    Object? isolationSelectionLeft = _omit,
+    Object? isolationSelectionTop = _omit,
+    Object? isolationSelectionRight = _omit,
+    Object? isolationSelectionBottom = _omit,
   }) {
     return ClipModel(
       id: id ?? this.id,
@@ -311,6 +323,18 @@ class ClipModel {
           ? this.isolationMaskPath
           : isolationMaskPath as String?,
       isolationProcessing: isolationProcessing ?? this.isolationProcessing,
+      isolationSelectionLeft: isolationSelectionLeft == _omit
+          ? this.isolationSelectionLeft
+          : isolationSelectionLeft as double?,
+      isolationSelectionTop: isolationSelectionTop == _omit
+          ? this.isolationSelectionTop
+          : isolationSelectionTop as double?,
+      isolationSelectionRight: isolationSelectionRight == _omit
+          ? this.isolationSelectionRight
+          : isolationSelectionRight as double?,
+      isolationSelectionBottom: isolationSelectionBottom == _omit
+          ? this.isolationSelectionBottom
+          : isolationSelectionBottom as double?,
     );
   }
 
