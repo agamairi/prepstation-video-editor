@@ -304,6 +304,39 @@ class SegmentationPlugin: NSObject, FlutterPlugin {
         return false
     }
 
+    private func renderMaskToARGB(
+        mask: CVPixelBuffer,
+        output: CVPixelBuffer,
+        width: Int,
+        height: Int,
+        ciContext: CIContext
+    ) {
+        let maskCI = CIImage(cvPixelBuffer: mask)
+        let scaleX = CGFloat(width) / maskCI.extent.width
+        let scaleY = CGFloat(height) / maskCI.extent.height
+        let scaledMask = maskCI.transformed(by: CGAffineTransform(scaleX: scaleX, y: scaleY))
+
+        guard let cgMask = ciContext.createCGImage(scaledMask, from: CGRect(x: 0, y: 0, width: width, height: height)) else { return }
+
+        CVPixelBufferLockBaseAddress(output, [])
+        defer { CVPixelBufferUnlockBaseAddress(output, []) }
+
+        let outBase = CVPixelBufferGetBaseAddress(output)!
+        let outStride = CVPixelBufferGetBytesPerRow(output)
+
+        guard let cgContext = CGContext(
+            data: outBase,
+            width: width,
+            height: height,
+            bitsPerComponent: 8,
+            bytesPerRow: outStride,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Big.rawValue
+        ) else { return }
+
+        cgContext.draw(cgMask, in: CGRect(x: 0, y: 0, width: width, height: height))
+    }
+
     private func generateMaskVideo(
         videoPath: String,
         outputPath: String,
@@ -388,26 +421,17 @@ class SegmentationPlugin: NSObject, FlutterPlugin {
 
                 previousMask = maskBuffer
 
-                let maskCI = CIImage(cvPixelBuffer: maskBuffer)
-                let scaledMask = maskCI.transformed(by: CGAffineTransform(
-                    scaleX: outputSize.width / maskCI.extent.width,
-                    y: outputSize.height / maskCI.extent.height
-                ))
-
-                let grayscaleToARGB = scaledMask
-                    .applyingFilter("CIColorMatrix", parameters: [
-                        "inputRVector": CIVector(x: 1, y: 0, z: 0, w: 0),
-                        "inputGVector": CIVector(x: 1, y: 0, z: 0, w: 0),
-                        "inputBVector": CIVector(x: 1, y: 0, z: 0, w: 0),
-                        "inputAVector": CIVector(x: 0, y: 0, z: 0, w: 1),
-                        "inputBiasVector": CIVector(x: 0, y: 0, z: 0, w: 0),
-                    ])
-
                 var pixelBuffer: CVPixelBuffer?
                 CVPixelBufferPoolCreatePixelBuffer(nil, adaptor.pixelBufferPool!, &pixelBuffer)
                 guard let outputBuffer = pixelBuffer else { continue }
 
-                ciContext.render(grayscaleToARGB, to: outputBuffer)
+                self.renderMaskToARGB(
+                    mask: maskBuffer,
+                    output: outputBuffer,
+                    width: Int(outputSize.width),
+                    height: Int(outputSize.height),
+                    ciContext: ciContext
+                )
 
                 let presentationTime = CMTime(value: CMTimeValue(frameIdx), timescale: CMTimeScale(fps))
 
