@@ -20,7 +20,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -151,6 +151,11 @@ class AppDatabase extends _$AppDatabase {
         );
         await customStatement(
           'ALTER TABLE clips ADD COLUMN isolation_selection_bottom REAL',
+        );
+      }
+      if (from < 8) {
+        await customStatement(
+          'ALTER TABLE clips ADD COLUMN isolation_edge_feather REAL NOT NULL DEFAULT 0.0',
         );
       }
     },

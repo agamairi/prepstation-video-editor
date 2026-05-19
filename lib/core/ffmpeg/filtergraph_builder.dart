@@ -408,10 +408,15 @@ class FiltergraphBuilder {
     final normalize = targetWidth != null && targetHeight != null;
     final scale = normalize ? scaleFilter(targetWidth, targetHeight) : '';
 
-    // Scale mask to match video dimensions
+    // Scale mask to match video dimensions, apply edge feathering
     sb.write('[$maskInputIdx:v]format=gray');
     if (normalize) {
       sb.write(',${scaleFilter(targetWidth, targetHeight)}');
+    }
+    final feather = clip.isolationEdgeFeather;
+    if (feather > 0) {
+      final r = feather.toInt().clamp(1, 10);
+      sb.write(',boxblur=$r:$r');
     }
     sb.write('[mask];');
 

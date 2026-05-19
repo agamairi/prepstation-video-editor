@@ -844,6 +844,23 @@ class TimelineController {
     ));
   }
 
+  Future<void> updateIsolationEdgeFeather(
+    String clipId,
+    double feather,
+  ) async {
+    final clip = _findClip(clipId);
+    if (clip == null) return;
+    final clamped = feather.clamp(
+      AppConstants.minIsolationEdgeFeather,
+      AppConstants.maxIsolationEdgeFeather,
+    );
+    await execute(UpdateClipCommand(
+      before: clip,
+      after: clip.copyWith(isolationEdgeFeather: clamped),
+      description: 'Isolation Edge Feather',
+    ));
+  }
+
   Future<void> setIsolationMaskPath(
     String clipId,
     String? maskPath,

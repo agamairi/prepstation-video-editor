@@ -108,6 +108,7 @@ class ClipModel {
     this.isolationMode = IsolationMode.transparent,
     this.isolationColorValue = 0xFF00FF00,
     this.isolationBlurRadius = AppConstants.defaultIsolationBlurRadius,
+    this.isolationEdgeFeather = AppConstants.defaultIsolationEdgeFeather,
     this.isolationMaskPath,
     this.isolationProcessing = false,
     this.isolationSelectionLeft,
@@ -187,6 +188,7 @@ class ClipModel {
   final IsolationMode isolationMode;
   final int isolationColorValue;
   final double isolationBlurRadius;
+  final double isolationEdgeFeather;
   final String? isolationMaskPath;
   final bool isolationProcessing;
   final double? isolationSelectionLeft;
@@ -255,6 +257,7 @@ class ClipModel {
     IsolationMode? isolationMode,
     int? isolationColorValue,
     double? isolationBlurRadius,
+    double? isolationEdgeFeather,
     Object? isolationMaskPath = _omit,
     bool? isolationProcessing,
     Object? isolationSelectionLeft = _omit,
@@ -319,6 +322,7 @@ class ClipModel {
       isolationMode: isolationMode ?? this.isolationMode,
       isolationColorValue: isolationColorValue ?? this.isolationColorValue,
       isolationBlurRadius: isolationBlurRadius ?? this.isolationBlurRadius,
+      isolationEdgeFeather: isolationEdgeFeather ?? this.isolationEdgeFeather,
       isolationMaskPath: isolationMaskPath == _omit
           ? this.isolationMaskPath
           : isolationMaskPath as String?,

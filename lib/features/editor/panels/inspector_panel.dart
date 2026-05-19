@@ -1902,6 +1902,31 @@ class _SubjectIsolationSectionState
               ],
             ),
           ),
+          // Edge feather (all modes, when mask exists)
+          if (clip.isolationMaskPath != null)
+            _SliderRow(
+              label: 'Edge',
+              value: clip.isolationEdgeFeather,
+              min: AppConstants.minIsolationEdgeFeather,
+              max: AppConstants.maxIsolationEdgeFeather,
+              displayText:
+                  clip.isolationEdgeFeather.toStringAsFixed(1),
+              onChangeStart: (_) => _atDragStart = _latestClip(),
+              onChanged: (v) {
+                final c = _latestClip();
+                if (c != null) {
+                  ref.read(timelineStateProvider).updateClip(
+                        c.copyWith(isolationEdgeFeather: v),
+                      );
+                }
+              },
+              onChangeEnd: (v) {
+                if (_atDragStart != null) {
+                  controller.updateIsolationEdgeFeather(clip.id, v);
+                  _atDragStart = null;
+                }
+              },
+            ),
           // Blur radius (only in blur mode)
           if (clip.isolationMode == IsolationMode.blur)
             _SliderRow(

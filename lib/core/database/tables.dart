@@ -166,6 +166,8 @@ class Clips extends Table {
       integer().withDefault(const Constant(0xFF00FF00))();
   RealColumn get isolationBlurRadius =>
       real().withDefault(const Constant(20.0))();
+  RealColumn get isolationEdgeFeather =>
+      real().withDefault(const Constant(0.0))();
   TextColumn get isolationMaskPath => text().nullable()();
   RealColumn get isolationSelectionLeft => real().nullable()();
   RealColumn get isolationSelectionTop => real().nullable()();

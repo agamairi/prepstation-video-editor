@@ -249,6 +249,7 @@ void main() {
       IsolationMode mode = IsolationMode.transparent,
       double blurRadius = 20.0,
       int colorValue = 0xFF00FF00,
+      double edgeFeather = 0.0,
     }) =>
         ClipModel(
           id: 'c1',
@@ -263,6 +264,7 @@ void main() {
           isolationMode: mode,
           isolationBlurRadius: blurRadius,
           isolationColorValue: colorValue,
+          isolationEdgeFeather: edgeFeather,
         );
 
     test('transparent mode uses alphamerge', () {
@@ -321,6 +323,94 @@ void main() {
         targetHeight: 1080,
       );
       expect(graph, contains('scale=1920:1080'));
+    });
+
+    test('edge feather zero does not add boxblur to mask', () {
+      final graph = builder.buildIsolationGraph(
+        _isolatedClip(mode: IsolationMode.transparent, edgeFeather: 0.0),
+        videoInputIdx: 0,
+        maskInputIdx: 1,
+      );
+      expect(graph, isNot(contains('boxblur')));
+    });
+
+    test('edge feather > 0 adds boxblur to mask chain', () {
+      final graph = builder.buildIsolationGraph(
+        _isolatedClip(mode: IsolationMode.transparent, edgeFeather: 5.0),
+        videoInputIdx: 0,
+        maskInputIdx: 1,
+      );
+      expect(graph, contains('boxblur=5:5'));
+    });
+
+    test('edge feather with blur mode has both boxblur filters', () {
+      final graph = builder.buildIsolationGraph(
+        _isolatedClip(mode: IsolationMode.blur, blurRadius: 20.0, edgeFeather: 3.0),
+        videoInputIdx: 0,
+        maskInputIdx: 1,
+      );
+      // Mask feather boxblur
+      expect(graph, contains('boxblur=3:3'));
+      // Background blur boxblur
+      expect(graph, contains('boxblur=20:20'));
+    });
+  });
+
+  group('AppConstants — edge feather', () {
+    test('edge feather min <= default <= max', () {
+      expect(AppConstants.minIsolationEdgeFeather, lessThanOrEqualTo(AppConstants.defaultIsolationEdgeFeather));
+      expect(AppConstants.defaultIsolationEdgeFeather, lessThanOrEqualTo(AppConstants.maxIsolationEdgeFeather));
+    });
+
+    test('default edge feather is 0', () {
+      expect(AppConstants.defaultIsolationEdgeFeather, 0.0);
+    });
+  });
+
+  group('ClipModel — edge feather', () {
+    test('default isolationEdgeFeather is 0', () {
+      const clip = ClipModel(
+        id: 'c1',
+        trackId: 't1',
+        mediaId: 'm1',
+        type: ClipType.video,
+        startOnTimeline: Duration.zero,
+        endOnTimeline: Duration(seconds: 5),
+        mediaInPoint: Duration.zero,
+        mediaOutPoint: Duration(seconds: 5),
+      );
+      expect(clip.isolationEdgeFeather, 0.0);
+    });
+
+    test('copyWith sets isolationEdgeFeather', () {
+      const clip = ClipModel(
+        id: 'c1',
+        trackId: 't1',
+        mediaId: 'm1',
+        type: ClipType.video,
+        startOnTimeline: Duration.zero,
+        endOnTimeline: Duration(seconds: 5),
+        mediaInPoint: Duration.zero,
+        mediaOutPoint: Duration(seconds: 5),
+      );
+      final updated = clip.copyWith(isolationEdgeFeather: 5.0);
+      expect(updated.isolationEdgeFeather, 5.0);
+    });
+
+    test('copyWith preserves isolationEdgeFeather when not specified', () {
+      const clip = ClipModel(
+        id: 'c1',
+        trackId: 't1',
+        mediaId: 'm1',
+        type: ClipType.video,
+        startOnTimeline: Duration.zero,
+        endOnTimeline: Duration(seconds: 5),
+        mediaInPoint: Duration.zero,
+        mediaOutPoint: Duration(seconds: 5),
+        isolationEdgeFeather: 7.0,
+      );
+      final updated = clip.copyWith(name: 'changed');
+      expect(updated.isolationEdgeFeather, 7.0);
     });
   });
 }

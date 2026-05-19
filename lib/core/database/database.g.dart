@@ -3093,6 +3093,18 @@ class $ClipsTable extends Clips with TableInfo<$ClipsTable, Clip> {
         requiredDuringInsert: false,
         defaultValue: const Constant(20.0),
       );
+  static const VerificationMeta _isolationEdgeFeatherMeta =
+      const VerificationMeta('isolationEdgeFeather');
+  @override
+  late final GeneratedColumn<double> isolationEdgeFeather =
+      GeneratedColumn<double>(
+        'isolation_edge_feather',
+        aliasedName,
+        false,
+        type: DriftSqlType.double,
+        requiredDuringInsert: false,
+        defaultValue: const Constant(0.0),
+      );
   static const VerificationMeta _isolationMaskPathMeta = const VerificationMeta(
     'isolationMaskPath',
   );
@@ -3200,6 +3212,7 @@ class $ClipsTable extends Clips with TableInfo<$ClipsTable, Clip> {
     isolationMode,
     isolationColorValue,
     isolationBlurRadius,
+    isolationEdgeFeather,
     isolationMaskPath,
     isolationSelectionLeft,
     isolationSelectionTop,
@@ -3594,6 +3607,15 @@ class $ClipsTable extends Clips with TableInfo<$ClipsTable, Clip> {
         ),
       );
     }
+    if (data.containsKey('isolation_edge_feather')) {
+      context.handle(
+        _isolationEdgeFeatherMeta,
+        isolationEdgeFeather.isAcceptableOrUnknown(
+          data['isolation_edge_feather']!,
+          _isolationEdgeFeatherMeta,
+        ),
+      );
+    }
     if (data.containsKey('isolation_mask_path')) {
       context.handle(
         _isolationMaskPathMeta,
@@ -3844,6 +3866,10 @@ class $ClipsTable extends Clips with TableInfo<$ClipsTable, Clip> {
         DriftSqlType.double,
         data['${effectivePrefix}isolation_blur_radius'],
       )!,
+      isolationEdgeFeather: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}isolation_edge_feather'],
+      )!,
       isolationMaskPath: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}isolation_mask_path'],
@@ -3923,6 +3949,7 @@ class Clip extends DataClass implements Insertable<Clip> {
   final String isolationMode;
   final int isolationColorValue;
   final double isolationBlurRadius;
+  final double isolationEdgeFeather;
   final String? isolationMaskPath;
   final double? isolationSelectionLeft;
   final double? isolationSelectionTop;
@@ -3978,6 +4005,7 @@ class Clip extends DataClass implements Insertable<Clip> {
     required this.isolationMode,
     required this.isolationColorValue,
     required this.isolationBlurRadius,
+    required this.isolationEdgeFeather,
     this.isolationMaskPath,
     this.isolationSelectionLeft,
     this.isolationSelectionTop,
@@ -4042,6 +4070,7 @@ class Clip extends DataClass implements Insertable<Clip> {
     map['isolation_mode'] = Variable<String>(isolationMode);
     map['isolation_color_value'] = Variable<int>(isolationColorValue);
     map['isolation_blur_radius'] = Variable<double>(isolationBlurRadius);
+    map['isolation_edge_feather'] = Variable<double>(isolationEdgeFeather);
     if (!nullToAbsent || isolationMaskPath != null) {
       map['isolation_mask_path'] = Variable<String>(isolationMaskPath);
     }
@@ -4123,6 +4152,7 @@ class Clip extends DataClass implements Insertable<Clip> {
       isolationMode: Value(isolationMode),
       isolationColorValue: Value(isolationColorValue),
       isolationBlurRadius: Value(isolationBlurRadius),
+      isolationEdgeFeather: Value(isolationEdgeFeather),
       isolationMaskPath: isolationMaskPath == null && nullToAbsent
           ? const Value.absent()
           : Value(isolationMaskPath),
@@ -4206,6 +4236,9 @@ class Clip extends DataClass implements Insertable<Clip> {
       isolationBlurRadius: serializer.fromJson<double>(
         json['isolationBlurRadius'],
       ),
+      isolationEdgeFeather: serializer.fromJson<double>(
+        json['isolationEdgeFeather'],
+      ),
       isolationMaskPath: serializer.fromJson<String?>(
         json['isolationMaskPath'],
       ),
@@ -4280,6 +4313,7 @@ class Clip extends DataClass implements Insertable<Clip> {
       'isolationMode': serializer.toJson<String>(isolationMode),
       'isolationColorValue': serializer.toJson<int>(isolationColorValue),
       'isolationBlurRadius': serializer.toJson<double>(isolationBlurRadius),
+      'isolationEdgeFeather': serializer.toJson<double>(isolationEdgeFeather),
       'isolationMaskPath': serializer.toJson<String?>(isolationMaskPath),
       'isolationSelectionLeft': serializer.toJson<double?>(
         isolationSelectionLeft,
@@ -4346,6 +4380,7 @@ class Clip extends DataClass implements Insertable<Clip> {
     String? isolationMode,
     int? isolationColorValue,
     double? isolationBlurRadius,
+    double? isolationEdgeFeather,
     Value<String?> isolationMaskPath = const Value.absent(),
     Value<double?> isolationSelectionLeft = const Value.absent(),
     Value<double?> isolationSelectionTop = const Value.absent(),
@@ -4408,6 +4443,7 @@ class Clip extends DataClass implements Insertable<Clip> {
     isolationMode: isolationMode ?? this.isolationMode,
     isolationColorValue: isolationColorValue ?? this.isolationColorValue,
     isolationBlurRadius: isolationBlurRadius ?? this.isolationBlurRadius,
+    isolationEdgeFeather: isolationEdgeFeather ?? this.isolationEdgeFeather,
     isolationMaskPath: isolationMaskPath.present
         ? isolationMaskPath.value
         : this.isolationMaskPath,
@@ -4527,6 +4563,9 @@ class Clip extends DataClass implements Insertable<Clip> {
       isolationBlurRadius: data.isolationBlurRadius.present
           ? data.isolationBlurRadius.value
           : this.isolationBlurRadius,
+      isolationEdgeFeather: data.isolationEdgeFeather.present
+          ? data.isolationEdgeFeather.value
+          : this.isolationEdgeFeather,
       isolationMaskPath: data.isolationMaskPath.present
           ? data.isolationMaskPath.value
           : this.isolationMaskPath,
@@ -4597,6 +4636,7 @@ class Clip extends DataClass implements Insertable<Clip> {
           ..write('isolationMode: $isolationMode, ')
           ..write('isolationColorValue: $isolationColorValue, ')
           ..write('isolationBlurRadius: $isolationBlurRadius, ')
+          ..write('isolationEdgeFeather: $isolationEdgeFeather, ')
           ..write('isolationMaskPath: $isolationMaskPath, ')
           ..write('isolationSelectionLeft: $isolationSelectionLeft, ')
           ..write('isolationSelectionTop: $isolationSelectionTop, ')
@@ -4657,6 +4697,7 @@ class Clip extends DataClass implements Insertable<Clip> {
     isolationMode,
     isolationColorValue,
     isolationBlurRadius,
+    isolationEdgeFeather,
     isolationMaskPath,
     isolationSelectionLeft,
     isolationSelectionTop,
@@ -4716,6 +4757,7 @@ class Clip extends DataClass implements Insertable<Clip> {
           other.isolationMode == this.isolationMode &&
           other.isolationColorValue == this.isolationColorValue &&
           other.isolationBlurRadius == this.isolationBlurRadius &&
+          other.isolationEdgeFeather == this.isolationEdgeFeather &&
           other.isolationMaskPath == this.isolationMaskPath &&
           other.isolationSelectionLeft == this.isolationSelectionLeft &&
           other.isolationSelectionTop == this.isolationSelectionTop &&
@@ -4773,6 +4815,7 @@ class ClipsCompanion extends UpdateCompanion<Clip> {
   final Value<String> isolationMode;
   final Value<int> isolationColorValue;
   final Value<double> isolationBlurRadius;
+  final Value<double> isolationEdgeFeather;
   final Value<String?> isolationMaskPath;
   final Value<double?> isolationSelectionLeft;
   final Value<double?> isolationSelectionTop;
@@ -4829,6 +4872,7 @@ class ClipsCompanion extends UpdateCompanion<Clip> {
     this.isolationMode = const Value.absent(),
     this.isolationColorValue = const Value.absent(),
     this.isolationBlurRadius = const Value.absent(),
+    this.isolationEdgeFeather = const Value.absent(),
     this.isolationMaskPath = const Value.absent(),
     this.isolationSelectionLeft = const Value.absent(),
     this.isolationSelectionTop = const Value.absent(),
@@ -4886,6 +4930,7 @@ class ClipsCompanion extends UpdateCompanion<Clip> {
     this.isolationMode = const Value.absent(),
     this.isolationColorValue = const Value.absent(),
     this.isolationBlurRadius = const Value.absent(),
+    this.isolationEdgeFeather = const Value.absent(),
     this.isolationMaskPath = const Value.absent(),
     this.isolationSelectionLeft = const Value.absent(),
     this.isolationSelectionTop = const Value.absent(),
@@ -4950,6 +4995,7 @@ class ClipsCompanion extends UpdateCompanion<Clip> {
     Expression<String>? isolationMode,
     Expression<int>? isolationColorValue,
     Expression<double>? isolationBlurRadius,
+    Expression<double>? isolationEdgeFeather,
     Expression<String>? isolationMaskPath,
     Expression<double>? isolationSelectionLeft,
     Expression<double>? isolationSelectionTop,
@@ -5012,6 +5058,8 @@ class ClipsCompanion extends UpdateCompanion<Clip> {
         'isolation_color_value': isolationColorValue,
       if (isolationBlurRadius != null)
         'isolation_blur_radius': isolationBlurRadius,
+      if (isolationEdgeFeather != null)
+        'isolation_edge_feather': isolationEdgeFeather,
       if (isolationMaskPath != null) 'isolation_mask_path': isolationMaskPath,
       if (isolationSelectionLeft != null)
         'isolation_selection_left': isolationSelectionLeft,
@@ -5075,6 +5123,7 @@ class ClipsCompanion extends UpdateCompanion<Clip> {
     Value<String>? isolationMode,
     Value<int>? isolationColorValue,
     Value<double>? isolationBlurRadius,
+    Value<double>? isolationEdgeFeather,
     Value<String?>? isolationMaskPath,
     Value<double?>? isolationSelectionLeft,
     Value<double?>? isolationSelectionTop,
@@ -5135,6 +5184,7 @@ class ClipsCompanion extends UpdateCompanion<Clip> {
       isolationMode: isolationMode ?? this.isolationMode,
       isolationColorValue: isolationColorValue ?? this.isolationColorValue,
       isolationBlurRadius: isolationBlurRadius ?? this.isolationBlurRadius,
+      isolationEdgeFeather: isolationEdgeFeather ?? this.isolationEdgeFeather,
       isolationMaskPath: isolationMaskPath ?? this.isolationMaskPath,
       isolationSelectionLeft:
           isolationSelectionLeft ?? this.isolationSelectionLeft,
@@ -5306,6 +5356,11 @@ class ClipsCompanion extends UpdateCompanion<Clip> {
         isolationBlurRadius.value,
       );
     }
+    if (isolationEdgeFeather.present) {
+      map['isolation_edge_feather'] = Variable<double>(
+        isolationEdgeFeather.value,
+      );
+    }
     if (isolationMaskPath.present) {
       map['isolation_mask_path'] = Variable<String>(isolationMaskPath.value);
     }
@@ -5387,6 +5442,7 @@ class ClipsCompanion extends UpdateCompanion<Clip> {
           ..write('isolationMode: $isolationMode, ')
           ..write('isolationColorValue: $isolationColorValue, ')
           ..write('isolationBlurRadius: $isolationBlurRadius, ')
+          ..write('isolationEdgeFeather: $isolationEdgeFeather, ')
           ..write('isolationMaskPath: $isolationMaskPath, ')
           ..write('isolationSelectionLeft: $isolationSelectionLeft, ')
           ..write('isolationSelectionTop: $isolationSelectionTop, ')
@@ -9271,6 +9327,7 @@ typedef $$ClipsTableCreateCompanionBuilder =
       Value<String> isolationMode,
       Value<int> isolationColorValue,
       Value<double> isolationBlurRadius,
+      Value<double> isolationEdgeFeather,
       Value<String?> isolationMaskPath,
       Value<double?> isolationSelectionLeft,
       Value<double?> isolationSelectionTop,
@@ -9329,6 +9386,7 @@ typedef $$ClipsTableUpdateCompanionBuilder =
       Value<String> isolationMode,
       Value<int> isolationColorValue,
       Value<double> isolationBlurRadius,
+      Value<double> isolationEdgeFeather,
       Value<String?> isolationMaskPath,
       Value<double?> isolationSelectionLeft,
       Value<double?> isolationSelectionTop,
@@ -9655,6 +9713,11 @@ class $$ClipsTableFilterComposer extends Composer<_$AppDatabase, $ClipsTable> {
 
   ColumnFilters<double> get isolationBlurRadius => $composableBuilder(
     column: $table.isolationBlurRadius,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get isolationEdgeFeather => $composableBuilder(
+    column: $table.isolationEdgeFeather,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -10024,6 +10087,11 @@ class $$ClipsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<double> get isolationEdgeFeather => $composableBuilder(
+    column: $table.isolationEdgeFeather,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get isolationMaskPath => $composableBuilder(
     column: $table.isolationMaskPath,
     builder: (column) => ColumnOrderings(column),
@@ -10298,6 +10366,11 @@ class $$ClipsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<double> get isolationEdgeFeather => $composableBuilder(
+    column: $table.isolationEdgeFeather,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get isolationMaskPath => $composableBuilder(
     column: $table.isolationMaskPath,
     builder: (column) => column,
@@ -10502,6 +10575,7 @@ class $$ClipsTableTableManager
                 Value<String> isolationMode = const Value.absent(),
                 Value<int> isolationColorValue = const Value.absent(),
                 Value<double> isolationBlurRadius = const Value.absent(),
+                Value<double> isolationEdgeFeather = const Value.absent(),
                 Value<String?> isolationMaskPath = const Value.absent(),
                 Value<double?> isolationSelectionLeft = const Value.absent(),
                 Value<double?> isolationSelectionTop = const Value.absent(),
@@ -10558,6 +10632,7 @@ class $$ClipsTableTableManager
                 isolationMode: isolationMode,
                 isolationColorValue: isolationColorValue,
                 isolationBlurRadius: isolationBlurRadius,
+                isolationEdgeFeather: isolationEdgeFeather,
                 isolationMaskPath: isolationMaskPath,
                 isolationSelectionLeft: isolationSelectionLeft,
                 isolationSelectionTop: isolationSelectionTop,
@@ -10616,6 +10691,7 @@ class $$ClipsTableTableManager
                 Value<String> isolationMode = const Value.absent(),
                 Value<int> isolationColorValue = const Value.absent(),
                 Value<double> isolationBlurRadius = const Value.absent(),
+                Value<double> isolationEdgeFeather = const Value.absent(),
                 Value<String?> isolationMaskPath = const Value.absent(),
                 Value<double?> isolationSelectionLeft = const Value.absent(),
                 Value<double?> isolationSelectionTop = const Value.absent(),
@@ -10672,6 +10748,7 @@ class $$ClipsTableTableManager
                 isolationMode: isolationMode,
                 isolationColorValue: isolationColorValue,
                 isolationBlurRadius: isolationBlurRadius,
+                isolationEdgeFeather: isolationEdgeFeather,
                 isolationMaskPath: isolationMaskPath,
                 isolationSelectionLeft: isolationSelectionLeft,
                 isolationSelectionTop: isolationSelectionTop,
