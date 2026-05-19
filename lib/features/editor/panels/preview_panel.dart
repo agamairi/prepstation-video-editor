@@ -784,7 +784,7 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
     controller.setIsolationProcessing(clipId, true);
 
     final dir = File(asset.filePath).parent.path;
-    final outputPath = '$dir/.mask_${clip.id}.mp4';
+    final outputPath = '$dir/mask_${clip.id}.mp4';
 
     final result = await segService.generateMaskVideo(
       videoPath: asset.filePath,
