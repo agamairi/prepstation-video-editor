@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:desktop_drop/desktop_drop.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,51 +12,105 @@ import 'package:fluxedit/core/project/project_repository.dart';
 import 'package:fluxedit/core/timeline/timeline_controller.dart';
 import 'package:fluxedit/core/timeline/track_model.dart';
 
-final _mediaAssetsProvider = FutureProvider.family<List<MediaAsset>, String>(
+final mediaAssetsProvider = FutureProvider.family<List<MediaAsset>, String>(
   (ref, projectId) =>
       ref.watch(projectRepositoryProvider).getMediaAssets(projectId),
 );
 
-class MediaPanel extends ConsumerWidget {
+class MediaPanel extends ConsumerStatefulWidget {
   const MediaPanel({super.key, required this.projectId, this.onClipAdded});
 
   final String projectId;
   final VoidCallback? onClipAdded;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final assetsAsync = ref.watch(_mediaAssetsProvider(projectId));
+  ConsumerState<MediaPanel> createState() => _MediaPanelState();
+}
 
-    return Column(
-      children: [
-        _PanelHeader(
-          title: 'Media',
-          onImport: () => _importMedia(context, ref),
-        ),
-        Expanded(
-          child: assetsAsync.when(
-            data: (assets) => assets.isEmpty
-                ? _EmptyMediaState(onImport: () => _importMedia(context, ref))
-                : _MediaGrid(
-                    assets: assets,
-                    projectId: projectId,
-                    onClipAdded: onClipAdded,
+class _MediaPanelState extends ConsumerState<MediaPanel> {
+  bool _isDragging = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final assetsAsync = ref.watch(mediaAssetsProvider(widget.projectId));
+
+    return DropTarget(
+      onDragEntered: (_) => setState(() => _isDragging = true),
+      onDragExited: (_) => setState(() => _isDragging = false),
+      onDragDone: (details) {
+        setState(() => _isDragging = false);
+        _importDroppedFiles(details.files.map((f) => f.path).toList());
+      },
+      child: Column(
+        children: [
+          _PanelHeader(
+            title: 'Media',
+            onImport: () => _importMedia(context),
+          ),
+          Expanded(
+            child: Stack(
+              children: [
+                assetsAsync.when(
+                  data: (assets) => assets.isEmpty
+                      ? _EmptyMediaState(
+                          onImport: () => _importMedia(context))
+                      : _MediaGrid(
+                          assets: assets,
+                          projectId: widget.projectId,
+                          onClipAdded: widget.onClipAdded,
+                        ),
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (e, _) => Center(
+                    child: Text(
+                      'Error: $e',
+                      style: AppTypography.bodySmall,
+                    ),
                   ),
-            loading: () =>
-                const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(
-              child: Text(
-                'Error: $e',
-                style: AppTypography.bodySmall,
-              ),
+                ),
+                if (_isDragging)
+                  Positioned.fill(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: ColorTokens.accentPrimary.withValues(alpha: 0.15),
+                        border: Border.all(
+                          color: ColorTokens.accentPrimary,
+                          width: 2,
+                        ),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.file_download_outlined,
+                              size: 32,
+                              color: ColorTokens.accentPrimary,
+                            ),
+                            SizedBox(height: 8),
+                            Text(
+                              'Drop to import',
+                              style: TextStyle(
+                                color: ColorTokens.accentPrimary,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
-  Future<void> _importMedia(BuildContext context, WidgetRef ref) async {
+  Future<void> _importMedia(BuildContext context) async {
     final result = await FilePicker.platform.pickFiles(
       allowMultiple: true,
       type: FileType.custom,
@@ -66,21 +121,37 @@ class MediaPanel extends ConsumerWidget {
 
     for (final file in result.files) {
       if (file.path == null) continue;
-      try {
-        await ref.read(timelineControllerProvider).importMediaFile(
-          projectId: projectId,
-          filePath: file.path!,
+      await _importFile(file.path!);
+    }
+  }
+
+  Future<void> _importDroppedFiles(List<String> paths) async {
+    final supportedExts = MediaConstants.allExtensions
+        .map((e) => e.toLowerCase())
+        .toSet();
+
+    for (final path in paths) {
+      final ext = path.split('.').last.toLowerCase();
+      if (!supportedExts.contains(ext)) continue;
+      await _importFile(path);
+    }
+  }
+
+  Future<void> _importFile(String path) async {
+    try {
+      await ref.read(timelineControllerProvider).importMediaFile(
+        projectId: widget.projectId,
+        filePath: path,
+      );
+      ref.invalidate(mediaAssetsProvider(widget.projectId));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Import failed: $e'),
+            backgroundColor: ColorTokens.error,
+          ),
         );
-        ref.invalidate(_mediaAssetsProvider(projectId));
-      } catch (e) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Import failed: $e'),
-              backgroundColor: ColorTokens.error,
-            ),
-          );
-        }
       }
     }
   }

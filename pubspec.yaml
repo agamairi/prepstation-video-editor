@@ -52,6 +52,7 @@ dependencies:
   # UI extras
   cupertino_icons: ^1.0.8
   google_fonts: ^8.1.0
+  desktop_drop: ^0.7.1
 
 dev_dependencies:
   flutter_test:
