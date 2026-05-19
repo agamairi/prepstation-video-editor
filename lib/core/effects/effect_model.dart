@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
-import 'package:fluxedit/core/effects/effect_type.dart';
+import 'package:prepstation/core/effects/effect_type.dart';
 
 @immutable
 class EffectInstance {

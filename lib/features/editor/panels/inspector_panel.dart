@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:fluxedit/app/theme/color_tokens.dart';
-import 'package:fluxedit/app/theme/typography.dart';
-import 'package:fluxedit/core/constants/app_constants.dart';
-import 'package:fluxedit/core/effects/effect_model.dart';
-import 'package:fluxedit/core/effects/effect_registry.dart';
-import 'package:fluxedit/core/effects/effect_type.dart';
-import 'package:fluxedit/core/keyframes/animated_property.dart';
-import 'package:fluxedit/core/project/project_model.dart';
-import 'package:fluxedit/core/project/project_repository.dart';
-import 'package:fluxedit/core/segmentation/isolation_mode.dart';
-import 'package:fluxedit/core/segmentation/segmentation_service.dart';
-import 'package:fluxedit/core/timeline/clip_model.dart';
-import 'package:fluxedit/core/timeline/timeline_controller.dart';
-import 'package:fluxedit/core/transitions/transition_type.dart';
+import 'package:prepstation/app/theme/color_tokens.dart';
+import 'package:prepstation/app/theme/typography.dart';
+import 'package:prepstation/core/constants/app_constants.dart';
+import 'package:prepstation/core/effects/effect_model.dart';
+import 'package:prepstation/core/effects/effect_registry.dart';
+import 'package:prepstation/core/effects/effect_type.dart';
+import 'package:prepstation/core/keyframes/animated_property.dart';
+import 'package:prepstation/core/project/project_model.dart';
+import 'package:prepstation/core/project/project_repository.dart';
+import 'package:prepstation/core/segmentation/isolation_mode.dart';
+import 'package:prepstation/core/segmentation/segmentation_service.dart';
+import 'package:prepstation/core/timeline/clip_model.dart';
+import 'package:prepstation/core/timeline/timeline_controller.dart';
+import 'package:prepstation/core/transitions/transition_type.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class InspectorPanel extends ConsumerWidget {

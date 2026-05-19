@@ -2,19 +2,19 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:fluxedit/app/theme/color_tokens.dart';
-import 'package:fluxedit/app/theme/typography.dart';
-import 'package:fluxedit/core/audio/waveform_generator.dart';
-import 'package:fluxedit/core/constants/app_constants.dart';
-import 'package:fluxedit/core/history/history_manager.dart';
-import 'package:fluxedit/core/project/project_model.dart';
-import 'package:fluxedit/core/project/project_repository.dart';
-import 'package:fluxedit/core/timeline/clip_model.dart';
-import 'package:fluxedit/core/timeline/clip_thumbnail_cache.dart';
-import 'package:fluxedit/core/timeline/timeline_controller.dart';
-import 'package:fluxedit/core/timeline/timeline_tool.dart';
-import 'package:fluxedit/core/timeline/track_model.dart';
-import 'package:fluxedit/widgets/timeline/timeline_canvas.dart';
+import 'package:prepstation/app/theme/color_tokens.dart';
+import 'package:prepstation/app/theme/typography.dart';
+import 'package:prepstation/core/audio/waveform_generator.dart';
+import 'package:prepstation/core/constants/app_constants.dart';
+import 'package:prepstation/core/history/history_manager.dart';
+import 'package:prepstation/core/project/project_model.dart';
+import 'package:prepstation/core/project/project_repository.dart';
+import 'package:prepstation/core/timeline/clip_model.dart';
+import 'package:prepstation/core/timeline/clip_thumbnail_cache.dart';
+import 'package:prepstation/core/timeline/timeline_controller.dart';
+import 'package:prepstation/core/timeline/timeline_tool.dart';
+import 'package:prepstation/core/timeline/track_model.dart';
+import 'package:prepstation/widgets/timeline/timeline_canvas.dart';
 
 class TimelinePanel extends ConsumerWidget {
   const TimelinePanel({super.key, required this.project});

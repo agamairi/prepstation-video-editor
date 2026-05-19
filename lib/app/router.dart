@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:fluxedit/features/editor/editor_screen.dart';
-import 'package:fluxedit/features/media_browser/project_browser_screen.dart';
+import 'package:prepstation/features/editor/editor_screen.dart';
+import 'package:prepstation/features/media_browser/project_browser_screen.dart';
 import 'package:go_router/go_router.dart';
 
 abstract final class AppRoutes {

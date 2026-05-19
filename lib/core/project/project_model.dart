@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
-import 'package:fluxedit/core/constants/app_constants.dart';
-import 'package:fluxedit/core/timeline/composition_model.dart';
+import 'package:prepstation/core/constants/app_constants.dart';
+import 'package:prepstation/core/timeline/composition_model.dart';
 
 @immutable
 class MediaAsset {

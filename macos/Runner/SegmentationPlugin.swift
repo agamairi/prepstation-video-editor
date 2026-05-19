@@ -9,7 +9,7 @@ class SegmentationPlugin: NSObject, FlutterPlugin {
 
     static func register(with registrar: FlutterPluginRegistrar) {
         let channel = FlutterMethodChannel(
-            name: "com.fluxedit/segmentation",
+            name: "com.agamairi.prepstation/segmentation",
             binaryMessenger: registrar.messenger
         )
         let instance = SegmentationPlugin()

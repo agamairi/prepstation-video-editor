@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 
 abstract final class AppConstants {
   static const String appName = 'PrepStation';
-  static const String projectFileExtension = '.fluxedit';
+  static const String projectFileExtension = '.prepstation';
   static const String proxyFileSuffix = '_proxy';
 
   // Project auto-save interval

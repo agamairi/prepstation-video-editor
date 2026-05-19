@@ -8,7 +8,7 @@ import 'package:ffmpeg_kit_flutter_new/return_code.dart';
 import 'package:ffmpeg_kit_flutter_new/statistics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:fluxedit/core/ffmpeg/probe_result.dart';
+import 'package:prepstation/core/ffmpeg/probe_result.dart';
 
 final ffmpegEngineProvider = Provider<FfmpegEngine>((ref) => FfmpegEngine());
 

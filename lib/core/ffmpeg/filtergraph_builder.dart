@@ -1,9 +1,9 @@
 import 'dart:math' as math;
-import 'package:fluxedit/core/effects/effect_model.dart';
-import 'package:fluxedit/core/effects/effect_registry.dart';
-import 'package:fluxedit/core/segmentation/isolation_mode.dart';
-import 'package:fluxedit/core/timeline/clip_model.dart';
-import 'package:fluxedit/core/transitions/transition_type.dart';
+import 'package:prepstation/core/effects/effect_model.dart';
+import 'package:prepstation/core/effects/effect_registry.dart';
+import 'package:prepstation/core/segmentation/isolation_mode.dart';
+import 'package:prepstation/core/timeline/clip_model.dart';
+import 'package:prepstation/core/transitions/transition_type.dart';
 
 /// Builds FFmpeg filtergraph strings for export-time rendering.
 class FiltergraphBuilder {

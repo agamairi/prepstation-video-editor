@@ -1,13 +1,13 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:fluxedit/core/history/history_manager.dart';
-import 'package:fluxedit/core/history/keyframe_commands.dart';
-import 'package:fluxedit/core/keyframes/animated_property.dart';
-import 'package:fluxedit/core/keyframes/keyframe_repository.dart';
-import 'package:fluxedit/core/project/project_repository.dart';
-import 'package:fluxedit/core/timeline/clip_model.dart';
-import 'package:fluxedit/core/timeline/keyframe_model.dart';
-import 'package:fluxedit/core/timeline/timeline_state.dart';
-import 'package:fluxedit/core/timeline/track_model.dart';
+import 'package:prepstation/core/history/history_manager.dart';
+import 'package:prepstation/core/history/keyframe_commands.dart';
+import 'package:prepstation/core/keyframes/animated_property.dart';
+import 'package:prepstation/core/keyframes/keyframe_repository.dart';
+import 'package:prepstation/core/project/project_repository.dart';
+import 'package:prepstation/core/timeline/clip_model.dart';
+import 'package:prepstation/core/timeline/keyframe_model.dart';
+import 'package:prepstation/core/timeline/timeline_state.dart';
+import 'package:prepstation/core/timeline/track_model.dart';
 
 // ── Stub repositories ──────────────────────────────────────────────────────
 

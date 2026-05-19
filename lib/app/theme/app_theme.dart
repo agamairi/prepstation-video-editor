@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:fluxedit/app/theme/color_tokens.dart';
-import 'package:fluxedit/app/theme/typography.dart';
+import 'package:prepstation/app/theme/color_tokens.dart';
+import 'package:prepstation/app/theme/typography.dart';
 
 abstract final class AppTheme {
   static ThemeData get dark => ThemeData(

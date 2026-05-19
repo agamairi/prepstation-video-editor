@@ -1,12 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:fluxedit/core/constants/app_constants.dart';
-import 'package:fluxedit/core/effects/effect_model.dart';
-import 'package:fluxedit/core/effects/effect_type.dart';
-import 'package:fluxedit/core/ffmpeg/filtergraph_builder.dart';
-import 'package:fluxedit/core/timeline/clip_model.dart';
-import 'package:fluxedit/core/timeline/timeline_state.dart';
-import 'package:fluxedit/core/timeline/track_model.dart';
-import 'package:fluxedit/core/transitions/transition_type.dart';
+import 'package:prepstation/core/constants/app_constants.dart';
+import 'package:prepstation/core/effects/effect_model.dart';
+import 'package:prepstation/core/effects/effect_type.dart';
+import 'package:prepstation/core/ffmpeg/filtergraph_builder.dart';
+import 'package:prepstation/core/timeline/clip_model.dart';
+import 'package:prepstation/core/timeline/timeline_state.dart';
+import 'package:prepstation/core/timeline/track_model.dart';
+import 'package:prepstation/core/transitions/transition_type.dart';
 
 // ── Fixtures ───────────────────────────────────────────────────────────────
 

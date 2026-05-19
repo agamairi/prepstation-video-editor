@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:fluxedit/core/project/project_model.dart';
+import 'package:prepstation/core/project/project_model.dart';
 
 /// Parsed output from `ffprobe -show_format -show_streams`.
 @immutable

@@ -2,10 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:fluxedit/app/theme/color_tokens.dart';
-import 'package:fluxedit/app/theme/typography.dart';
-import 'package:fluxedit/core/project/project_model.dart';
-import 'package:fluxedit/core/project/project_repository.dart';
+import 'package:prepstation/app/theme/color_tokens.dart';
+import 'package:prepstation/app/theme/typography.dart';
+import 'package:prepstation/core/project/project_model.dart';
+import 'package:prepstation/core/project/project_repository.dart';
 import 'package:go_router/go_router.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -90,7 +90,7 @@ class ProjectBrowserScreen extends ConsumerWidget {
 
     final project = ProjectModel.create(
       name: projectName,
-      filePath: '${appDocDir.path}/fluxedit/$projectName.fluxedit',
+      filePath: '${appDocDir.path}/prepstation/$projectName.prepstation',
     );
 
     await ref.read(projectRepositoryProvider).saveProject(project);

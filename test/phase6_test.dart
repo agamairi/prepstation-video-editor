@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:fluxedit/core/help/help_data.dart';
-import 'package:fluxedit/core/timeline/clip_model.dart';
-import 'package:fluxedit/core/timeline/timeline_state.dart';
-import 'package:fluxedit/core/timeline/track_model.dart';
+import 'package:prepstation/core/help/help_data.dart';
+import 'package:prepstation/core/timeline/clip_model.dart';
+import 'package:prepstation/core/timeline/timeline_state.dart';
+import 'package:prepstation/core/timeline/track_model.dart';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 

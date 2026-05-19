@@ -1,7 +1,7 @@
-import 'package:fluxedit/core/effects/effect_model.dart';
-import 'package:fluxedit/core/history/edit_command.dart';
-import 'package:fluxedit/core/project/project_repository.dart';
-import 'package:fluxedit/core/timeline/timeline_state.dart';
+import 'package:prepstation/core/effects/effect_model.dart';
+import 'package:prepstation/core/history/edit_command.dart';
+import 'package:prepstation/core/project/project_repository.dart';
+import 'package:prepstation/core/timeline/timeline_state.dart';
 
 class AddEffectCommand extends EditCommand {
   const AddEffectCommand(this.effect);

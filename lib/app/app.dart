@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:fluxedit/app/router.dart';
-import 'package:fluxedit/app/theme/app_theme.dart';
+import 'package:prepstation/app/router.dart';
+import 'package:prepstation/app/theme/app_theme.dart';
 
 class FluxEditApp extends ConsumerWidget {
   const FluxEditApp({super.key});

@@ -1,8 +1,8 @@
-import 'package:fluxedit/core/history/edit_command.dart';
-import 'package:fluxedit/core/keyframes/keyframe_repository.dart';
-import 'package:fluxedit/core/project/project_repository.dart';
-import 'package:fluxedit/core/timeline/keyframe_model.dart';
-import 'package:fluxedit/core/timeline/timeline_state.dart';
+import 'package:prepstation/core/history/edit_command.dart';
+import 'package:prepstation/core/keyframes/keyframe_repository.dart';
+import 'package:prepstation/core/project/project_repository.dart';
+import 'package:prepstation/core/timeline/keyframe_model.dart';
+import 'package:prepstation/core/timeline/timeline_state.dart';
 
 class AddKeyframeCommand extends EditCommand {
   const AddKeyframeCommand({

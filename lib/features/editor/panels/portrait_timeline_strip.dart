@@ -2,11 +2,11 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:fluxedit/app/theme/color_tokens.dart';
-import 'package:fluxedit/core/constants/app_constants.dart';
-import 'package:fluxedit/core/timeline/clip_model.dart';
-import 'package:fluxedit/core/timeline/timeline_controller.dart';
-import 'package:fluxedit/core/timeline/timeline_state.dart';
+import 'package:prepstation/app/theme/color_tokens.dart';
+import 'package:prepstation/core/constants/app_constants.dart';
+import 'package:prepstation/core/timeline/clip_model.dart';
+import 'package:prepstation/core/timeline/timeline_controller.dart';
+import 'package:prepstation/core/timeline/timeline_state.dart';
 
 class PortraitTimelineStrip extends ConsumerStatefulWidget {
   const PortraitTimelineStrip({super.key});

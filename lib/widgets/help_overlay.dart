@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:fluxedit/app/theme/color_tokens.dart';
-import 'package:fluxedit/app/theme/typography.dart';
-import 'package:fluxedit/core/help/help_data.dart';
+import 'package:prepstation/app/theme/color_tokens.dart';
+import 'package:prepstation/app/theme/typography.dart';
+import 'package:prepstation/core/help/help_data.dart';
 
 void showHelpDialog(BuildContext context) {
   showDialog<void>(

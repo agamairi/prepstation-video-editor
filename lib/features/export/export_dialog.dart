@@ -3,15 +3,15 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:fluxedit/app/theme/color_tokens.dart';
-import 'package:fluxedit/app/theme/typography.dart';
-import 'package:fluxedit/core/ffmpeg/codec_registry.dart';
-import 'package:fluxedit/core/ffmpeg/ffmpeg_engine.dart';
-import 'package:fluxedit/core/ffmpeg/filtergraph_builder.dart';
-import 'package:fluxedit/core/project/project_model.dart';
-import 'package:fluxedit/core/project/project_repository.dart';
-import 'package:fluxedit/core/timeline/clip_model.dart';
-import 'package:fluxedit/core/timeline/timeline_controller.dart';
+import 'package:prepstation/app/theme/color_tokens.dart';
+import 'package:prepstation/app/theme/typography.dart';
+import 'package:prepstation/core/ffmpeg/codec_registry.dart';
+import 'package:prepstation/core/ffmpeg/ffmpeg_engine.dart';
+import 'package:prepstation/core/ffmpeg/filtergraph_builder.dart';
+import 'package:prepstation/core/project/project_model.dart';
+import 'package:prepstation/core/project/project_repository.dart';
+import 'package:prepstation/core/timeline/clip_model.dart';
+import 'package:prepstation/core/timeline/timeline_controller.dart';
 import 'package:path_provider/path_provider.dart';
 
 enum _ExportStatus { idle, exporting, done, failed }

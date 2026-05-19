@@ -1,15 +1,15 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:fluxedit/core/constants/app_constants.dart';
-import 'package:fluxedit/core/effects/effect_model.dart';
-import 'package:fluxedit/core/effects/effect_registry.dart';
-import 'package:fluxedit/core/effects/effect_type.dart';
-import 'package:fluxedit/core/ffmpeg/filtergraph_builder.dart';
-import 'package:fluxedit/core/history/effect_commands.dart';
-import 'package:fluxedit/core/history/history_manager.dart';
-import 'package:fluxedit/core/project/project_repository.dart';
-import 'package:fluxedit/core/timeline/clip_model.dart';
-import 'package:fluxedit/core/timeline/timeline_state.dart';
-import 'package:fluxedit/core/timeline/track_model.dart';
+import 'package:prepstation/core/constants/app_constants.dart';
+import 'package:prepstation/core/effects/effect_model.dart';
+import 'package:prepstation/core/effects/effect_registry.dart';
+import 'package:prepstation/core/effects/effect_type.dart';
+import 'package:prepstation/core/ffmpeg/filtergraph_builder.dart';
+import 'package:prepstation/core/history/effect_commands.dart';
+import 'package:prepstation/core/history/history_manager.dart';
+import 'package:prepstation/core/project/project_repository.dart';
+import 'package:prepstation/core/timeline/clip_model.dart';
+import 'package:prepstation/core/timeline/timeline_state.dart';
+import 'package:prepstation/core/timeline/track_model.dart';
 
 // ── Minimal stub repository ────────────────────────────────────────────────
 

@@ -1,5 +1,5 @@
-import 'package:fluxedit/core/effects/effect_model.dart';
-import 'package:fluxedit/core/effects/effect_type.dart';
+import 'package:prepstation/core/effects/effect_model.dart';
+import 'package:prepstation/core/effects/effect_type.dart';
 
 abstract final class EffectRegistry {
   static Map<String, double> defaultParameters(EffectType type) {

@@ -4,10 +4,10 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:fluxedit/core/constants/app_constants.dart';
-import 'package:fluxedit/core/ffmpeg/thumbnail_generator.dart';
-import 'package:fluxedit/core/project/project_repository.dart';
-import 'package:fluxedit/core/timeline/clip_model.dart';
+import 'package:prepstation/core/constants/app_constants.dart';
+import 'package:prepstation/core/ffmpeg/thumbnail_generator.dart';
+import 'package:prepstation/core/project/project_repository.dart';
+import 'package:prepstation/core/timeline/clip_model.dart';
 
 /// Non-autoDispose so thumbnails survive navigation between screens.
 final clipThumbnailCacheProvider =

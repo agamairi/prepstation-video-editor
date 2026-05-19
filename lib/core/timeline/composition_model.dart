@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:fluxedit/core/constants/app_constants.dart';
+import 'package:prepstation/core/constants/app_constants.dart';
 
 @immutable
 class CompositionModel {

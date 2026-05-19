@@ -1,6 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
-import 'package:fluxedit/core/database/tables.dart';
+import 'package:prepstation/core/database/tables.dart';
 
 part 'database.g.dart';
 
@@ -157,6 +157,6 @@ class AppDatabase extends _$AppDatabase {
   );
 
   static QueryExecutor _openConnection() {
-    return driftDatabase(name: 'fluxedit_db');
+    return driftDatabase(name: 'prepstation_db');
   }
 }

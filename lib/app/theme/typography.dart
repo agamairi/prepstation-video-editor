@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:fluxedit/app/theme/color_tokens.dart';
+import 'package:prepstation/app/theme/color_tokens.dart';
 
 abstract final class AppTypography {
   static const String _fontFamily = 'SF Pro Display';

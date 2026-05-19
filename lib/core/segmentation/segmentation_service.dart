@@ -10,7 +10,7 @@ final segmentationServiceProvider = Provider<SegmentationService>(
 enum SegmentationQuality { fast, balanced, accurate }
 
 class SegmentationService {
-  static const _channel = MethodChannel('com.fluxedit/segmentation');
+  static const _channel = MethodChannel('com.agamairi.prepstation/segmentation');
 
   Future<bool> isAvailable() async {
     try {

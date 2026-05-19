@@ -4,13 +4,13 @@ import 'package:desktop_drop/desktop_drop.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:fluxedit/app/theme/color_tokens.dart';
-import 'package:fluxedit/app/theme/typography.dart';
-import 'package:fluxedit/core/constants/media_constants.dart';
-import 'package:fluxedit/core/project/project_model.dart';
-import 'package:fluxedit/core/project/project_repository.dart';
-import 'package:fluxedit/core/timeline/timeline_controller.dart';
-import 'package:fluxedit/core/timeline/track_model.dart';
+import 'package:prepstation/app/theme/color_tokens.dart';
+import 'package:prepstation/app/theme/typography.dart';
+import 'package:prepstation/core/constants/media_constants.dart';
+import 'package:prepstation/core/project/project_model.dart';
+import 'package:prepstation/core/project/project_repository.dart';
+import 'package:prepstation/core/timeline/timeline_controller.dart';
+import 'package:prepstation/core/timeline/track_model.dart';
 
 final mediaAssetsProvider = FutureProvider.family<List<MediaAsset>, String>(
   (ref, projectId) =>

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:fluxedit/app/theme/color_tokens.dart';
-import 'package:fluxedit/core/constants/app_constants.dart';
-import 'package:fluxedit/core/segmentation/isolation_mode.dart';
+import 'package:prepstation/app/theme/color_tokens.dart';
+import 'package:prepstation/core/constants/app_constants.dart';
+import 'package:prepstation/core/segmentation/isolation_mode.dart';
 
 enum ClipType { video, audio, title, image, adjustment, colorCard }
 

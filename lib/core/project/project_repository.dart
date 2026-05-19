@@ -1,15 +1,15 @@
 import 'package:drift/drift.dart' hide Column;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:fluxedit/core/database/database.dart';
-import 'package:fluxedit/core/database/database_provider.dart';
-import 'package:fluxedit/core/effects/effect_model.dart';
-import 'package:fluxedit/core/effects/effect_type.dart';
-import 'package:fluxedit/core/project/project_model.dart';
-import 'package:fluxedit/core/segmentation/isolation_mode.dart';
-import 'package:fluxedit/core/timeline/clip_model.dart';
-import 'package:fluxedit/core/timeline/composition_model.dart';
-import 'package:fluxedit/core/timeline/marker_model.dart';
-import 'package:fluxedit/core/timeline/track_model.dart';
+import 'package:prepstation/core/database/database.dart';
+import 'package:prepstation/core/database/database_provider.dart';
+import 'package:prepstation/core/effects/effect_model.dart';
+import 'package:prepstation/core/effects/effect_type.dart';
+import 'package:prepstation/core/project/project_model.dart';
+import 'package:prepstation/core/segmentation/isolation_mode.dart';
+import 'package:prepstation/core/timeline/clip_model.dart';
+import 'package:prepstation/core/timeline/composition_model.dart';
+import 'package:prepstation/core/timeline/marker_model.dart';
+import 'package:prepstation/core/timeline/track_model.dart';
 
 final projectRepositoryProvider = Provider<ProjectRepository>(
   (ref) => ProjectRepository(ref.watch(databaseProvider)),

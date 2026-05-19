@@ -1,11 +1,11 @@
 // ignore_for_file: lines_longer_than_80_chars
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:fluxedit/core/constants/app_constants.dart';
-import 'package:fluxedit/core/ffmpeg/filtergraph_builder.dart';
-import 'package:fluxedit/core/segmentation/isolation_mode.dart';
-import 'package:fluxedit/core/timeline/clip_model.dart';
-import 'package:fluxedit/core/timeline/timeline_state.dart';
+import 'package:prepstation/core/constants/app_constants.dart';
+import 'package:prepstation/core/ffmpeg/filtergraph_builder.dart';
+import 'package:prepstation/core/segmentation/isolation_mode.dart';
+import 'package:prepstation/core/timeline/clip_model.dart';
+import 'package:prepstation/core/timeline/timeline_state.dart';
 
 void main() {
   group('IsolationMode', () {

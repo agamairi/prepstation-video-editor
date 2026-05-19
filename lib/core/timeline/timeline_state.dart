@@ -1,10 +1,10 @@
 import 'package:flutter/foundation.dart';
-import 'package:fluxedit/core/constants/app_constants.dart';
-import 'package:fluxedit/core/effects/effect_model.dart';
-import 'package:fluxedit/core/timeline/clip_model.dart';
-import 'package:fluxedit/core/timeline/keyframe_model.dart';
-import 'package:fluxedit/core/timeline/marker_model.dart';
-import 'package:fluxedit/core/timeline/track_model.dart';
+import 'package:prepstation/core/constants/app_constants.dart';
+import 'package:prepstation/core/effects/effect_model.dart';
+import 'package:prepstation/core/timeline/clip_model.dart';
+import 'package:prepstation/core/timeline/keyframe_model.dart';
+import 'package:prepstation/core/timeline/marker_model.dart';
+import 'package:prepstation/core/timeline/track_model.dart';
 
 /// The canonical timeline state. Uses [ChangeNotifier] so timeline widgets
 /// can subscribe at fine-grained granularity without rebuilding the full

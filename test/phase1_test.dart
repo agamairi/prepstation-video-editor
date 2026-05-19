@@ -1,13 +1,13 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:fluxedit/core/constants/app_constants.dart';
-import 'package:fluxedit/core/ffmpeg/codec_registry.dart';
-import 'package:fluxedit/core/ffmpeg/filtergraph_builder.dart';
-import 'package:fluxedit/core/project/project_model.dart';
-import 'package:fluxedit/core/timeline/clip_model.dart';
-import 'package:fluxedit/core/timeline/composition_model.dart';
-import 'package:fluxedit/core/timeline/keyframe_model.dart';
-import 'package:fluxedit/core/timeline/timeline_state.dart';
-import 'package:fluxedit/core/timeline/track_model.dart';
+import 'package:prepstation/core/constants/app_constants.dart';
+import 'package:prepstation/core/ffmpeg/codec_registry.dart';
+import 'package:prepstation/core/ffmpeg/filtergraph_builder.dart';
+import 'package:prepstation/core/project/project_model.dart';
+import 'package:prepstation/core/timeline/clip_model.dart';
+import 'package:prepstation/core/timeline/composition_model.dart';
+import 'package:prepstation/core/timeline/keyframe_model.dart';
+import 'package:prepstation/core/timeline/timeline_state.dart';
+import 'package:prepstation/core/timeline/track_model.dart';
 
 void main() {
   // ── Project Model ──────────────────────────────────────────────────────────
@@ -16,11 +16,11 @@ void main() {
     test('create() factory sets sensible defaults', () {
       final project = ProjectModel.create(
         name: 'Test Project',
-        filePath: '/tmp/test.fluxedit',
+        filePath: '/tmp/test.prepstation',
       );
 
       expect(project.name, 'Test Project');
-      expect(project.filePath, '/tmp/test.fluxedit');
+      expect(project.filePath, '/tmp/test.prepstation');
       expect(project.id, startsWith('proj_'));
       expect(project.version, '0.1.0');
       expect(project.composition.width, AppConstants.defaultWidth);
@@ -31,7 +31,7 @@ void main() {
     test('copyWith preserves unchanged fields', () {
       final original = ProjectModel.create(
         name: 'Original',
-        filePath: '/tmp/original.fluxedit',
+        filePath: '/tmp/original.prepstation',
       );
       final copy = original.copyWith(name: 'Renamed');
 

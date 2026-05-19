@@ -2,15 +2,15 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:fluxedit/app/theme/color_tokens.dart';
-import 'package:fluxedit/app/theme/typography.dart';
-import 'package:fluxedit/core/audio/waveform_data.dart';
-import 'package:fluxedit/core/timeline/clip_model.dart';
-import 'package:fluxedit/core/timeline/keyframe_model.dart';
-import 'package:fluxedit/core/timeline/timeline_state.dart';
-import 'package:fluxedit/core/timeline/timeline_tool.dart';
-import 'package:fluxedit/core/timeline/track_model.dart';
-import 'package:fluxedit/core/transitions/transition_type.dart';
+import 'package:prepstation/app/theme/color_tokens.dart';
+import 'package:prepstation/app/theme/typography.dart';
+import 'package:prepstation/core/audio/waveform_data.dart';
+import 'package:prepstation/core/timeline/clip_model.dart';
+import 'package:prepstation/core/timeline/keyframe_model.dart';
+import 'package:prepstation/core/timeline/timeline_state.dart';
+import 'package:prepstation/core/timeline/timeline_tool.dart';
+import 'package:prepstation/core/timeline/track_model.dart';
+import 'package:prepstation/core/transitions/transition_type.dart';
 
 typedef ClipCallback = void Function(String clipId);
 typedef ClipDragCallback = void Function(String clipId, double delta, {double? globalY});

@@ -1,8 +1,8 @@
 import 'package:drift/drift.dart' hide Column;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:fluxedit/core/database/database.dart';
-import 'package:fluxedit/core/database/database_provider.dart';
-import 'package:fluxedit/core/timeline/keyframe_model.dart';
+import 'package:prepstation/core/database/database.dart';
+import 'package:prepstation/core/database/database_provider.dart';
+import 'package:prepstation/core/timeline/keyframe_model.dart';
 
 final keyframeRepositoryProvider = Provider<KeyframeRepository>(
   (ref) => KeyframeRepository(ref.watch(databaseProvider)),
