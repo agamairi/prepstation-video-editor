@@ -179,6 +179,11 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
       return KeyEventResult.handled;
     }
 
+    if (key == LogicalKeyboardKey.keyT) {
+      ref.read(timelineToolProvider.notifier).state = TimelineTool.tracker;
+      return KeyEventResult.handled;
+    }
+
     if (key == LogicalKeyboardKey.escape) {
       timelineState.clearSelection();
       ref.read(timelineToolProvider.notifier).state = TimelineTool.select;

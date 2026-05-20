@@ -13,6 +13,8 @@ import 'package:prepstation/core/segmentation/isolation_mode.dart';
 import 'package:prepstation/core/segmentation/segmentation_service.dart';
 import 'package:prepstation/core/timeline/clip_model.dart';
 import 'package:prepstation/core/timeline/timeline_controller.dart';
+import 'package:prepstation/core/timeline/timeline_tool.dart';
+import 'package:prepstation/core/tracker/tracker_model.dart';
 import 'package:prepstation/core/transitions/transition_type.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -323,6 +325,8 @@ class _ClipInspectorState extends ConsumerState<_ClipInspector> {
               _ClipFlagsSection(clip: clip),
               const SizedBox(height: 12),
               _SubjectIsolationSection(clip: clip),
+              const SizedBox(height: 12),
+              _TrackerSection(clip: clip),
             ],
             const SizedBox(height: 12),
             _EffectsSection(clipId: clip.id),
@@ -2101,6 +2105,271 @@ class _TransitionSectionState extends ConsumerState<_TransitionSection> {
           ),
         ],
       ],
+    );
+  }
+}
+
+// ── Subject Tracking Section ────────────────────────────────────────────────
+
+class _TrackerSection extends ConsumerWidget {
+  const _TrackerSection({required this.clip});
+
+  final ClipModel clip;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final timelineState = ref.watch(timelineStateProvider);
+    final sessions = timelineState.trackerSessionsForClip(clip.id);
+    final activeSessionId = timelineState.activeTrackerSessionId;
+    final controller = ref.read(timelineControllerProvider);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Expanded(child: _SectionHeader(title: 'Subject Tracking')),
+            Tooltip(
+              message: 'Activate tracker tool to drop pins',
+              child: GestureDetector(
+                onTap: () {
+                  ref.read(timelineToolProvider.notifier).state =
+                      TimelineTool.tracker;
+                },
+                child: Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    color: ColorTokens.backgroundSurface,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: ColorTokens.borderDefault),
+                  ),
+                  child: const Icon(
+                    Icons.pin_drop_outlined,
+                    size: 14,
+                    color: ColorTokens.textSecondary,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        if (sessions.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Text(
+              'Use the Track Point tool (T) to drop a pin on the preview.',
+              style: TextStyle(
+                color: ColorTokens.textSecondary,
+                fontSize: 11,
+              ),
+            ),
+          ),
+        for (final session in sessions)
+          _TrackerSessionTile(
+            session: session,
+            isActive: session.id == activeSessionId,
+            onTap: () {
+              timelineState.setActiveTrackerSession(session.id);
+            },
+            onDelete: () {
+              controller.removeTrackerSession(session.id);
+            },
+            onApplyStabilize: session.status == TrackerStatus.completed
+                ? () => controller.applyTrackingToTransform(
+                      session.id,
+                      stabilize: true,
+                    )
+                : null,
+            onApplyFollow: session.status == TrackerStatus.completed
+                ? () => controller.applyTrackingToTransform(
+                      session.id,
+                      stabilize: false,
+                    )
+                : null,
+          ),
+      ],
+    );
+  }
+}
+
+class _TrackerSessionTile extends StatelessWidget {
+  const _TrackerSessionTile({
+    required this.session,
+    required this.isActive,
+    required this.onTap,
+    required this.onDelete,
+    this.onApplyStabilize,
+    this.onApplyFollow,
+  });
+
+  final TrackerSession session;
+  final bool isActive;
+  final VoidCallback onTap;
+  final VoidCallback onDelete;
+  final VoidCallback? onApplyStabilize;
+  final VoidCallback? onApplyFollow;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = Color(session.colorHex);
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: isActive
+              ? color.withValues(alpha: 0.08)
+              : ColorTokens.backgroundSurface,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isActive ? color.withValues(alpha: 0.4) : ColorTokens.borderSubtle,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: color,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    session.name,
+                    style: TextStyle(
+                      color: isActive
+                          ? ColorTokens.textPrimary
+                          : ColorTokens.textSecondary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                _StatusBadge(status: session.status),
+                const SizedBox(width: 4),
+                GestureDetector(
+                  onTap: onDelete,
+                  child: const Icon(
+                    Icons.close,
+                    size: 14,
+                    color: ColorTokens.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+            if (session.status == TrackerStatus.completed) ...[
+              const SizedBox(height: 6),
+              Text(
+                '${session.points.length} points tracked',
+                style: const TextStyle(
+                  color: ColorTokens.textSecondary,
+                  fontSize: 10,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  _SmallActionBtn(
+                    label: 'Stabilize',
+                    icon: Icons.center_focus_strong,
+                    onTap: onApplyStabilize,
+                  ),
+                  const SizedBox(width: 6),
+                  _SmallActionBtn(
+                    label: 'Follow',
+                    icon: Icons.control_camera,
+                    onTap: onApplyFollow,
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StatusBadge extends StatelessWidget {
+  const _StatusBadge({required this.status});
+
+  final TrackerStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    final (String label, Color color) = switch (status) {
+      TrackerStatus.idle => ('Idle', ColorTokens.textDisabled),
+      TrackerStatus.tracking => ('Tracking...', ColorTokens.accentPrimary),
+      TrackerStatus.completed => ('Done', ColorTokens.success),
+      TrackerStatus.failed => ('Failed', ColorTokens.error),
+    };
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 9,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.3,
+        ),
+      ),
+    );
+  }
+}
+
+class _SmallActionBtn extends StatelessWidget {
+  const _SmallActionBtn({
+    required this.label,
+    required this.icon,
+    this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: ColorTokens.backgroundSurface,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: ColorTokens.borderDefault),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 12, color: ColorTokens.textSecondary),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: const TextStyle(
+                color: ColorTokens.textSecondary,
+                fontSize: 10,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

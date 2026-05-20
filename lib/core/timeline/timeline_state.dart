@@ -5,6 +5,7 @@ import 'package:prepstation/core/timeline/clip_model.dart';
 import 'package:prepstation/core/timeline/keyframe_model.dart';
 import 'package:prepstation/core/timeline/marker_model.dart';
 import 'package:prepstation/core/timeline/track_model.dart';
+import 'package:prepstation/core/tracker/tracker_model.dart';
 
 /// The canonical timeline state. Uses [ChangeNotifier] so timeline widgets
 /// can subscribe at fine-grained granularity without rebuilding the full
@@ -432,6 +433,57 @@ class TimelineState extends ChangeNotifier {
       );
     }
     _curvesByClipId[clipId] = curves;
+    notifyListeners();
+  }
+
+  // ── Tracker state ─────────────────────────────────────────────────────────
+
+  final List<TrackerSession> _trackerSessions = [];
+  String? _activeTrackerSessionId;
+
+  List<TrackerSession> get trackerSessions =>
+      List.unmodifiable(_trackerSessions);
+
+  List<TrackerSession> trackerSessionsForClip(String clipId) =>
+      _trackerSessions.where((s) => s.clipId == clipId).toList();
+
+  String? get activeTrackerSessionId => _activeTrackerSessionId;
+
+  TrackerSession? get activeTrackerSession {
+    if (_activeTrackerSessionId == null) return null;
+    try {
+      return _trackerSessions.firstWhere(
+        (s) => s.id == _activeTrackerSessionId,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  void addTrackerSession(TrackerSession session) {
+    _trackerSessions.add(session);
+    _activeTrackerSessionId = session.id;
+    notifyListeners();
+  }
+
+  void updateTrackerSession(TrackerSession session) {
+    final idx = _trackerSessions.indexWhere((s) => s.id == session.id);
+    if (idx >= 0) {
+      _trackerSessions[idx] = session;
+      notifyListeners();
+    }
+  }
+
+  void removeTrackerSession(String sessionId) {
+    _trackerSessions.removeWhere((s) => s.id == sessionId);
+    if (_activeTrackerSessionId == sessionId) {
+      _activeTrackerSessionId = null;
+    }
+    notifyListeners();
+  }
+
+  void setActiveTrackerSession(String? sessionId) {
+    _activeTrackerSessionId = sessionId;
     notifyListeners();
   }
 

@@ -17,8 +17,10 @@ import 'package:prepstation/core/segmentation/segmentation_service.dart';
 import 'package:prepstation/core/timeline/clip_model.dart';
 import 'package:prepstation/core/timeline/timeline_controller.dart';
 import 'package:prepstation/core/timeline/timeline_state.dart';
+import 'package:prepstation/core/timeline/timeline_tool.dart';
 import 'package:prepstation/core/timeline/track_model.dart';
 import 'package:prepstation/core/transitions/transition_type.dart';
+import 'package:prepstation/features/editor/panels/tracker_overlay.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:just_audio/just_audio.dart' as ja;
 import 'package:video_player/video_player.dart';
@@ -1142,6 +1144,11 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
         activeClip.isolationMaskPath == null &&
         activeClip.isolationSelectionLeft == null;
 
+    final tool = ref.watch(timelineToolProvider);
+    final inTrackerMode = tool == TimelineTool.tracker &&
+        activeClip != null &&
+        activeClip.type == ClipType.video;
+
     return Container(
       color: Colors.black,
       child: Column(
@@ -1176,7 +1183,18 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
                         );
                       },
                     )
-                  : contentWidget,
+                  : inTrackerMode
+                      ? Stack(
+                          children: [
+                            contentWidget,
+                            Positioned.fill(
+                              child: TrackerOverlay(
+                                activeClip: activeClip,
+                              ),
+                            ),
+                          ],
+                        )
+                      : contentWidget,
             ),
           ),
           _PreviewToolbar(project: widget.project),

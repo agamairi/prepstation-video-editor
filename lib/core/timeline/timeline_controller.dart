@@ -23,6 +23,8 @@ import 'package:prepstation/core/timeline/keyframe_model.dart';
 import 'package:prepstation/core/timeline/marker_model.dart';
 import 'package:prepstation/core/timeline/timeline_state.dart';
 import 'package:prepstation/core/timeline/track_model.dart';
+import 'package:prepstation/core/tracker/tracker_model.dart';
+import 'package:prepstation/core/tracker/tracker_service.dart';
 import 'package:prepstation/core/transitions/transition_type.dart';
 import 'package:uuid/uuid.dart';
 
@@ -40,6 +42,7 @@ final timelineControllerProvider = Provider<TimelineController>((ref) {
     history: ref.watch(historyManagerProvider.notifier),
     keyframeRepo: ref.watch(keyframeRepositoryProvider),
   );
+  controller.setTrackerService(ref.watch(trackerServiceProvider));
   ref.onDispose(controller.dispose);
   return controller;
 });
@@ -982,6 +985,148 @@ class TimelineController {
         state.setPlayhead(markers[i].time);
         return;
       }
+    }
+  }
+
+  // ── Subject tracking ──────────────────────────────────────────────────
+
+  TrackerService? _trackerService;
+
+  void setTrackerService(TrackerService service) {
+    _trackerService = service;
+  }
+
+  Future<TrackerSession?> createTrackerSession({
+    required String clipId,
+    required double pinX,
+    required double pinY,
+    String? name,
+  }) async {
+    final clip = _findClip(clipId);
+    if (clip == null || clip.type != ClipType.video) return null;
+
+    final existingSessions = state.trackerSessionsForClip(clipId);
+    final sessionName = name ?? 'Track ${existingSessions.length + 1}';
+
+    final session = TrackerSession(
+      id: 'tracker_${_uuid.v4()}',
+      clipId: clipId,
+      name: sessionName,
+      pinX: pinX,
+      pinY: pinY,
+      pinTime: state.playhead - clip.startOnTimeline + clip.mediaInPoint,
+    );
+
+    state.addTrackerSession(session);
+    return session;
+  }
+
+  Future<void> runTracking(String sessionId) async {
+    final session = state.activeTrackerSession;
+    if (session == null || session.id != sessionId) return;
+    if (_trackerService == null) return;
+
+    final clip = _findClip(session.clipId);
+    if (clip == null) return;
+
+    final asset = await repository.getMediaAsset(clip.mediaId);
+    if (asset == null || !asset.hasVideo) return;
+
+    state.updateTrackerSession(
+      session.copyWith(status: TrackerStatus.tracking),
+    );
+
+    try {
+      final points = await _trackerService!.trackPoint(
+        videoPath: asset.filePath,
+        pinX: session.pinX,
+        pinY: session.pinY,
+        pinTime: session.pinTime,
+        inPoint: clip.mediaInPoint,
+        outPoint: clip.mediaOutPoint,
+        videoWidth: asset.width,
+        videoHeight: asset.height,
+        searchRadius: session.searchRadius,
+        frameStep: 2,
+        onProgress: (progress) {
+          if (!_active) return;
+          state.updateTrackerSession(
+            state.trackerSessions
+                .firstWhere((s) => s.id == sessionId)
+                .copyWith(status: TrackerStatus.tracking),
+          );
+        },
+      );
+
+      if (!_active) return;
+
+      state.updateTrackerSession(
+        state.trackerSessions
+            .firstWhere((s) => s.id == sessionId)
+            .copyWith(
+              status: TrackerStatus.completed,
+              points: points,
+            ),
+      );
+    } catch (e) {
+      if (!_active) return;
+      state.updateTrackerSession(
+        state.trackerSessions
+            .firstWhere((s) => s.id == sessionId)
+            .copyWith(status: TrackerStatus.failed),
+      );
+    }
+  }
+
+  void removeTrackerSession(String sessionId) {
+    state.removeTrackerSession(sessionId);
+  }
+
+  /// Bakes the tracker data from a completed session into posX/posY keyframes
+  /// on the clip, producing a stabilize or follow effect.
+  Future<void> applyTrackingToTransform(
+    String sessionId, {
+    bool stabilize = false,
+  }) async {
+    final session = state.trackerSessions.cast<TrackerSession?>().firstWhere(
+      (s) => s!.id == sessionId,
+      orElse: () => null,
+    );
+    if (session == null || session.status != TrackerStatus.completed) return;
+    if (session.points.length < 2) return;
+
+    final clip = _findClip(session.clipId);
+    if (clip == null) return;
+
+    final refPoint = session.pointAtTime(session.pinTime) ??
+        session.interpolatedAt(session.pinTime);
+    if (refPoint == null) return;
+
+    final refX = refPoint.x;
+    final refY = refPoint.y;
+
+    for (final point in session.points) {
+      final clipTime = point.time - clip.mediaInPoint + clip.startOnTimeline;
+      if (clipTime < clip.startOnTimeline || clipTime > clip.endOnTimeline) {
+        continue;
+      }
+
+      final dx = point.x - refX;
+      final dy = point.y - refY;
+
+      // For stabilize: invert the motion. For follow: apply the motion.
+      final sign = stabilize ? -1.0 : 1.0;
+      final posX = sign * dx * 1920;
+      final posY = sign * dy * 1080;
+
+      // Save playhead, set keyframes, restore playhead
+      final savedPlayhead = state.playhead;
+      state.setPlayhead(clipTime);
+
+      await setKeyframe(session.clipId, 'posX', posX);
+      await setKeyframe(session.clipId, 'posY', posY);
+
+      state.setPlayhead(savedPlayhead);
     }
   }
 
