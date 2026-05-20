@@ -182,21 +182,25 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
 
     Duration seekTo = state.playhead;
 
-    if (state.duration > Duration.zero && seekTo >= state.duration) {
-      seekTo = Duration.zero;
-      state.setPlayhead(seekTo);
-    }
-
+    // Capture selected clip to scope playback to it.
+    ClipModel? boundaryClip;
     if (state.selectedClipIds.isNotEmpty) {
       final selectedId = state.selectedClipIds.first;
       try {
-        final selected = state.clips.firstWhere((c) => c.id == selectedId);
-        if (state.playhead < selected.startOnTimeline ||
-            state.playhead >= selected.endOnTimeline) {
-          seekTo = selected.startOnTimeline;
-          state.setPlayhead(seekTo);
-        }
+        boundaryClip = state.clips.firstWhere((c) => c.id == selectedId);
       } catch (_) {}
+    }
+
+    if (boundaryClip != null) {
+      // Clamp to selected clip range
+      if (seekTo < boundaryClip.startOnTimeline ||
+          seekTo >= boundaryClip.endOnTimeline) {
+        seekTo = boundaryClip.startOnTimeline;
+        state.setPlayhead(seekTo);
+      }
+    } else if (state.duration > Duration.zero && seekTo >= state.duration) {
+      seekTo = Duration.zero;
+      state.setPlayhead(seekTo);
     }
 
     _playheadAtPlayStart = seekTo;
@@ -205,6 +209,10 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
     _syncLayerControllers(state, seekTo, startPlaying: true);
     _syncAudioPlayback(state, seekTo);
 
+    // Track which clips had playing controllers last tick so we can detect
+    // when the playhead crosses into a new clip and start its controller.
+    Set<String> lastVisibleClipIds = {};
+
     _playbackTimer = Timer.periodic(const Duration(milliseconds: 33), (_) {
       if (!mounted) return;
       final s = ref.read(timelineStateProvider);
@@ -212,6 +220,18 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
 
       final elapsed = DateTime.now().difference(_wallClockAtPlayStart!);
       final newPlayhead = _playheadAtPlayStart + elapsed;
+
+      // Stop at selected clip boundary
+      if (boundaryClip != null &&
+          newPlayhead >= boundaryClip.endOnTimeline) {
+        s.setPlayhead(boundaryClip.startOnTimeline);
+        s.setPlaying(false);
+        for (final layer in _layers.values) {
+          layer.videoController?.pause();
+        }
+        _stopAllAudio();
+        return;
+      }
 
       if (s.duration > Duration.zero && newPlayhead >= s.duration) {
         s.setPlayhead(Duration.zero);
@@ -223,7 +243,41 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
         _stopAllAudio();
         return;
       }
+
       s.setPlayhead(newPlayhead);
+
+      // Sync video controllers for clips currently under the playhead.
+      // This ensures that when the playhead moves from one clip to the
+      // next, the new clip's video controller gets seeked and played.
+      final nowVisible = <String>{};
+      for (final track in s.videoTracks) {
+        if (!track.isVisible) continue;
+        final clip = s.clipAt(track.id, newPlayhead);
+        if (clip != null && clip.type == ClipType.video) {
+          nowVisible.add(clip.id);
+          final layer = _layers[clip.id];
+          if (layer != null &&
+              layer.initialized &&
+              layer.videoController != null) {
+            if (!lastVisibleClipIds.contains(clip.id)) {
+              // Clip just became visible — seek and play
+              final offsetInClip = newPlayhead - clip.startOnTimeline;
+              final videoPos = clip.mediaInPoint + offsetInClip;
+              layer.videoController!.seekTo(videoPos);
+              layer.videoController!.play();
+            }
+          }
+        }
+      }
+
+      // Pause controllers for clips that are no longer under the playhead
+      for (final oldId in lastVisibleClipIds) {
+        if (!nowVisible.contains(oldId)) {
+          _layers[oldId]?.videoController?.pause();
+        }
+      }
+      lastVisibleClipIds = nowVisible;
+
       _syncAudioPlayback(s, newPlayhead);
     });
   }
