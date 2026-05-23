@@ -1087,6 +1087,7 @@ class TimelineController {
   Future<void> applyTrackingToTransform(
     String sessionId, {
     bool stabilize = false,
+    String? targetClipId,
   }) async {
     final session = state.trackerSessions.cast<TrackerSession?>().firstWhere(
       (s) => s!.id == sessionId,
@@ -1095,8 +1096,12 @@ class TimelineController {
     if (session == null || session.status != TrackerStatus.completed) return;
     if (session.points.length < 2) return;
 
-    final clip = _findClip(session.clipId);
-    if (clip == null) return;
+    final sourceClip = _findClip(session.clipId);
+    if (sourceClip == null) return;
+
+    final applyToClipId = targetClipId ?? session.clipId;
+    final targetClip = _findClip(applyToClipId);
+    if (targetClip == null) return;
 
     final refPoint = session.pointAtTime(session.pinTime) ??
         session.interpolatedAt(session.pinTime);
@@ -1106,25 +1111,26 @@ class TimelineController {
     final refY = refPoint.y;
 
     for (final point in session.points) {
-      final clipTime = point.time - clip.mediaInPoint + clip.startOnTimeline;
-      if (clipTime < clip.startOnTimeline || clipTime > clip.endOnTimeline) {
+      final timelineTime =
+          point.time - sourceClip.mediaInPoint + sourceClip.startOnTimeline;
+
+      if (timelineTime < targetClip.startOnTimeline ||
+          timelineTime > targetClip.endOnTimeline) {
         continue;
       }
 
       final dx = point.x - refX;
       final dy = point.y - refY;
 
-      // For stabilize: invert the motion. For follow: apply the motion.
       final sign = stabilize ? -1.0 : 1.0;
       final posX = sign * dx * 1920;
       final posY = sign * dy * 1080;
 
-      // Save playhead, set keyframes, restore playhead
       final savedPlayhead = state.playhead;
-      state.setPlayhead(clipTime);
+      state.setPlayhead(timelineTime);
 
-      await setKeyframe(session.clipId, 'posX', posX);
-      await setKeyframe(session.clipId, 'posY', posY);
+      await setKeyframe(applyToClipId, 'posX', posX);
+      await setKeyframe(applyToClipId, 'posY', posY);
 
       state.setPlayhead(savedPlayhead);
     }

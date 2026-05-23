@@ -314,9 +314,11 @@ class _ClipInspectorState extends ConsumerState<_ClipInspector> {
                 },
               ),
             ],
-            if (clip.type == ClipType.video || clip.type == ClipType.image) ...[
+            if (clip.type != ClipType.audio) ...[
               const SizedBox(height: 12),
               _TransformSection(clip: clip),
+            ],
+            if (clip.type == ClipType.video || clip.type == ClipType.image) ...[
               const SizedBox(height: 12),
               _CropSection(clip: clip),
             ],
@@ -327,6 +329,10 @@ class _ClipInspectorState extends ConsumerState<_ClipInspector> {
               _SubjectIsolationSection(clip: clip),
               const SizedBox(height: 12),
               _TrackerSection(clip: clip),
+            ],
+            if (clip.type != ClipType.video && clip.type != ClipType.audio) ...[
+              const SizedBox(height: 12),
+              _AttachToTrackerSection(clip: clip),
             ],
             const SizedBox(height: 12),
             _EffectsSection(clipId: clip.id),
@@ -2189,6 +2195,131 @@ class _TrackerSection extends ConsumerWidget {
                 : null,
           ),
       ],
+    );
+  }
+}
+
+class _AttachToTrackerSection extends ConsumerWidget {
+  const _AttachToTrackerSection({required this.clip});
+
+  final ClipModel clip;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final timelineState = ref.watch(timelineStateProvider);
+    final controller = ref.read(timelineControllerProvider);
+
+    final completedSessions = timelineState.trackerSessions
+        .where((s) => s.status == TrackerStatus.completed)
+        .where((s) {
+      final sourceClip = timelineState.clips.cast<ClipModel?>().firstWhere(
+        (c) => c!.id == s.clipId,
+        orElse: () => null,
+      );
+      if (sourceClip == null) return false;
+      return clip.startOnTimeline < sourceClip.endOnTimeline &&
+          clip.endOnTimeline > sourceClip.startOnTimeline;
+    }).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _SectionHeader(title: 'Attach to Tracker'),
+        if (completedSessions.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Text(
+              'No completed trackers overlap this clip. Track a point on a video clip first.',
+              style: TextStyle(
+                color: ColorTokens.textSecondary,
+                fontSize: 11,
+              ),
+            ),
+          ),
+        for (final session in completedSessions)
+          _AttachableTrackerTile(
+            session: session,
+            sourceClipName: timelineState.clips
+                    .cast<ClipModel?>()
+                    .firstWhere(
+                      (c) => c!.id == session.clipId,
+                      orElse: () => null,
+                    )
+                    ?.name ??
+                'Unknown',
+            onAttach: () => controller.applyTrackingToTransform(
+              session.id,
+              targetClipId: clip.id,
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _AttachableTrackerTile extends StatelessWidget {
+  const _AttachableTrackerTile({
+    required this.session,
+    required this.sourceClipName,
+    required this.onAttach,
+  });
+
+  final TrackerSession session;
+  final String sourceClipName;
+  final VoidCallback onAttach;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = Color(session.colorHex);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: ColorTokens.backgroundSurface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: ColorTokens.borderSubtle),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  session.name,
+                  style: const TextStyle(
+                    color: ColorTokens.textPrimary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                Text(
+                  'from $sourceClipName',
+                  style: const TextStyle(
+                    color: ColorTokens.textSecondary,
+                    fontSize: 10,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          _SmallActionBtn(
+            label: 'Attach',
+            icon: Icons.link,
+            onTap: onAttach,
+          ),
+        ],
+      ),
     );
   }
 }
