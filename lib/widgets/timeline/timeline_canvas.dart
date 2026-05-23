@@ -213,8 +213,18 @@ class _TimelineCanvasState extends State<TimelineCanvas> {
             }
           },
           onDragEnd: () => _draggingClipId = null,
-          onTrimStartDrag: (dx) => widget.onClipTrimStart(clip.id, left + dx),
-          onTrimEndDrag: (dx) => widget.onClipTrimEnd(clip.id, left + dx),
+          onTrimStartDrag: (globalX) {
+            final box = context.findRenderObject() as RenderBox?;
+            if (box == null) return;
+            final localX = box.globalToLocal(Offset(globalX, 0)).dx;
+            widget.onClipTrimStart(clip.id, localX);
+          },
+          onTrimEndDrag: (globalX) {
+            final box = context.findRenderObject() as RenderBox?;
+            if (box == null) return;
+            final localX = box.globalToLocal(Offset(globalX, 0)).dx;
+            widget.onClipTrimEnd(clip.id, localX);
+          },
           onContextMenu: widget.onClipContextMenu != null
               ? (pos) => widget.onClipContextMenu!(clip.id, pos)
               : null,
@@ -314,7 +324,7 @@ class _ClipGestureAreaState extends State<_ClipGestureArea> {
             behavior: HitTestBehavior.opaque,
             onHorizontalDragStart: (_) {},
             onHorizontalDragUpdate: (d) =>
-                widget.onTrimStartDrag(d.localPosition.dx),
+                widget.onTrimStartDrag(d.globalPosition.dx),
             child: MouseRegion(
               cursor: SystemMouseCursors.resizeLeft,
               child: Container(
@@ -341,7 +351,7 @@ class _ClipGestureAreaState extends State<_ClipGestureArea> {
             behavior: HitTestBehavior.opaque,
             onHorizontalDragStart: (_) {},
             onHorizontalDragUpdate: (d) =>
-                widget.onTrimEndDrag(d.localPosition.dx),
+                widget.onTrimEndDrag(d.globalPosition.dx),
             child: MouseRegion(
               cursor: SystemMouseCursors.resizeRight,
               child: Container(
@@ -712,7 +722,7 @@ class _TimelinePainter extends CustomPainter {
     final cy = trackTop + trackHeight - 6.0;
 
     for (final kf in keyframes) {
-      final x = timelineState.timeToPixel(clip.startOnTimeline + kf.time);
+      final x = timelineState.timeToPixel(kf.time);
       final path = Path()
         ..moveTo(x, cy - r)
         ..lineTo(x + r, cy)

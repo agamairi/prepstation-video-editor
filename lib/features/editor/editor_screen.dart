@@ -102,9 +102,23 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
     final isShift = HardwareKeyboard.instance.isShiftPressed;
     final key = event.logicalKey;
 
-    final isTextFieldFocused =
-        FocusManager.instance.primaryFocus?.context?.widget is EditableText;
-    if (isTextFieldFocused && !isMeta) return KeyEventResult.ignored;
+    // Block all non-modifier shortcuts when a text field is focused.
+    // Walk up the element tree from the primary focus to find EditableText.
+    var isTextFieldFocused = false;
+    final focusContext = FocusManager.instance.primaryFocus?.context;
+    if (focusContext != null) {
+      focusContext.visitAncestorElements((element) {
+        if (element.widget is EditableText) {
+          isTextFieldFocused = true;
+          return false; // stop walking
+        }
+        return true;
+      });
+    }
+    if (isTextFieldFocused &&
+        !(isMeta || HardwareKeyboard.instance.isControlPressed)) {
+      return KeyEventResult.ignored;
+    }
 
     final controller = ref.read(timelineControllerProvider);
     final timelineState = ref.read(timelineStateProvider);

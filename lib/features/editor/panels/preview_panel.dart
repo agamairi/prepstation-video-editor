@@ -288,13 +288,15 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
             if (!lastVisibleClipIds.contains(clip.id)) {
               final offsetInClip = newPlayhead - clip.startOnTimeline;
               final videoPos = clip.mediaInPoint + offsetInClip;
-              layer.safeSeek(videoPos);
-              layer.safePlay();
+              // Await seek before play to avoid showing a stale frame
+              layer.safeSeek(videoPos).then((_) => layer.safePlay());
             }
           }
         }
       }
 
+      // Pause clips that left visibility — but only after new ones are
+      // ready so we don't flash a blank frame during the handoff.
       for (final oldId in lastVisibleClipIds) {
         if (!nowVisible.contains(oldId)) {
           _layers[oldId]?.safePause();
