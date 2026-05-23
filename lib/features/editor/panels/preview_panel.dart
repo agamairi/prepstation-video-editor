@@ -999,7 +999,7 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
         clip: clip,
         compositionWidth: widget.project.composition.width,
         compositionHeight: widget.project.composition.height,
-        background: Colors.black,
+        background: Color(clip.titleBgColorValue),
         animT: animT,
       );
     } else if (clip.type == ClipType.colorCard) {

@@ -643,6 +643,16 @@ class TimelineController {
     ));
   }
 
+  Future<void> updateTitleBgColor(String clipId, int colorValue) async {
+    final clip = _findClip(clipId);
+    if (clip == null) return;
+    await execute(UpdateClipCommand(
+      before: clip,
+      after: clip.copyWith(titleBgColorValue: colorValue),
+      description: 'Title Background',
+    ));
+  }
+
   Future<void> updateTitleAlignment(String clipId, String alignment) async {
     final clip = _findClip(clipId);
     if (clip == null) return;

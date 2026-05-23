@@ -102,6 +102,10 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
     final isShift = HardwareKeyboard.instance.isShiftPressed;
     final key = event.logicalKey;
 
+    final isTextFieldFocused =
+        FocusManager.instance.primaryFocus?.context?.widget is EditableText;
+    if (isTextFieldFocused && !isMeta) return KeyEventResult.ignored;
+
     final controller = ref.read(timelineControllerProvider);
     final timelineState = ref.read(timelineStateProvider);
 

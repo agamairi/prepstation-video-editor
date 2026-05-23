@@ -1120,18 +1120,45 @@ class _TextStyleControlsState extends ConsumerState<_TextStyleControls> {
 
 // ── Title Clip Section ────────────────────────────────────────────────────────
 
-class _TitleSection extends StatelessWidget {
+class _TitleSection extends ConsumerWidget {
   const _TitleSection({required this.clip});
 
   final ClipModel clip;
 
+  static const _bgColors = [
+    0x00000000, // transparent
+    0xFF000000, // black
+    0xFFFFFFFF, // white
+    0xFF1A1A1B, // dark grey
+    0xFF505057, // mid grey
+    0xFFFF5252, // red
+    0xFF4D9CFF, // blue
+    0xFF34C47A, // green
+  ];
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final liveClip = ref
+            .watch(timelineStateProvider)
+            .clips
+            .cast<ClipModel?>()
+            .firstWhere((c) => c?.id == clip.id, orElse: () => null) ??
+        clip;
+    final controller = ref.read(timelineControllerProvider);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const _SectionHeader(title: 'Title'),
-        _TextStyleControls(clip: clip),
+        const Text('Background', style: AppTypography.labelMedium),
+        const SizedBox(height: 6),
+        _ColorSwatchRow(
+          selectedColor: liveClip.titleBgColorValue,
+          colors: _bgColors,
+          onSelected: (c) => controller.updateTitleBgColor(liveClip.id, c),
+        ),
+        const SizedBox(height: 8),
+        _TextStyleControls(clip: liveClip),
       ],
     );
   }
@@ -1145,6 +1172,7 @@ class _ColorCardSection extends ConsumerWidget {
   final ClipModel clip;
 
   static const _bgColors = [
+    0x00000000, // transparent
     0xFF000000, // black
     0xFFFFFFFF, // white
     0xFF1A1A1B, // dark grey
@@ -1256,7 +1284,6 @@ class _ColorSwatchRow extends StatelessWidget {
                 width: 24,
                 height: 24,
                 decoration: BoxDecoration(
-                  color: Color(c),
                   shape: BoxShape.circle,
                   border: Border.all(
                     color: selectedColor == c
@@ -1265,12 +1292,41 @@ class _ColorSwatchRow extends StatelessWidget {
                     width: selectedColor == c ? 2 : 1,
                   ),
                 ),
+                child: ClipOval(
+                  child: Color(c).a == 0
+                      ? CustomPaint(
+                          size: const Size(24, 24),
+                          painter: _CheckerPainter(),
+                        )
+                      : ColoredBox(color: Color(c)),
+                ),
               ),
             ),
           )
           .toList(),
     );
   }
+}
+
+class _CheckerPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    const cellSize = 4.0;
+    final light = Paint()..color = const Color(0xFFCCCCCC);
+    final dark = Paint()..color = const Color(0xFF999999);
+    for (var y = 0.0; y < size.height; y += cellSize) {
+      for (var x = 0.0; x < size.width; x += cellSize) {
+        final isEven = ((x / cellSize).floor() + (y / cellSize).floor()).isEven;
+        canvas.drawRect(
+          Rect.fromLTWH(x, y, cellSize, cellSize),
+          isEven ? light : dark,
+        );
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 // ── Image Clip Section ────────────────────────────────────────────────────────

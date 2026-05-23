@@ -311,6 +311,8 @@ class _ClipGestureAreaState extends State<_ClipGestureArea> {
           bottom: 0,
           width: widget.trimHandleWidth,
           child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onHorizontalDragStart: (_) {},
             onHorizontalDragUpdate: (d) =>
                 widget.onTrimStartDrag(d.localPosition.dx),
             child: MouseRegion(
@@ -336,6 +338,8 @@ class _ClipGestureAreaState extends State<_ClipGestureArea> {
           bottom: 0,
           width: widget.trimHandleWidth,
           child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onHorizontalDragStart: (_) {},
             onHorizontalDragUpdate: (d) =>
                 widget.onTrimEndDrag(d.localPosition.dx),
             child: MouseRegion(
