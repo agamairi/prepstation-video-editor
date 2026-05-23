@@ -13,8 +13,11 @@ import 'package:prepstation/core/timeline/timeline_controller.dart';
 import 'package:prepstation/core/timeline/track_model.dart';
 
 final mediaAssetsProvider = FutureProvider.family<List<MediaAsset>, String>(
-  (ref, projectId) =>
-      ref.watch(projectRepositoryProvider).getMediaAssets(projectId),
+  (ref, projectId) async {
+    final assets =
+        await ref.watch(projectRepositoryProvider).getMediaAssets(projectId);
+    return assets.where((a) => !a.type.startsWith('synthetic_')).toList();
+  },
 );
 
 class MediaPanel extends ConsumerStatefulWidget {
