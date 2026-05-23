@@ -124,12 +124,16 @@ class _LayerEntry {
   VideoPlayerController? videoController;
   String? mediaId;
   bool initialized = false;
+  bool _disposed = false;
 
   VideoPlayerController? maskController;
   String? maskPath;
   bool maskInitialized = false;
 
+  bool get isDisposed => _disposed;
+
   Future<void> dispose() async {
+    _disposed = true;
     await videoController?.dispose();
     await maskController?.dispose();
     videoController = null;
@@ -227,7 +231,7 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
         s.setPlayhead(boundaryClip.startOnTimeline);
         s.setPlaying(false);
         for (final layer in _layers.values) {
-          layer.videoController?.pause();
+          if (!layer.isDisposed) layer.videoController?.pause();
         }
         _stopAllAudio();
         return;
@@ -237,8 +241,10 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
         s.setPlayhead(Duration.zero);
         s.setPlaying(false);
         for (final layer in _layers.values) {
-          layer.videoController?.seekTo(Duration.zero);
-          layer.videoController?.pause();
+          if (!layer.isDisposed) {
+            layer.videoController?.seekTo(Duration.zero);
+            layer.videoController?.pause();
+          }
         }
         _stopAllAudio();
         return;
@@ -258,9 +264,9 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
           final layer = _layers[clip.id];
           if (layer != null &&
               layer.initialized &&
+              !layer.isDisposed &&
               layer.videoController != null) {
             if (!lastVisibleClipIds.contains(clip.id)) {
-              // Clip just became visible — seek and play
               final offsetInClip = newPlayhead - clip.startOnTimeline;
               final videoPos = clip.mediaInPoint + offsetInClip;
               layer.videoController!.seekTo(videoPos);
@@ -270,10 +276,12 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
         }
       }
 
-      // Pause controllers for clips that are no longer under the playhead
       for (final oldId in lastVisibleClipIds) {
         if (!nowVisible.contains(oldId)) {
-          _layers[oldId]?.videoController?.pause();
+          final old = _layers[oldId];
+          if (old != null && !old.isDisposed) {
+            old.videoController?.pause();
+          }
         }
       }
       lastVisibleClipIds = nowVisible;
@@ -519,6 +527,7 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
 
   Widget _applyClipTransforms(Widget child, ClipModel clip) {
     Widget result = child;
+    final controller = ref.read(timelineControllerProvider);
 
     // Crop: clip the visible area by the fractional insets
     final hasCrop = clip.cropLeft > 0 ||
@@ -557,20 +566,23 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
     }
 
     // Scale
-    if (clip.scaleX != 1.0 || clip.scaleY != 1.0) {
+    final scaleX = controller.evaluatedParameter(clip.id, 'scaleX', clip.scaleX);
+    final scaleY = controller.evaluatedParameter(clip.id, 'scaleY', clip.scaleY);
+    if (scaleX != 1.0 || scaleY != 1.0) {
       result = Transform(
         alignment: Alignment(
           -1.0 + 2.0 * clip.anchorX,
           -1.0 + 2.0 * clip.anchorY,
         ),
-        transform: Matrix4.diagonal3Values(clip.scaleX, clip.scaleY, 1.0),
+        transform: Matrix4.diagonal3Values(scaleX, scaleY, 1.0),
         child: result,
       );
     }
 
     // Rotation (in degrees)
-    if (clip.rotation != 0.0) {
-      final radians = clip.rotation * math.pi / 180.0;
+    final rotation = controller.evaluatedParameter(clip.id, 'rotation', clip.rotation);
+    if (rotation != 0.0) {
+      final radians = rotation * math.pi / 180.0;
       result = Transform.rotate(
         angle: radians,
         alignment: Alignment(
@@ -581,17 +593,20 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
       );
     }
 
-    // Position offset (in pixels)
-    if (clip.posX != 0.0 || clip.posY != 0.0) {
+    // Position offset (in pixels) — evaluate keyframes for animated tracking
+    final posX = controller.evaluatedParameter(clip.id, 'posX', clip.posX);
+    final posY = controller.evaluatedParameter(clip.id, 'posY', clip.posY);
+    if (posX != 0.0 || posY != 0.0) {
       result = Transform.translate(
-        offset: Offset(clip.posX, clip.posY),
+        offset: Offset(posX, posY),
         child: result,
       );
     }
 
     // Opacity
-    if (clip.opacity < 1.0) {
-      result = Opacity(opacity: clip.opacity.clamp(0.0, 1.0), child: result);
+    final opacity = controller.evaluatedParameter(clip.id, 'opacity', clip.opacity);
+    if (opacity < 1.0) {
+      result = Opacity(opacity: opacity.clamp(0.0, 1.0), child: result);
     }
 
     return result;
@@ -1070,11 +1085,21 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
     final transitionInfo = ref.watch(_transitionInfoProvider);
 
     // Ensure layer controllers are loaded for all visible clips.
+    // During playback, load ALL video clips so controllers are ready
+    // when the playhead reaches them; only prune when paused.
+    final clipsToLoad = timelineState.isPlaying
+        ? timelineState.clips
+            .where((c) => c.type == ClipType.video || c.type == ClipType.image)
+            .toList()
+        : visibleLayers;
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      _pruneUnusedLayers(visibleLayers);
+      if (!timelineState.isPlaying) {
+        _pruneUnusedLayers(visibleLayers);
+      }
 
-      for (final clip in visibleLayers) {
+      for (final clip in clipsToLoad) {
         if (clip.type == ClipType.video) {
           final layer = _layers[clip.id];
           if (layer == null || layer.mediaId != clip.mediaId) {
