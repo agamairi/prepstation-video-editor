@@ -132,14 +132,40 @@ class _LayerEntry {
 
   bool get isDisposed => _disposed;
 
+  /// Safely seek the video controller, ignoring errors from disposed state.
+  Future<void> safeSeek(Duration position) async {
+    if (_disposed || videoController == null) return;
+    try {
+      await videoController!.seekTo(position);
+    } catch (_) {}
+  }
+
+  /// Safely play the video controller.
+  void safePlay() {
+    if (_disposed || videoController == null) return;
+    try {
+      videoController!.play();
+    } catch (_) {}
+  }
+
+  /// Safely pause the video controller.
+  void safePause() {
+    if (_disposed || videoController == null) return;
+    try {
+      videoController!.pause();
+    } catch (_) {}
+  }
+
   Future<void> dispose() async {
     _disposed = true;
-    await videoController?.dispose();
-    await maskController?.dispose();
+    final vc = videoController;
+    final mc = maskController;
     videoController = null;
     maskController = null;
     initialized = false;
     maskInitialized = false;
+    await vc?.dispose();
+    await mc?.dispose();
   }
 }
 
@@ -231,7 +257,7 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
         s.setPlayhead(boundaryClip.startOnTimeline);
         s.setPlaying(false);
         for (final layer in _layers.values) {
-          if (!layer.isDisposed) layer.videoController?.pause();
+          layer.safePause();
         }
         _stopAllAudio();
         return;
@@ -241,10 +267,8 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
         s.setPlayhead(Duration.zero);
         s.setPlaying(false);
         for (final layer in _layers.values) {
-          if (!layer.isDisposed) {
-            layer.videoController?.seekTo(Duration.zero);
-            layer.videoController?.pause();
-          }
+          layer.safeSeek(Duration.zero);
+          layer.safePause();
         }
         _stopAllAudio();
         return;
@@ -253,8 +277,6 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
       s.setPlayhead(newPlayhead);
 
       // Sync video controllers for clips currently under the playhead.
-      // This ensures that when the playhead moves from one clip to the
-      // next, the new clip's video controller gets seeked and played.
       final nowVisible = <String>{};
       for (final track in s.videoTracks) {
         if (!track.isVisible) continue;
@@ -262,15 +284,12 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
         if (clip != null && clip.type == ClipType.video) {
           nowVisible.add(clip.id);
           final layer = _layers[clip.id];
-          if (layer != null &&
-              layer.initialized &&
-              !layer.isDisposed &&
-              layer.videoController != null) {
+          if (layer != null && layer.initialized && !layer.isDisposed) {
             if (!lastVisibleClipIds.contains(clip.id)) {
               final offsetInClip = newPlayhead - clip.startOnTimeline;
               final videoPos = clip.mediaInPoint + offsetInClip;
-              layer.videoController!.seekTo(videoPos);
-              layer.videoController!.play();
+              layer.safeSeek(videoPos);
+              layer.safePlay();
             }
           }
         }
@@ -278,10 +297,7 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
 
       for (final oldId in lastVisibleClipIds) {
         if (!nowVisible.contains(oldId)) {
-          final old = _layers[oldId];
-          if (old != null && !old.isDisposed) {
-            old.videoController?.pause();
-          }
+          _layers[oldId]?.safePause();
         }
       }
       lastVisibleClipIds = nowVisible;
@@ -295,7 +311,7 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
     _playbackTimer = null;
     _wallClockAtPlayStart = null;
     for (final layer in _layers.values) {
-      layer.videoController?.pause();
+      layer.safePause();
     }
     _stopAllAudio();
   }
@@ -315,24 +331,24 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
 
     for (final clip in visibleClips) {
       final layer = _layers[clip.id];
-      if (layer == null || !layer.initialized || layer.videoController == null) {
-        if (layer?.mediaId != clip.mediaId) {
+      if (layer == null || layer.isDisposed || !layer.initialized || layer.videoController == null) {
+        if (layer == null || layer.mediaId != clip.mediaId) {
           _loadLayerVideo(clip.id, clip.mediaId).then((_) {
             if (!mounted) return;
             final l = _layers[clip.id];
-            if (l == null || !l.initialized || l.videoController == null) return;
+            if (l == null || l.isDisposed || !l.initialized) return;
             final offsetInClip = playhead - clip.startOnTimeline;
             final videoPos = clip.mediaInPoint + offsetInClip;
-            l.videoController!.seekTo(videoPos);
-            if (startPlaying) l.videoController!.play();
+            l.safeSeek(videoPos);
+            if (startPlaying) l.safePlay();
           });
         }
         continue;
       }
       final offsetInClip = playhead - clip.startOnTimeline;
       final videoPos = clip.mediaInPoint + offsetInClip;
-      layer.videoController!.seekTo(videoPos);
-      if (startPlaying) layer.videoController!.play();
+      layer.safeSeek(videoPos);
+      if (startPlaying) layer.safePlay();
     }
   }
 
@@ -689,9 +705,11 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
     if (layer != null && layer.mediaId == mediaId && layer.initialized) return;
 
     if (layer != null) {
-      await layer.videoController?.dispose();
+      final oldController = layer.videoController;
       layer.videoController = null;
       layer.initialized = false;
+      layer._disposed = false;
+      await oldController?.dispose();
     } else {
       layer = _LayerEntry();
       _layers[clipId] = layer;
@@ -1106,18 +1124,19 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
             _loadLayerVideo(clip.id, clip.mediaId).then((_) {
               if (!mounted) return;
               final l = _layers[clip.id];
-              if (l == null || !l.initialized || l.videoController == null) return;
+              if (l == null || l.isDisposed || !l.initialized) return;
               final ts = ref.read(timelineStateProvider);
               final offsetInClip = ts.playhead - clip.startOnTimeline;
               final videoPos = clip.mediaInPoint + offsetInClip;
-              l.videoController!.seekTo(videoPos);
+              l.safeSeek(videoPos);
             });
           } else if (layer.initialized &&
+              !layer.isDisposed &&
               layer.videoController != null &&
               !timelineState.isPlaying) {
             final offsetInClip = timelineState.playhead - clip.startOnTimeline;
             final videoPos = clip.mediaInPoint + offsetInClip;
-            layer.videoController!.seekTo(videoPos);
+            layer.safeSeek(videoPos);
           }
         }
 
