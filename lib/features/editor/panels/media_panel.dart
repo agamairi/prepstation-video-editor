@@ -294,6 +294,10 @@ class _MediaTile extends ConsumerWidget {
       child: GestureDetector(
         onTap: () => _addToTimeline(ref, context),
         onDoubleTap: () => _addToTimeline(ref, context),
+        onSecondaryTapDown: (d) =>
+            _showContextMenu(ref, context, d.globalPosition),
+        onLongPressStart: (d) =>
+            _showContextMenu(ref, context, d.globalPosition),
         child: Container(
           decoration: BoxDecoration(
             color: ColorTokens.backgroundSurface,
@@ -406,6 +410,75 @@ class _MediaTile extends ConsumerWidget {
           backgroundColor: ColorTokens.backgroundElevated,
         ),
       );
+    }
+  }
+
+  Future<void> _showContextMenu(
+    WidgetRef ref,
+    BuildContext context,
+    Offset position,
+  ) async {
+    final result = await showMenu<String>(
+      context: context,
+      position: RelativeRect.fromLTRB(
+        position.dx,
+        position.dy,
+        position.dx + 1,
+        position.dy + 1,
+      ),
+      items: [
+        const PopupMenuItem(
+          value: 'add',
+          child: Row(
+            children: [
+              Icon(Icons.add, size: 16, color: ColorTokens.textSecondary),
+              SizedBox(width: 8),
+              Text('Add to Timeline'),
+            ],
+          ),
+        ),
+        const PopupMenuItem(
+          value: 'delete',
+          child: Row(
+            children: [
+              Icon(Icons.delete_outline, size: 16, color: ColorTokens.error),
+              SizedBox(width: 8),
+              Text('Delete', style: TextStyle(color: ColorTokens.error)),
+            ],
+          ),
+        ),
+      ],
+    );
+
+    if (!context.mounted) return;
+    if (result == 'add') {
+      await _addToTimeline(ref, context);
+    } else if (result == 'delete') {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: ColorTokens.backgroundElevated,
+          title: const Text('Delete Media'),
+          content: Text('Remove "${asset.name}" from the project?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Delete',
+                  style: TextStyle(color: ColorTokens.error)),
+            ),
+          ],
+        ),
+      );
+      if (confirmed == true) {
+        await ref
+            .read(projectRepositoryProvider)
+            .deleteMediaAsset(asset.id);
+        ref.invalidate(mediaAssetsProvider);
+      }
     }
   }
 
