@@ -17,8 +17,10 @@ import 'package:prepstation/core/segmentation/segmentation_service.dart';
 import 'package:prepstation/core/timeline/clip_model.dart';
 import 'package:prepstation/core/timeline/timeline_controller.dart';
 import 'package:prepstation/core/timeline/timeline_state.dart';
+import 'package:prepstation/core/timeline/timeline_tool.dart';
 import 'package:prepstation/core/timeline/track_model.dart';
 import 'package:prepstation/core/transitions/transition_type.dart';
+import 'package:prepstation/features/editor/panels/tracker_overlay.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:just_audio/just_audio.dart' as ja;
 import 'package:video_player/video_player.dart';
@@ -122,18 +124,48 @@ class _LayerEntry {
   VideoPlayerController? videoController;
   String? mediaId;
   bool initialized = false;
+  bool _disposed = false;
 
   VideoPlayerController? maskController;
   String? maskPath;
   bool maskInitialized = false;
 
+  bool get isDisposed => _disposed;
+
+  /// Safely seek the video controller, ignoring errors from disposed state.
+  Future<void> safeSeek(Duration position) async {
+    if (_disposed || videoController == null) return;
+    try {
+      await videoController!.seekTo(position);
+    } catch (_) {}
+  }
+
+  /// Safely play the video controller.
+  void safePlay() {
+    if (_disposed || videoController == null) return;
+    try {
+      videoController!.play();
+    } catch (_) {}
+  }
+
+  /// Safely pause the video controller.
+  void safePause() {
+    if (_disposed || videoController == null) return;
+    try {
+      videoController!.pause();
+    } catch (_) {}
+  }
+
   Future<void> dispose() async {
-    await videoController?.dispose();
-    await maskController?.dispose();
+    _disposed = true;
+    final vc = videoController;
+    final mc = maskController;
     videoController = null;
     maskController = null;
     initialized = false;
     maskInitialized = false;
+    await vc?.dispose();
+    await mc?.dispose();
   }
 }
 
@@ -180,21 +212,25 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
 
     Duration seekTo = state.playhead;
 
-    if (state.duration > Duration.zero && seekTo >= state.duration) {
-      seekTo = Duration.zero;
-      state.setPlayhead(seekTo);
-    }
-
+    // Capture selected clip to scope playback to it.
+    ClipModel? boundaryClip;
     if (state.selectedClipIds.isNotEmpty) {
       final selectedId = state.selectedClipIds.first;
       try {
-        final selected = state.clips.firstWhere((c) => c.id == selectedId);
-        if (state.playhead < selected.startOnTimeline ||
-            state.playhead >= selected.endOnTimeline) {
-          seekTo = selected.startOnTimeline;
-          state.setPlayhead(seekTo);
-        }
+        boundaryClip = state.clips.firstWhere((c) => c.id == selectedId);
       } catch (_) {}
+    }
+
+    if (boundaryClip != null) {
+      // Clamp to selected clip range
+      if (seekTo < boundaryClip.startOnTimeline ||
+          seekTo >= boundaryClip.endOnTimeline) {
+        seekTo = boundaryClip.startOnTimeline;
+        state.setPlayhead(seekTo);
+      }
+    } else if (state.duration > Duration.zero && seekTo >= state.duration) {
+      seekTo = Duration.zero;
+      state.setPlayhead(seekTo);
     }
 
     _playheadAtPlayStart = seekTo;
@@ -202,6 +238,10 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
 
     _syncLayerControllers(state, seekTo, startPlaying: true);
     _syncAudioPlayback(state, seekTo);
+
+    // Track which clips had playing controllers last tick so we can detect
+    // when the playhead crosses into a new clip and start its controller.
+    Set<String> lastVisibleClipIds = {};
 
     _playbackTimer = Timer.periodic(const Duration(milliseconds: 33), (_) {
       if (!mounted) return;
@@ -211,17 +251,59 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
       final elapsed = DateTime.now().difference(_wallClockAtPlayStart!);
       final newPlayhead = _playheadAtPlayStart + elapsed;
 
-      if (s.duration > Duration.zero && newPlayhead >= s.duration) {
-        s.setPlayhead(Duration.zero);
+      // Stop at selected clip boundary
+      if (boundaryClip != null &&
+          newPlayhead >= boundaryClip.endOnTimeline) {
+        s.setPlayhead(boundaryClip.startOnTimeline);
         s.setPlaying(false);
         for (final layer in _layers.values) {
-          layer.videoController?.seekTo(Duration.zero);
-          layer.videoController?.pause();
+          layer.safePause();
         }
         _stopAllAudio();
         return;
       }
+
+      if (s.duration > Duration.zero && newPlayhead >= s.duration) {
+        s.setPlayhead(Duration.zero);
+        s.setPlaying(false);
+        for (final layer in _layers.values) {
+          layer.safeSeek(Duration.zero);
+          layer.safePause();
+        }
+        _stopAllAudio();
+        return;
+      }
+
       s.setPlayhead(newPlayhead);
+
+      // Sync video controllers for clips currently under the playhead.
+      final nowVisible = <String>{};
+      for (final track in s.videoTracks) {
+        if (!track.isVisible) continue;
+        final clip = s.clipAt(track.id, newPlayhead);
+        if (clip != null && clip.type == ClipType.video) {
+          nowVisible.add(clip.id);
+          final layer = _layers[clip.id];
+          if (layer != null && layer.initialized && !layer.isDisposed) {
+            if (!lastVisibleClipIds.contains(clip.id)) {
+              final offsetInClip = newPlayhead - clip.startOnTimeline;
+              final videoPos = clip.mediaInPoint + offsetInClip;
+              // Await seek before play to avoid showing a stale frame
+              layer.safeSeek(videoPos).then((_) => layer.safePlay());
+            }
+          }
+        }
+      }
+
+      // Pause clips that left visibility — but only after new ones are
+      // ready so we don't flash a blank frame during the handoff.
+      for (final oldId in lastVisibleClipIds) {
+        if (!nowVisible.contains(oldId)) {
+          _layers[oldId]?.safePause();
+        }
+      }
+      lastVisibleClipIds = nowVisible;
+
       _syncAudioPlayback(s, newPlayhead);
     });
   }
@@ -231,7 +313,7 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
     _playbackTimer = null;
     _wallClockAtPlayStart = null;
     for (final layer in _layers.values) {
-      layer.videoController?.pause();
+      layer.safePause();
     }
     _stopAllAudio();
   }
@@ -251,24 +333,24 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
 
     for (final clip in visibleClips) {
       final layer = _layers[clip.id];
-      if (layer == null || !layer.initialized || layer.videoController == null) {
-        if (layer?.mediaId != clip.mediaId) {
+      if (layer == null || layer.isDisposed || !layer.initialized || layer.videoController == null) {
+        if (layer == null || layer.mediaId != clip.mediaId) {
           _loadLayerVideo(clip.id, clip.mediaId).then((_) {
             if (!mounted) return;
             final l = _layers[clip.id];
-            if (l == null || !l.initialized || l.videoController == null) return;
+            if (l == null || l.isDisposed || !l.initialized) return;
             final offsetInClip = playhead - clip.startOnTimeline;
             final videoPos = clip.mediaInPoint + offsetInClip;
-            l.videoController!.seekTo(videoPos);
-            if (startPlaying) l.videoController!.play();
+            l.safeSeek(videoPos);
+            if (startPlaying) l.safePlay();
           });
         }
         continue;
       }
       final offsetInClip = playhead - clip.startOnTimeline;
       final videoPos = clip.mediaInPoint + offsetInClip;
-      layer.videoController!.seekTo(videoPos);
-      if (startPlaying) layer.videoController!.play();
+      layer.safeSeek(videoPos);
+      if (startPlaying) layer.safePlay();
     }
   }
 
@@ -463,6 +545,7 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
 
   Widget _applyClipTransforms(Widget child, ClipModel clip) {
     Widget result = child;
+    final controller = ref.read(timelineControllerProvider);
 
     // Crop: clip the visible area by the fractional insets
     final hasCrop = clip.cropLeft > 0 ||
@@ -501,20 +584,23 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
     }
 
     // Scale
-    if (clip.scaleX != 1.0 || clip.scaleY != 1.0) {
+    final scaleX = controller.evaluatedParameter(clip.id, 'scaleX', clip.scaleX);
+    final scaleY = controller.evaluatedParameter(clip.id, 'scaleY', clip.scaleY);
+    if (scaleX != 1.0 || scaleY != 1.0) {
       result = Transform(
         alignment: Alignment(
           -1.0 + 2.0 * clip.anchorX,
           -1.0 + 2.0 * clip.anchorY,
         ),
-        transform: Matrix4.diagonal3Values(clip.scaleX, clip.scaleY, 1.0),
+        transform: Matrix4.diagonal3Values(scaleX, scaleY, 1.0),
         child: result,
       );
     }
 
     // Rotation (in degrees)
-    if (clip.rotation != 0.0) {
-      final radians = clip.rotation * math.pi / 180.0;
+    final rotation = controller.evaluatedParameter(clip.id, 'rotation', clip.rotation);
+    if (rotation != 0.0) {
+      final radians = rotation * math.pi / 180.0;
       result = Transform.rotate(
         angle: radians,
         alignment: Alignment(
@@ -525,17 +611,20 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
       );
     }
 
-    // Position offset (in pixels)
-    if (clip.posX != 0.0 || clip.posY != 0.0) {
+    // Position offset (in pixels) — evaluate keyframes for animated tracking
+    final posX = controller.evaluatedParameter(clip.id, 'posX', clip.posX);
+    final posY = controller.evaluatedParameter(clip.id, 'posY', clip.posY);
+    if (posX != 0.0 || posY != 0.0) {
       result = Transform.translate(
-        offset: Offset(clip.posX, clip.posY),
+        offset: Offset(posX, posY),
         child: result,
       );
     }
 
     // Opacity
-    if (clip.opacity < 1.0) {
-      result = Opacity(opacity: clip.opacity.clamp(0.0, 1.0), child: result);
+    final opacity = controller.evaluatedParameter(clip.id, 'opacity', clip.opacity);
+    if (opacity < 1.0) {
+      result = Opacity(opacity: opacity.clamp(0.0, 1.0), child: result);
     }
 
     return result;
@@ -618,9 +707,11 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
     if (layer != null && layer.mediaId == mediaId && layer.initialized) return;
 
     if (layer != null) {
-      await layer.videoController?.dispose();
+      final oldController = layer.videoController;
       layer.videoController = null;
       layer.initialized = false;
+      layer._disposed = false;
+      await oldController?.dispose();
     } else {
       layer = _LayerEntry();
       _layers[clipId] = layer;
@@ -943,7 +1034,7 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
         clip: clip,
         compositionWidth: widget.project.composition.width,
         compositionHeight: widget.project.composition.height,
-        background: Colors.black,
+        background: Color(clip.titleBgColorValue),
         animT: animT,
       );
     } else if (clip.type == ClipType.colorCard) {
@@ -1014,29 +1105,40 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
     final transitionInfo = ref.watch(_transitionInfoProvider);
 
     // Ensure layer controllers are loaded for all visible clips.
+    // During playback, load ALL video clips so controllers are ready
+    // when the playhead reaches them; only prune when paused.
+    final clipsToLoad = timelineState.isPlaying
+        ? timelineState.clips
+            .where((c) => c.type == ClipType.video || c.type == ClipType.image)
+            .toList()
+        : visibleLayers;
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      _pruneUnusedLayers(visibleLayers);
+      if (!timelineState.isPlaying) {
+        _pruneUnusedLayers(visibleLayers);
+      }
 
-      for (final clip in visibleLayers) {
+      for (final clip in clipsToLoad) {
         if (clip.type == ClipType.video) {
           final layer = _layers[clip.id];
           if (layer == null || layer.mediaId != clip.mediaId) {
             _loadLayerVideo(clip.id, clip.mediaId).then((_) {
               if (!mounted) return;
               final l = _layers[clip.id];
-              if (l == null || !l.initialized || l.videoController == null) return;
+              if (l == null || l.isDisposed || !l.initialized) return;
               final ts = ref.read(timelineStateProvider);
               final offsetInClip = ts.playhead - clip.startOnTimeline;
               final videoPos = clip.mediaInPoint + offsetInClip;
-              l.videoController!.seekTo(videoPos);
+              l.safeSeek(videoPos);
             });
           } else if (layer.initialized &&
+              !layer.isDisposed &&
               layer.videoController != null &&
               !timelineState.isPlaying) {
             final offsetInClip = timelineState.playhead - clip.startOnTimeline;
             final videoPos = clip.mediaInPoint + offsetInClip;
-            layer.videoController!.seekTo(videoPos);
+            layer.safeSeek(videoPos);
           }
         }
 
@@ -1136,11 +1238,30 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
       );
     }
 
-    final inSelectionMode = activeClip != null &&
-        activeClip.type == ClipType.video &&
-        activeClip.isolationEnabled &&
-        activeClip.isolationMaskPath == null &&
-        activeClip.isolationSelectionLeft == null;
+    // Use the selected clip for isolation drawing if it has isolation enabled,
+    // otherwise fall back to the active clip at the playhead.
+    final selectedId = timelineState.selectedClipIds.firstOrNull;
+    final isolationClip = selectedId != null
+        ? timelineState.clips.cast<ClipModel?>().firstWhere(
+              (c) => c?.id == selectedId && c?.type == ClipType.video,
+              orElse: () => null,
+            )
+        : null;
+    final clipForIsolation = (isolationClip != null &&
+            isolationClip.isolationEnabled)
+        ? isolationClip
+        : activeClip;
+
+    final inSelectionMode = clipForIsolation != null &&
+        clipForIsolation.type == ClipType.video &&
+        clipForIsolation.isolationEnabled &&
+        clipForIsolation.isolationMaskPath == null &&
+        clipForIsolation.isolationSelectionLeft == null;
+
+    final tool = ref.watch(timelineToolProvider);
+    final inTrackerMode = tool == TimelineTool.tracker &&
+        activeClip != null &&
+        activeClip.type == ClipType.video;
 
     return Container(
       color: Colors.black,
@@ -1157,7 +1278,7 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
                           onPanUpdate: (d) =>
                               _onSelectionPanUpdate(d, constraints),
                           onPanEnd: (d) =>
-                              _onSelectionPanEnd(activeClip!),
+                              _onSelectionPanEnd(clipForIsolation!),
                           child: Stack(
                             children: [
                               contentWidget,
@@ -1176,7 +1297,18 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
                         );
                       },
                     )
-                  : contentWidget,
+                  : inTrackerMode
+                      ? Stack(
+                          children: [
+                            contentWidget,
+                            Positioned.fill(
+                              child: TrackerOverlay(
+                                activeClip: activeClip,
+                              ),
+                            ),
+                          ],
+                        )
+                      : contentWidget,
             ),
           ),
           _PreviewToolbar(project: widget.project),

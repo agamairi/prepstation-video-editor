@@ -404,7 +404,8 @@ class SegmentationPlugin: NSObject, FlutterPlugin {
                 guard let rgbMask = opaqueFilter.outputImage else { continue }
 
                 var pixelBuffer: CVPixelBuffer?
-                CVPixelBufferPoolCreatePixelBuffer(nil, adaptor.pixelBufferPool!, &pixelBuffer)
+                guard let pool = adaptor.pixelBufferPool else { continue }
+                CVPixelBufferPoolCreatePixelBuffer(nil, pool, &pixelBuffer)
                 guard let outputBuffer = pixelBuffer else { continue }
 
                 ciContext.render(rgbMask, to: outputBuffer)

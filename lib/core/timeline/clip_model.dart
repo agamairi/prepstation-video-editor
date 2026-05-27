@@ -78,6 +78,7 @@ class ClipModel {
     this.titleText,
     this.titleFontSize = AppConstants.defaultTitleFontSize,
     this.titleColorValue = AppConstants.defaultTitleColor,
+    this.titleBgColorValue = 0x00000000,
     this.titleAlignment = 'center',
     this.cardColorValue = AppConstants.defaultCardColor,
     this.fontFamily = AppConstants.defaultFontFamily,
@@ -149,6 +150,7 @@ class ClipModel {
   final String? titleText;
   final double titleFontSize;
   final int titleColorValue;
+  final int titleBgColorValue;
   final String titleAlignment; // 'left' | 'center' | 'right'
 
   // Color-card clip field
@@ -232,6 +234,7 @@ class ClipModel {
     Object? titleText = _omit,
     double? titleFontSize,
     int? titleColorValue,
+    int? titleBgColorValue,
     String? titleAlignment,
     int? cardColorValue,
     String? fontFamily,
@@ -296,6 +299,7 @@ class ClipModel {
       titleText: titleText == _omit ? this.titleText : titleText as String?,
       titleFontSize: titleFontSize ?? this.titleFontSize,
       titleColorValue: titleColorValue ?? this.titleColorValue,
+      titleBgColorValue: titleBgColorValue ?? this.titleBgColorValue,
       titleAlignment: titleAlignment ?? this.titleAlignment,
       cardColorValue: cardColorValue ?? this.cardColorValue,
       fontFamily: fontFamily ?? this.fontFamily,
