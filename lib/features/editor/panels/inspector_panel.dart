@@ -13,6 +13,8 @@ import 'package:prepstation/core/segmentation/isolation_mode.dart';
 import 'package:prepstation/core/segmentation/segmentation_service.dart';
 import 'package:prepstation/core/timeline/clip_model.dart';
 import 'package:prepstation/core/timeline/timeline_controller.dart';
+import 'package:prepstation/core/timeline/timeline_tool.dart';
+import 'package:prepstation/core/tracker/tracker_model.dart';
 import 'package:prepstation/core/transitions/transition_type.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -312,9 +314,11 @@ class _ClipInspectorState extends ConsumerState<_ClipInspector> {
                 },
               ),
             ],
-            if (clip.type == ClipType.video || clip.type == ClipType.image) ...[
+            if (clip.type != ClipType.audio) ...[
               const SizedBox(height: 12),
               _TransformSection(clip: clip),
+            ],
+            if (clip.type == ClipType.video || clip.type == ClipType.image) ...[
               const SizedBox(height: 12),
               _CropSection(clip: clip),
             ],
@@ -323,6 +327,12 @@ class _ClipInspectorState extends ConsumerState<_ClipInspector> {
               _ClipFlagsSection(clip: clip),
               const SizedBox(height: 12),
               _SubjectIsolationSection(clip: clip),
+              const SizedBox(height: 12),
+              _TrackerSection(clip: clip),
+            ],
+            if (clip.type != ClipType.video && clip.type != ClipType.audio) ...[
+              const SizedBox(height: 12),
+              _AttachToTrackerSection(clip: clip),
             ],
             const SizedBox(height: 12),
             _EffectsSection(clipId: clip.id),
@@ -1110,18 +1120,45 @@ class _TextStyleControlsState extends ConsumerState<_TextStyleControls> {
 
 // ── Title Clip Section ────────────────────────────────────────────────────────
 
-class _TitleSection extends StatelessWidget {
+class _TitleSection extends ConsumerWidget {
   const _TitleSection({required this.clip});
 
   final ClipModel clip;
 
+  static const _bgColors = [
+    0x00000000, // transparent
+    0xFF000000, // black
+    0xFFFFFFFF, // white
+    0xFF1A1A1B, // dark grey
+    0xFF505057, // mid grey
+    0xFFFF5252, // red
+    0xFF4D9CFF, // blue
+    0xFF34C47A, // green
+  ];
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final liveClip = ref
+            .watch(timelineStateProvider)
+            .clips
+            .cast<ClipModel?>()
+            .firstWhere((c) => c?.id == clip.id, orElse: () => null) ??
+        clip;
+    final controller = ref.read(timelineControllerProvider);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const _SectionHeader(title: 'Title'),
-        _TextStyleControls(clip: clip),
+        const Text('Background', style: AppTypography.labelMedium),
+        const SizedBox(height: 6),
+        _ColorSwatchRow(
+          selectedColor: liveClip.titleBgColorValue,
+          colors: _bgColors,
+          onSelected: (c) => controller.updateTitleBgColor(liveClip.id, c),
+        ),
+        const SizedBox(height: 8),
+        _TextStyleControls(clip: liveClip),
       ],
     );
   }
@@ -1135,6 +1172,7 @@ class _ColorCardSection extends ConsumerWidget {
   final ClipModel clip;
 
   static const _bgColors = [
+    0x00000000, // transparent
     0xFF000000, // black
     0xFFFFFFFF, // white
     0xFF1A1A1B, // dark grey
@@ -1246,7 +1284,6 @@ class _ColorSwatchRow extends StatelessWidget {
                 width: 24,
                 height: 24,
                 decoration: BoxDecoration(
-                  color: Color(c),
                   shape: BoxShape.circle,
                   border: Border.all(
                     color: selectedColor == c
@@ -1255,12 +1292,41 @@ class _ColorSwatchRow extends StatelessWidget {
                     width: selectedColor == c ? 2 : 1,
                   ),
                 ),
+                child: ClipOval(
+                  child: Color(c).a == 0
+                      ? CustomPaint(
+                          size: const Size(24, 24),
+                          painter: _CheckerPainter(),
+                        )
+                      : ColoredBox(color: Color(c)),
+                ),
               ),
             ),
           )
           .toList(),
     );
   }
+}
+
+class _CheckerPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    const cellSize = 4.0;
+    final light = Paint()..color = const Color(0xFFCCCCCC);
+    final dark = Paint()..color = const Color(0xFF999999);
+    for (var y = 0.0; y < size.height; y += cellSize) {
+      for (var x = 0.0; x < size.width; x += cellSize) {
+        final isEven = ((x / cellSize).floor() + (y / cellSize).floor()).isEven;
+        canvas.drawRect(
+          Rect.fromLTWH(x, y, cellSize, cellSize),
+          isEven ? light : dark,
+        );
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 // ── Image Clip Section ────────────────────────────────────────────────────────
@@ -2101,6 +2167,396 @@ class _TransitionSectionState extends ConsumerState<_TransitionSection> {
           ),
         ],
       ],
+    );
+  }
+}
+
+// ── Subject Tracking Section ────────────────────────────────────────────────
+
+class _TrackerSection extends ConsumerWidget {
+  const _TrackerSection({required this.clip});
+
+  final ClipModel clip;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final timelineState = ref.watch(timelineStateProvider);
+    final sessions = timelineState.trackerSessionsForClip(clip.id);
+    final activeSessionId = timelineState.activeTrackerSessionId;
+    final controller = ref.read(timelineControllerProvider);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Expanded(child: _SectionHeader(title: 'Subject Tracking')),
+            Tooltip(
+              message: 'Activate tracker tool to drop pins',
+              child: GestureDetector(
+                onTap: () {
+                  ref.read(timelineToolProvider.notifier).state =
+                      TimelineTool.tracker;
+                },
+                child: Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    color: ColorTokens.backgroundSurface,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: ColorTokens.borderDefault),
+                  ),
+                  child: const Icon(
+                    Icons.pin_drop_outlined,
+                    size: 14,
+                    color: ColorTokens.textSecondary,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        if (sessions.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Text(
+              'Use the Track Point tool (T) to drop a pin on the preview.',
+              style: TextStyle(
+                color: ColorTokens.textSecondary,
+                fontSize: 11,
+              ),
+            ),
+          ),
+        for (final session in sessions)
+          _TrackerSessionTile(
+            session: session,
+            isActive: session.id == activeSessionId,
+            onTap: () {
+              timelineState.setActiveTrackerSession(session.id);
+            },
+            onDelete: () {
+              controller.removeTrackerSession(session.id);
+            },
+            onApplyStabilize: session.status == TrackerStatus.completed
+                ? () => controller.applyTrackingToTransform(
+                      session.id,
+                      stabilize: true,
+                    )
+                : null,
+            onApplyFollow: session.status == TrackerStatus.completed
+                ? () => controller.applyTrackingToTransform(
+                      session.id,
+                      stabilize: false,
+                    )
+                : null,
+          ),
+      ],
+    );
+  }
+}
+
+class _AttachToTrackerSection extends ConsumerWidget {
+  const _AttachToTrackerSection({required this.clip});
+
+  final ClipModel clip;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final timelineState = ref.watch(timelineStateProvider);
+    final controller = ref.read(timelineControllerProvider);
+
+    final completedSessions = timelineState.trackerSessions
+        .where((s) => s.status == TrackerStatus.completed)
+        .where((s) {
+      final sourceClip = timelineState.clips.cast<ClipModel?>().firstWhere(
+        (c) => c!.id == s.clipId,
+        orElse: () => null,
+      );
+      if (sourceClip == null) return false;
+      return clip.startOnTimeline < sourceClip.endOnTimeline &&
+          clip.endOnTimeline > sourceClip.startOnTimeline;
+    }).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _SectionHeader(title: 'Attach to Tracker'),
+        if (completedSessions.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Text(
+              'No completed trackers overlap this clip. Track a point on a video clip first.',
+              style: TextStyle(
+                color: ColorTokens.textSecondary,
+                fontSize: 11,
+              ),
+            ),
+          ),
+        for (final session in completedSessions)
+          _AttachableTrackerTile(
+            session: session,
+            sourceClipName: timelineState.clips
+                    .cast<ClipModel?>()
+                    .firstWhere(
+                      (c) => c!.id == session.clipId,
+                      orElse: () => null,
+                    )
+                    ?.name ??
+                'Unknown',
+            onAttach: () => controller.applyTrackingToTransform(
+              session.id,
+              targetClipId: clip.id,
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _AttachableTrackerTile extends StatelessWidget {
+  const _AttachableTrackerTile({
+    required this.session,
+    required this.sourceClipName,
+    required this.onAttach,
+  });
+
+  final TrackerSession session;
+  final String sourceClipName;
+  final VoidCallback onAttach;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = Color(session.colorHex);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: ColorTokens.backgroundSurface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: ColorTokens.borderSubtle),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  session.name,
+                  style: const TextStyle(
+                    color: ColorTokens.textPrimary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                Text(
+                  'from $sourceClipName',
+                  style: const TextStyle(
+                    color: ColorTokens.textSecondary,
+                    fontSize: 10,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          _SmallActionBtn(
+            label: 'Attach',
+            icon: Icons.link,
+            onTap: onAttach,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TrackerSessionTile extends StatelessWidget {
+  const _TrackerSessionTile({
+    required this.session,
+    required this.isActive,
+    required this.onTap,
+    required this.onDelete,
+    this.onApplyStabilize,
+    this.onApplyFollow,
+  });
+
+  final TrackerSession session;
+  final bool isActive;
+  final VoidCallback onTap;
+  final VoidCallback onDelete;
+  final VoidCallback? onApplyStabilize;
+  final VoidCallback? onApplyFollow;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = Color(session.colorHex);
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: isActive
+              ? color.withValues(alpha: 0.08)
+              : ColorTokens.backgroundSurface,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isActive ? color.withValues(alpha: 0.4) : ColorTokens.borderSubtle,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: color,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    session.name,
+                    style: TextStyle(
+                      color: isActive
+                          ? ColorTokens.textPrimary
+                          : ColorTokens.textSecondary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                _StatusBadge(status: session.status),
+                const SizedBox(width: 4),
+                GestureDetector(
+                  onTap: onDelete,
+                  child: const Icon(
+                    Icons.close,
+                    size: 14,
+                    color: ColorTokens.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+            if (session.status == TrackerStatus.completed) ...[
+              const SizedBox(height: 6),
+              Text(
+                '${session.points.length} points tracked',
+                style: const TextStyle(
+                  color: ColorTokens.textSecondary,
+                  fontSize: 10,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  _SmallActionBtn(
+                    label: 'Stabilize',
+                    icon: Icons.center_focus_strong,
+                    onTap: onApplyStabilize,
+                  ),
+                  const SizedBox(width: 6),
+                  _SmallActionBtn(
+                    label: 'Follow',
+                    icon: Icons.control_camera,
+                    onTap: onApplyFollow,
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StatusBadge extends StatelessWidget {
+  const _StatusBadge({required this.status});
+
+  final TrackerStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    final (String label, Color color) = switch (status) {
+      TrackerStatus.idle => ('Idle', ColorTokens.textDisabled),
+      TrackerStatus.tracking => ('Tracking...', ColorTokens.accentPrimary),
+      TrackerStatus.completed => ('Done', ColorTokens.success),
+      TrackerStatus.failed => ('Failed', ColorTokens.error),
+    };
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 9,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.3,
+        ),
+      ),
+    );
+  }
+}
+
+class _SmallActionBtn extends StatelessWidget {
+  const _SmallActionBtn({
+    required this.label,
+    required this.icon,
+    this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: ColorTokens.backgroundSurface,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: ColorTokens.borderDefault),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 12, color: ColorTokens.textSecondary),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: const TextStyle(
+                color: ColorTokens.textSecondary,
+                fontSize: 10,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -119,31 +119,17 @@ class _TimelineToolbar extends ConsumerWidget {
                 .read(timelineToolProvider.notifier)
                 .state = TimelineTool.blade,
           ),
-          const VerticalDivider(width: 16),
-          // Add video / audio tracks
-          IconButton(
-            icon: const Icon(Icons.add, size: 16),
-            tooltip: 'Add Video Track',
-            onPressed: () => ref.read(timelineControllerProvider).addTrack(
-              projectId: project.id,
-              type: TrackType.video,
-            ),
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-          ),
-          IconButton(
-            icon: const Icon(Icons.music_note, size: 16),
-            tooltip: 'Add Audio Track',
-            onPressed: () => ref.read(timelineControllerProvider).addTrack(
-              projectId: project.id,
-              type: TrackType.audio,
-            ),
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+          // Tracker tool
+          _ToolButton(
+            icon: Icons.pin_drop_outlined,
+            tooltip: 'Track Point (T)',
+            isActive: tool == TimelineTool.tracker,
+            onPressed: () => ref
+                .read(timelineToolProvider.notifier)
+                .state = TimelineTool.tracker,
           ),
           const VerticalDivider(width: 16),
-          // Add synthetic clips
-          _AddSyntheticButton(project: project),
+          _UnifiedAddButton(project: project),
           const SizedBox(width: 8),
           const VerticalDivider(width: 8),
           const SizedBox(width: 8),
@@ -196,57 +182,94 @@ class _TimelineToolbar extends ConsumerWidget {
   }
 }
 
-/// Popup menu for adding a Title or Color Card clip to the first video track.
-class _AddSyntheticButton extends ConsumerWidget {
-  const _AddSyntheticButton({required this.project});
+/// Unified add button — single "+" that lets the user add any type of track or
+/// synthetic clip from one popup menu.
+class _UnifiedAddButton extends ConsumerWidget {
+  const _UnifiedAddButton({required this.project});
 
   final ProjectModel project;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return PopupMenuButton<_SyntheticClipType>(
-      tooltip: 'Add Title / Color Card',
+    return PopupMenuButton<_AddAction>(
+      tooltip: 'Add',
       padding: EdgeInsets.zero,
       constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-      icon: const Icon(Icons.text_fields, size: 16),
-      onSelected: (type) {
+      icon: const Icon(Icons.add, size: 16),
+      onSelected: (action) {
         final state = ref.read(timelineStateProvider);
         final controller = ref.read(timelineControllerProvider);
-        final firstVideoTrack =
-            state.videoTracks.isNotEmpty ? state.videoTracks.first : null;
-        if (firstVideoTrack == null) return;
 
-        switch (type) {
-          case _SyntheticClipType.title:
+        switch (action) {
+          case _AddAction.videoTrack:
+            controller.addTrack(
+              projectId: project.id,
+              type: TrackType.video,
+            );
+          case _AddAction.audioTrack:
+            controller.addTrack(
+              projectId: project.id,
+              type: TrackType.audio,
+            );
+          case _AddAction.title:
+            final track = state.videoTracks.isNotEmpty
+                ? state.videoTracks.first
+                : null;
+            if (track == null) return;
             controller.addTitleClip(
               projectId: project.id,
-              trackId: firstVideoTrack.id,
+              trackId: track.id,
             );
-          case _SyntheticClipType.colorCard:
+          case _AddAction.colorCard:
+            final track = state.videoTracks.isNotEmpty
+                ? state.videoTracks.first
+                : null;
+            if (track == null) return;
             controller.addColorCardClip(
               projectId: project.id,
-              trackId: firstVideoTrack.id,
+              trackId: track.id,
             );
         }
       },
       itemBuilder: (_) => const [
         PopupMenuItem(
-          value: _SyntheticClipType.title,
+          value: _AddAction.videoTrack,
           child: Row(
             children: [
-              Icon(Icons.title, size: 16),
+              Icon(Icons.videocam_outlined, size: 16),
               SizedBox(width: 8),
-              Text('Add Title'),
+              Text('Video Track'),
             ],
           ),
         ),
         PopupMenuItem(
-          value: _SyntheticClipType.colorCard,
+          value: _AddAction.audioTrack,
           child: Row(
             children: [
-              Icon(Icons.rectangle, size: 16),
+              Icon(Icons.music_note_outlined, size: 16),
               SizedBox(width: 8),
-              Text('Add Color Card'),
+              Text('Audio Track'),
+            ],
+          ),
+        ),
+        PopupMenuDivider(),
+        PopupMenuItem(
+          value: _AddAction.title,
+          child: Row(
+            children: [
+              Icon(Icons.title, size: 16),
+              SizedBox(width: 8),
+              Text('Title'),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          value: _AddAction.colorCard,
+          child: Row(
+            children: [
+              Icon(Icons.rectangle_outlined, size: 16),
+              SizedBox(width: 8),
+              Text('Color Card'),
             ],
           ),
         ),
@@ -255,7 +278,7 @@ class _AddSyntheticButton extends ConsumerWidget {
   }
 }
 
-enum _SyntheticClipType { title, colorCard }
+enum _AddAction { videoTrack, audioTrack, title, colorCard }
 
 class _ToolButton extends StatelessWidget {
   const _ToolButton({
