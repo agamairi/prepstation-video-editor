@@ -381,15 +381,28 @@ class _MediaTile extends ConsumerWidget {
 
     String trackId;
     final videoTracks = state.videoTracks;
-    if (videoTracks.isNotEmpty) {
-      trackId = videoTracks.first.id;
-    } else {
+    if (videoTracks.isEmpty) {
       final track = await controller.addTrack(
         projectId: projectId,
         type: TrackType.video,
         name: 'V1',
       );
       trackId = track.id;
+    } else {
+      // Prefer the selected track if it's a video track, then any empty
+      // video track, then fall back to the first video track.
+      final selected = state.selectedTrackId;
+      final selectedVideo = videoTracks
+          .where((t) => t.id == selected)
+          .firstOrNull;
+      if (selectedVideo != null) {
+        trackId = selectedVideo.id;
+      } else {
+        final emptyTrack = videoTracks
+            .where((t) => state.clipsForTrack(t.id).isEmpty)
+            .firstOrNull;
+        trackId = emptyTrack?.id ?? videoTracks.first.id;
+      }
     }
 
     await controller.addClipFromAsset(

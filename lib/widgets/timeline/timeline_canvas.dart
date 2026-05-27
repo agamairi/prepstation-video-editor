@@ -170,7 +170,8 @@ class _TimelineCanvasState extends State<TimelineCanvas> {
     return clips.map((clip) {
       final left = state.timeToPixel(clip.startOnTimeline);
       final right = state.timeToPixel(clip.endOnTimeline);
-      final width = (right - left).clamp(0.0, canvasWidth - left);
+      final maxWidth = (canvasWidth - left).clamp(0.0, canvasWidth);
+      final width = (right - left).clamp(0.0, maxWidth);
       if (width <= 0) return const SizedBox.shrink();
 
       final isSelected = state.selectedClipIds.contains(clip.id);

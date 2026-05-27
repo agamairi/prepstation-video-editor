@@ -102,22 +102,16 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
     final isShift = HardwareKeyboard.instance.isShiftPressed;
     final key = event.logicalKey;
 
-    // Block all non-modifier shortcuts when a text field is focused.
-    // Walk up the element tree from the primary focus to find EditableText.
-    var isTextFieldFocused = false;
-    final focusContext = FocusManager.instance.primaryFocus?.context;
-    if (focusContext != null) {
-      focusContext.visitAncestorElements((element) {
-        if (element.widget is EditableText) {
-          isTextFieldFocused = true;
-          return false; // stop walking
+    // Block all non-modifier shortcuts when a text field has focus.
+    if (!(isMeta || HardwareKeyboard.instance.isControlPressed)) {
+      final primaryFocus = FocusManager.instance.primaryFocus;
+      if (primaryFocus != null && primaryFocus != _focusNode) {
+        final ctx = primaryFocus.context;
+        if (ctx != null &&
+            ctx.findAncestorWidgetOfExactType<EditableText>() != null) {
+          return KeyEventResult.ignored;
         }
-        return true;
-      });
-    }
-    if (isTextFieldFocused &&
-        !(isMeta || HardwareKeyboard.instance.isControlPressed)) {
-      return KeyEventResult.ignored;
+      }
     }
 
     final controller = ref.read(timelineControllerProvider);
@@ -269,12 +263,23 @@ class _EditorScreenState extends ConsumerState<EditorScreen>
 
     return projectAsync.when(
       data: (project) => project != null
-          ? Focus(
-              focusNode: _focusNode,
-              onKeyEvent: _handleKey,
-              child: _EditorLayout(
-                project: project,
-                savedIndicator: _savedIndicator,
+          ? GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTapDown: (_) {
+                // When the user taps anywhere in the editor, reclaim
+                // focus so that keyboard shortcuts work again after
+                // leaving a text field. If a text field is tapped,
+                // Flutter will give it focus AFTER this handler, so
+                // it still works correctly.
+                _focusNode.requestFocus();
+              },
+              child: Focus(
+                focusNode: _focusNode,
+                onKeyEvent: _handleKey,
+                child: _EditorLayout(
+                  project: project,
+                  savedIndicator: _savedIndicator,
+                ),
               ),
             )
           : const Scaffold(

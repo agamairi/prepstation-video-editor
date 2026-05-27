@@ -1238,11 +1238,25 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
       );
     }
 
-    final inSelectionMode = activeClip != null &&
-        activeClip.type == ClipType.video &&
-        activeClip.isolationEnabled &&
-        activeClip.isolationMaskPath == null &&
-        activeClip.isolationSelectionLeft == null;
+    // Use the selected clip for isolation drawing if it has isolation enabled,
+    // otherwise fall back to the active clip at the playhead.
+    final selectedId = timelineState.selectedClipIds.firstOrNull;
+    final isolationClip = selectedId != null
+        ? timelineState.clips.cast<ClipModel?>().firstWhere(
+              (c) => c?.id == selectedId && c?.type == ClipType.video,
+              orElse: () => null,
+            )
+        : null;
+    final clipForIsolation = (isolationClip != null &&
+            isolationClip.isolationEnabled)
+        ? isolationClip
+        : activeClip;
+
+    final inSelectionMode = clipForIsolation != null &&
+        clipForIsolation.type == ClipType.video &&
+        clipForIsolation.isolationEnabled &&
+        clipForIsolation.isolationMaskPath == null &&
+        clipForIsolation.isolationSelectionLeft == null;
 
     final tool = ref.watch(timelineToolProvider);
     final inTrackerMode = tool == TimelineTool.tracker &&
@@ -1264,7 +1278,7 @@ class _PreviewPanelState extends ConsumerState<PreviewPanel> {
                           onPanUpdate: (d) =>
                               _onSelectionPanUpdate(d, constraints),
                           onPanEnd: (d) =>
-                              _onSelectionPanEnd(activeClip!),
+                              _onSelectionPanEnd(clipForIsolation!),
                           child: Stack(
                             children: [
                               contentWidget,
